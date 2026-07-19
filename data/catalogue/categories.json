@@ -1,0 +1,32 @@
+[
+  {
+    "slug": "levage",
+    "title": "Levage",
+    "description": "Accessoires de levage, charges d'essai, élévateurs de charge, palans, portiques, potences et tripodes.",
+    "count": 147
+  },
+  {
+    "slug": "manutention-au-sol",
+    "title": "Manutention au sol",
+    "description": "Chariots, diables, gerbeurs, grues d'atelier, tables élévatrices, tireurs pousseurs, transpalettes et accessoires de chariot élévateur.",
+    "count": 283
+  },
+  {
+    "slug": "motorisation-sew",
+    "title": "Motorisation SEW",
+    "description": "Huiles, moteurs et variateurs SEW.",
+    "count": 9
+  },
+  {
+    "slug": "stockage-emballage",
+    "title": "Stockage et emballage",
+    "description": "Dérouleurs, équipements de quai, kits de cerclage et outils de cerclage.",
+    "count": 53
+  },
+  {
+    "slug": "acces-hauteur",
+    "title": "Accès en hauteur",
+    "description": "Escabeaux, marchepieds, nacelles et plateformes individuelles modulables.",
+    "count": 5
+  }
+]

@@ -1,0 +1,85 @@
+{
+  "startedAt": "2026-07-07T17:56:39.340Z",
+  "csv": "C:\\Users\\adjeridi\\oyste-next\\Oxatis-All-ADEI-49840(2).csv",
+  "dryRun": false,
+  "force": false,
+  "rows": 720,
+  "rowsProcessed": 5,
+  "productsImported": 5,
+  "productsWithoutSku": 0,
+  "productsWithoutImage": 0,
+  "images": {},
+  "documents": {},
+  "imageBytes": 0,
+  "documentBytes": 0,
+  "workingHosts": [],
+  "errors": [
+    {
+      "sku": "PFI1502000",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/05/PFI1502000-big.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "PFI1502000",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/09/PFI1502000-small.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "PFI1502000",
+      "type": "document",
+      "url": "https://adei.oxatis.com/Files/134686/Potence-sur-fut-inversee.pdf",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/13/SC-big.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/17/SC-small.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/13/SC-big.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/17/SC-small.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/13/SC-big.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/17/SC-small.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/13/SC-big.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    },
+    {
+      "sku": "SC",
+      "type": "image",
+      "url": "https://www.oyste.fr/Files/134686/Img/17/SC-small.jpg",
+      "message": "browserContext.newPage: Target page, context or browser has been closed"
+    }
+  ],
+  "finishedAt": "2026-07-07T17:56:39.357Z"
+}

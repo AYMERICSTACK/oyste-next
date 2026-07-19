@@ -1,0 +1,38 @@
+{
+  "source": "Copie de BDD DATAPLUG FINAL (003).xlsx",
+  "allowedManufacturers": [
+    "ADEI",
+    "COMEPAL",
+    "CROMOX",
+    "HYDROBULL",
+    "KITO",
+    "SEW",
+    "GOLIATH",
+    "STOCKMAN"
+  ],
+  "importedAt": "2026-07-06T10:02:45.534Z",
+  "importedProducts": 2423,
+  "ignoredRows": 345,
+  "byManufacturer": {
+    "ADEI": 1041,
+    "COMEPAL": 6,
+    "CROMOX": 104,
+    "HYDROBULL": 13,
+    "KITO": 174,
+    "SEW": 175,
+    "GOLIATH": 4,
+    "STOCKMAN": 906
+  },
+  "byCategory": {
+    "acces-hauteur": 17,
+    "accessoires-pieces": 2,
+    "manutention-au-sol": 282,
+    "motorisation-sew": 9,
+    "palans-palonniers": 134,
+    "portiques": 2,
+    "stockage-emballage": 53
+  },
+  "importedParentProducts": 499,
+  "importedVariants": 2423,
+  "groupedProducts": 253
+}

@@ -34,3 +34,19 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+## Base de données — V35.1
+
+La fondation PostgreSQL/Prisma se trouve dans `prisma/`. Le site public et le back-office continuent pour l'instant à lire les fichiers locaux : la connexion des écrans à PostgreSQL sera effectuée module par module à partir de la V35.2/V35.3.
+
+Commandes utiles :
+
+```bash
+npm run db:generate
+npm run db:validate
+npm run db:migrate -- --name init_oyste
+npm run db:seed
+npm run db:studio
+```
+
+Voir [`prisma/README.md`](prisma/README.md) pour la procédure complète.

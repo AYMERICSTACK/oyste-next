@@ -1,0 +1,128 @@
+{
+  "model": "PFI125_MANUAL_TROLLEY_MANUAL_HOIST",
+  "path": "/models/chariot-manuel-palan-manuel.glb",
+  "camera": {
+    "position": [
+      -0.1951,
+      5.2498,
+      12.4911
+    ],
+    "target": [
+      0,
+      3.025,
+      0
+    ],
+    "fov": 38,
+    "zoom": 1
+  },
+  "root": {
+    "id": "mesh-001",
+    "name": "Assemblage complet",
+    "protected": true
+  },
+  "groups": {
+    "potence": {
+      "label": "Potence",
+      "meshes": [
+        "mesh-004",
+        "mesh-005",
+        "mesh-006",
+        "mesh-009",
+        "mesh-010"
+      ]
+    },
+    "palan": {
+      "label": "palan",
+      "meshes": [
+        "mesh-002",
+        "mesh-007",
+        "mesh-008",
+        "mesh-001"
+      ]
+    },
+    "chariot-manuel": {
+      "label": "chariot manuel",
+      "meshes": [
+        "mesh-003",
+        "mesh-011"
+      ]
+    }
+  },
+  "freeExtractions": [],
+  "validation": {
+    "summary": {
+      "total": 11,
+      "validated": 11,
+      "review": 0
+    },
+    "records": {
+      "mesh-002": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T07:36:38.361Z"
+      },
+      "mesh-003": {
+        "status": "validated",
+        "group": "chariot-manuel",
+        "note": "",
+        "updatedAt": "2026-07-16T07:37:22.082Z"
+      },
+      "mesh-004": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:37:36.913Z"
+      },
+      "mesh-005": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:38:15.084Z"
+      },
+      "mesh-006": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:38:26.469Z"
+      },
+      "mesh-007": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T07:39:10.531Z"
+      },
+      "mesh-008": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T07:39:30.219Z"
+      },
+      "mesh-009": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:39:50.541Z"
+      },
+      "mesh-010": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:40:02.525Z"
+      },
+      "mesh-011": {
+        "status": "validated",
+        "group": "chariot-manuel",
+        "note": "",
+        "updatedAt": "2026-07-16T07:40:41.206Z"
+      },
+      "mesh-001": {
+        "status": "validated",
+        "group": "palan",
+        "note": "Géométrie racine : chaîne et crochet du palan",
+        "updatedAt": "2026-07-16T07:59:04.592Z"
+      }
+    }
+  },
+  "meshes": []
+}

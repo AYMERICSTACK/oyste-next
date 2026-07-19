@@ -1,0 +1,169 @@
+{
+  "model": "PFI125_MANUAL_TROLLEY_ELECTRIC_HOIST",
+  "path": "/models/chariot-manuel-palan-electrique.glb",
+  "camera": {
+    "position": [
+      -0.1951,
+      5.2498,
+      12.4911
+    ],
+    "target": [
+      0,
+      3.025,
+      0
+    ],
+    "fov": 38,
+    "zoom": 1
+  },
+  "root": {
+    "id": "mesh-001",
+    "name": "Assemblage complet",
+    "protected": true
+  },
+  "groups": {
+    "palan": {
+      "label": "Palan",
+      "meshes": [
+        "mesh-002",
+        "mesh-003",
+        "mesh-004",
+        "mesh-005",
+        "mesh-006",
+        "mesh-007",
+        "mesh-008"
+      ]
+    },
+    "chariot-manuel": {
+      "label": "Chariot manuel",
+      "meshes": [
+        "mesh-009",
+        "mesh-017",
+        "mesh-018"
+      ]
+    },
+    "potence": {
+      "label": "potence",
+      "meshes": [
+        "mesh-010",
+        "mesh-011",
+        "mesh-012",
+        "mesh-014",
+        "mesh-015",
+        "mesh-016"
+      ]
+    }
+  },
+  "freeExtractions": [],
+  "validation": {
+    "summary": {
+      "total": 18,
+      "validated": 17,
+      "review": 0
+    },
+    "records": {
+      "mesh-002": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:32:20.200Z"
+      },
+      "mesh-003": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:32:42.802Z"
+      },
+      "mesh-004": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:56:26.890Z"
+      },
+      "mesh-005": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:56:50.137Z"
+      },
+      "mesh-006": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:57:29.736Z"
+      },
+      "mesh-007": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:57:44.442Z"
+      },
+      "mesh-008": {
+        "status": "validated",
+        "group": "palan",
+        "note": "",
+        "updatedAt": "2026-07-16T06:57:54.329Z"
+      },
+      "mesh-009": {
+        "status": "validated",
+        "group": "chariot-manuel",
+        "note": "",
+        "updatedAt": "2026-07-16T06:58:55.435Z"
+      },
+      "mesh-010": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T06:59:30.528Z"
+      },
+      "mesh-011": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:00:12.671Z"
+      },
+      "mesh-012": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:00:55.475Z"
+      },
+      "mesh-013": {
+        "status": "validated",
+        "group": "ignore",
+        "note": "",
+        "updatedAt": "2026-07-16T07:01:30.580Z"
+      },
+      "mesh-014": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:02:27.684Z"
+      },
+      "mesh-015": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:02:47.748Z"
+      },
+      "mesh-016": {
+        "status": "validated",
+        "group": "potence",
+        "note": "",
+        "updatedAt": "2026-07-16T07:03:06.704Z"
+      },
+      "mesh-017": {
+        "status": "validated",
+        "group": "chariot-manuel",
+        "note": "",
+        "updatedAt": "2026-07-16T07:03:33.552Z"
+      },
+      "mesh-018": {
+        "status": "validated",
+        "group": "chariot-manuel",
+        "note": "",
+        "updatedAt": "2026-07-16T07:03:58.962Z"
+      }
+    }
+  },
+  "meshes": []
+}

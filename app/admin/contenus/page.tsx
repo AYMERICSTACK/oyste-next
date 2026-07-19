@@ -1,0 +1,2 @@
+import SiteContentManager from "@/components/admin/SiteContentManager";
+export default function ContentPage() { return <main className="mx-auto w-full max-w-[1500px] p-4 md:p-7 xl:p-9"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Gestion du site</p><h1 className="mt-2 text-3xl font-black md:text-4xl">Contenus & pages</h1><p className="mt-2 text-sm text-slate-500">Modifiez les textes, bannières, menus et blocs éditoriaux sans toucher au code.</p></div><SiteContentManager /></main>; }

@@ -1,6 +1,9 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# dependencies
+# -------------------------------------------------
+# Dependencies
+# -------------------------------------------------
+
 /node_modules
 /.pnp
 .pnp.*
@@ -10,32 +13,94 @@
 !.yarn/releases
 !.yarn/versions
 
-# testing
-/coverage
+# -------------------------------------------------
+# Testing
+# -------------------------------------------------
 
-# next.js
+/coverage
+/playwright-report
+/test-results
+
+# -------------------------------------------------
+# Next.js
+# -------------------------------------------------
+
 /.next/
 /out/
 
-# production
+# -------------------------------------------------
+# Production
+# -------------------------------------------------
+
 /build
 
-# misc
-.DS_Store
-*.pem
+# -------------------------------------------------
+# Generated Prisma Client
+# -------------------------------------------------
 
-# debug
+/generated/prisma
+
+# -------------------------------------------------
+# Environment variables
+# -------------------------------------------------
+
+.env*
+!.env.example
+
+# -------------------------------------------------
+# Vercel
+# -------------------------------------------------
+
+.vercel
+
+# -------------------------------------------------
+# TypeScript
+# -------------------------------------------------
+
+*.tsbuildinfo
+next-env.d.ts
+
+# -------------------------------------------------
+# Logs
+# -------------------------------------------------
+
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+*.log
 
-# env files (can opt-in for committing if needed)
-.env*
+# -------------------------------------------------
+# System files
+# -------------------------------------------------
 
-# vercel
-.vercel
+.DS_Store
+Thumbs.db
+*.pem
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# -------------------------------------------------
+# Local browser profile
+# -------------------------------------------------
+
+/.oxatis-browser-profile
+
+# -------------------------------------------------
+# OYSTE - Local work files (never commit)
+# -------------------------------------------------
+
+# Archives
+*.zip
+
+# Local exports
+*.xlsx
+*.ods
+
+# Oxatis import file
+Oxatis-All-ADEI-49840(2).csv
+
+# -------------------------------------------------
+# IDE (optional)
+# -------------------------------------------------
+
+.vscode/settings.json
+.idea/
