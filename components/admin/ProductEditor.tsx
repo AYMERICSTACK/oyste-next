@@ -6,24 +6,100 @@ import { ArrowLeft, Check, FileText, GripVertical, ImagePlus, Link2, Plus, Save,
 import type { AdminCatalogueProduct } from "@/lib/admin/catalogue-admin";
 
 const tabs = ["Informations", "Parcours produit", "Description", "Médias", "Fiches techniques", "Caractéristiques", "SEO"];
-const emptyProduct = { id: "", code: "", name: "", shortName: "", manufacturer: "OYSTE", categoryPath: "", slug: "", description: "", detailedDescription: "", priceHT: null, delay: "", stock: null, images: [], features: [], documentCount: 0, status: "Brouillon", completeness: 0 } as unknown as AdminCatalogueProduct;
+const emptyProduct = { weightKg: null, shippingMode: "QUOTE", id: "", code: "", name: "", shortName: "", manufacturer: "OYSTE", categoryPath: "", slug: "", description: "", detailedDescription: "", priceHT: null, delay: "", stock: null, images: [], features: [], documentCount: 0, status: "Brouillon", completeness: 0 } as unknown as AdminCatalogueProduct;
 
 export default function ProductEditor({ product = emptyProduct, mode = "edit" }: { product?: AdminCatalogueProduct; mode?: "edit" | "create" }) {
   const [active, setActive] = useState("Informations");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const [status, setStatus] = useState(product.status);
+  const [weightKg, setWeightKg] = useState(product.weightKg?.toString() || "");
+  const [shippingMode, setShippingMode] = useState(product.shippingMode || "QUOTE");
   const [experienceType, setExperienceType] = useState(product.experienceType || "STANDARD");
-  const save = () => { setSaved(true); window.setTimeout(() => setSaved(false), 2200); };
+  const [variants, setVariants] = useState(() =>
+    (product.variants || []).map((variant) => ({
+      id: variant.id,
+      code: variant.code,
+      name: variant.label || variant.name,
+      weightKg: variant.weightKg?.toString() || "",
+      shippingMode: variant.shippingMode || "",
+    })),
+  );
+
+  const save = async () => {
+    if (mode === "create") {
+      setError("La création complète d’un produit sera branchée avec le prochain module catalogue.");
+      return;
+    }
+
+    const normalizedWeight = weightKg.trim() === "" ? null : Number(weightKg.replace(",", "."));
+    if (normalizedWeight !== null && (!Number.isFinite(normalizedWeight) || normalizedWeight <= 0)) {
+      setError("Le poids doit être un nombre supérieur à 0.");
+      return;
+    }
+    if (shippingMode === "MESSAGERIE" && normalizedWeight === null) {
+      setError("Renseignez le poids avant de sélectionner la messagerie.");
+      return;
+    }
+
+    const normalizedVariants = variants.map((variant) => ({
+      id: variant.id,
+      weightKg: variant.weightKg.trim() === "" ? null : Number(variant.weightKg.replace(",", ".")),
+      shippingMode: variant.shippingMode || null,
+    }));
+    const invalidVariant = normalizedVariants.find((variant) =>
+      variant.weightKg !== null && (!Number.isFinite(variant.weightKg) || variant.weightKg <= 0),
+    );
+    if (invalidVariant) {
+      setError("Le poids d’une variante doit être un nombre supérieur à 0.");
+      return;
+    }
+    const invalidMessagerieVariant = normalizedVariants.find((variant) =>
+      variant.shippingMode === "MESSAGERIE" && variant.weightKg === null && normalizedWeight === null,
+    );
+    if (invalidMessagerieVariant) {
+      setError("Une variante en messagerie doit avoir un poids propre ou hériter du poids produit.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSaved(false);
+
+    try {
+      const response = await fetch(`/api/admin/catalogue/${encodeURIComponent(product.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          weightKg: normalizedWeight,
+          shippingMode,
+          publicationStatus: status === "Publié" ? "PUBLISHED" : status === "Masqué" ? "HIDDEN" : "DRAFT",
+          variants: normalizedVariants,
+        }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Enregistrement impossible.");
+      setSaved(true);
+      window.setTimeout(() => setSaved(false), 2200);
+    } catch (saveError) {
+      setError(saveError instanceof Error ? saveError.message : "Enregistrement impossible.");
+    } finally {
+      setSaving(false);
+    }
+  };
   const field = "w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-900/5";
 
   return <main className="mx-auto w-full max-w-[1500px] p-4 md:p-7 xl:p-9">
-    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between"><div><Link href="/admin/catalogue" className="inline-flex items-center gap-2 text-xs font-black text-slate-500 hover:text-slate-900"><ArrowLeft size={16} /> Retour au catalogue</Link><p className="mt-6 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Administration produit</p><h1 className="mt-2 text-3xl font-black md:text-4xl">{mode === "create" ? "Créer un produit" : product.name}</h1><p className="mt-2 text-sm text-slate-500">{mode === "create" ? "Ajoutez une nouvelle référence au catalogue OYSTE." : `${product.code} · ${product.categoryPath || "Catégorie non renseignée"}`}</p></div><div className="flex flex-wrap gap-2"><select value={status} onChange={(event) => setStatus(event.target.value as AdminCatalogueProduct["status"])} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black outline-none"><option>Publié</option><option>Brouillon</option><option>Masqué</option></select><button onClick={save} className="inline-flex items-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3 text-xs font-black text-white shadow-lg shadow-cyan-900/10">{saved ? <Check size={17} /> : <Save size={17} />}{saved ? "Modifications enregistrées" : "Enregistrer"}</button></div></div>
+    <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between"><div><Link href="/admin/catalogue" className="inline-flex items-center gap-2 text-xs font-black text-slate-500 hover:text-slate-900"><ArrowLeft size={16} /> Retour au catalogue</Link><p className="mt-6 text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Administration produit</p><h1 className="mt-2 text-3xl font-black md:text-4xl">{mode === "create" ? "Créer un produit" : product.name}</h1><p className="mt-2 text-sm text-slate-500">{mode === "create" ? "Ajoutez une nouvelle référence au catalogue OYSTE." : `${product.code} · ${product.categoryPath || "Catégorie non renseignée"}`}</p></div><div className="flex flex-wrap gap-2"><select value={status} onChange={(event) => setStatus(event.target.value as AdminCatalogueProduct["status"])} className="rounded-xl border border-slate-200 bg-white px-4 py-3 text-xs font-black outline-none"><option>Publié</option><option>Brouillon</option><option>Masqué</option></select><button onClick={save} disabled={saving} className="inline-flex items-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3 text-xs font-black text-white shadow-lg shadow-cyan-900/10 disabled:cursor-not-allowed disabled:opacity-60">{saved ? <Check size={17} /> : <Save size={17} />}{saving ? "Enregistrement…" : saved ? "Modifications enregistrées" : "Enregistrer"}</button></div></div>
+
+    {error ? <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-bold text-red-700">{error}</div> : null}
 
     <div className="mt-7 overflow-x-auto rounded-[1.5rem] border border-slate-200 bg-white p-2 shadow-sm"><div className="flex min-w-max gap-1">{tabs.map((tab) => <button key={tab} onClick={() => setActive(tab)} className={`rounded-xl px-4 py-3 text-xs font-black transition ${active === tab ? "bg-slate-950 text-white" : "text-slate-500 hover:bg-slate-100"}`}>{tab}</button>)}</div></div>
 
     <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
       <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm md:p-7">
-        {active === "Informations" && <div><h2 className="text-xl font-black">Informations générales</h2><p className="mt-1 text-sm text-slate-500">Les données principales visibles dans les listes et sur la fiche produit.</p><div className="mt-6 grid gap-5 md:grid-cols-2"><label className="text-xs font-black text-slate-600 md:col-span-2">Nom du produit<input defaultValue={product.name} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Référence<input defaultValue={product.code} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Fabricant<input defaultValue={product.manufacturer} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600 md:col-span-2">Catégorie<div className="relative mt-2"><Search size={17} className="absolute left-4 top-3.5 text-slate-400" /><input defaultValue={product.categoryPath} className={`${field} pl-11`} /></div></label><label className="text-xs font-black text-slate-600">Prix HT<input defaultValue={product.priceHT ?? ""} type="number" className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Délai<input defaultValue={product.delay} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Stock<input defaultValue={product.stock ?? ""} type="number" className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Ordre d’affichage<input defaultValue="100" type="number" className={`${field} mt-2`} /></label></div></div>}
+        {active === "Informations" && <div><h2 className="text-xl font-black">Informations générales</h2><p className="mt-1 text-sm text-slate-500">Les données principales visibles dans les listes et sur la fiche produit.</p><div className="mt-6 grid gap-5 md:grid-cols-2"><label className="text-xs font-black text-slate-600 md:col-span-2">Nom du produit<input defaultValue={product.name} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Référence<input defaultValue={product.code} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Fabricant<input defaultValue={product.manufacturer} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600 md:col-span-2">Catégorie<div className="relative mt-2"><Search size={17} className="absolute left-4 top-3.5 text-slate-400" /><input defaultValue={product.categoryPath} className={`${field} pl-11`} /></div></label><label className="text-xs font-black text-slate-600">Prix HT<input defaultValue={product.priceHT ?? ""} type="number" className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Délai<input defaultValue={product.delay} className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Stock<input defaultValue={product.stock ?? ""} type="number" className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600">Poids unitaire (kg)<input value={weightKg} onChange={(event) => setWeightKg(event.target.value)} min="0" step="0.001" type="number" placeholder="Ex. 57" className={`${field} mt-2`} /><span className="mt-2 block text-[11px] font-bold leading-5 text-slate-400">Utilisé pour calculer automatiquement le transport selon la quantité.</span></label><label className="text-xs font-black text-slate-600">Mode de livraison<select value={shippingMode} onChange={(event) => setShippingMode(event.target.value as typeof shippingMode)} className={`${field} mt-2`}><option value="INCLUDED">Livraison incluse</option><option value="MESSAGERIE">Messagerie</option><option value="AFFRETEMENT">Affrètement</option><option value="QUOTE">Sur devis</option></select><span className="mt-2 block text-[11px] font-bold leading-5 text-slate-400">La messagerie exige un poids. L’affrètement et le devis restent confirmés selon la destination.</span></label><label className="text-xs font-black text-slate-600">Ordre d’affichage<input defaultValue="100" type="number" className={`${field} mt-2`} /></label></div>{variants.length ? <div className="mt-7 rounded-2xl border border-slate-200 bg-slate-50 p-5"><div className="flex items-center justify-between gap-4"><div><h3 className="text-sm font-black text-slate-950">Variantes produit</h3><p className="mt-1 text-xs font-bold text-slate-500">Laissez vide pour hériter du produit principal, ou définissez une règle spécifique.</p></div><span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600">{variants.length}</span></div><div className="mt-4 grid gap-3">{variants.map((variant, index) => <div key={variant.id} className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 md:grid-cols-[minmax(0,1fr)_170px_210px]"><div><p className="text-xs font-black text-slate-950">{variant.name}</p><p className="mt-1 text-xs font-bold text-slate-500">{variant.code}</p></div><label className="text-[11px] font-black text-slate-600">Poids propre (kg)<input value={variant.weightKg} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, weightKg: event.target.value } : item))} min="0" step="0.001" type="number" placeholder={weightKg || "Hérité"} className={`${field} mt-2 py-2.5`} /></label><label className="text-[11px] font-black text-slate-600">Mode propre<select value={variant.shippingMode} onChange={(event) => setVariants((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, shippingMode: event.target.value } : item))} className={`${field} mt-2 py-2.5`}><option value="">Hériter du produit</option><option value="INCLUDED">Livraison incluse</option><option value="MESSAGERIE">Messagerie</option><option value="AFFRETEMENT">Affrètement</option><option value="QUOTE">Sur devis</option></select></label></div>)}</div></div> : null}</div>}
         {active === "Parcours produit" && <div><h2 className="text-xl font-black">Parcours e-commerce</h2><p className="mt-1 text-sm text-slate-500">Définissez si la fiche vend directement le produit ou ouvre le configurateur OYSTE.</p><div className="mt-6 grid gap-4 md:grid-cols-2"><button type="button" onClick={() => setExperienceType("STANDARD")} className={`rounded-2xl border p-5 text-left transition ${experienceType === "STANDARD" ? "border-[#007f8f] bg-cyan-50 ring-2 ring-cyan-100" : "border-slate-200"}`}><p className="text-sm font-black text-slate-950">📦 Produit standard</p><p className="mt-2 text-xs font-bold leading-5 text-slate-500">La fiche affiche le prix, les variantes et le bouton Ajouter au panier.</p></button><button type="button" onClick={() => setExperienceType("CONFIGURABLE")} className={`rounded-2xl border p-5 text-left transition ${experienceType === "CONFIGURABLE" ? "border-orange-500 bg-orange-50 ring-2 ring-orange-100" : "border-slate-200"}`}><p className="text-sm font-black text-slate-950">⚙️ Produit configurable</p><p className="mt-2 text-xs font-bold leading-5 text-slate-500">La fiche devient une page SEO et son CTA ouvre le configurateur avec la bonne famille.</p></button></div><div className="mt-6 grid gap-5 md:grid-cols-2"><label className="text-xs font-black text-slate-600">Type de fiche<input value={experienceType === "CONFIGURABLE" ? "Configurable" : "Standard"} readOnly className={`${field} mt-2 bg-slate-50`} /></label><label className="text-xs font-black text-slate-600">Famille configurateur<select defaultValue={product.configuratorFamily || ""} disabled={experienceType !== "CONFIGURABLE"} className={`${field} mt-2 disabled:bg-slate-100 disabled:text-slate-400`}><option value="">Sélectionner une famille</option>{["PFI", "PFT", "PMI", "PMT", "PMA", "PMAM", "PORT"].map((family) => <option key={family}>{family}</option>)}</select></label><label className="text-xs font-black text-slate-600 md:col-span-2">Badges marketing<input defaultValue={product.marketingBadges?.join(", ") || ""} placeholder="Nouveau, Bestseller, Sur mesure…" className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600 md:col-span-2">Produits associés<input defaultValue={product.relatedProductCodes?.join(", ") || ""} placeholder="Références séparées par des virgules" className={`${field} mt-2`} /></label><label className="text-xs font-black text-slate-600 md:col-span-2">Accessoires compatibles<input defaultValue={product.accessoryProductCodes?.join(", ") || ""} placeholder="Références séparées par des virgules" className={`${field} mt-2`} /></label></div><div className="mt-6 rounded-2xl border border-orange-200 bg-orange-50 p-5"><p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">Règle d’enrichissement</p><p className="mt-2 text-sm font-bold leading-6 text-slate-700">Les données importées ERP et Oxatis restent intactes. Cette couche admin ajoute uniquement le comportement e-commerce et le contenu marketing.</p></div></div>}
         {active === "Description" && <div><h2 className="text-xl font-black">Contenus de la fiche</h2><p className="mt-1 text-sm text-slate-500">Modifiez les textes sans intervenir dans le code du site.</p><div className="mt-6 space-y-5"><label className="block text-xs font-black text-slate-600">Description courte<textarea defaultValue={product.description} rows={4} className={`${field} mt-2 resize-y`} /></label><label className="block text-xs font-black text-slate-600">Description détaillée<div className="mt-2 rounded-t-xl border border-b-0 border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500">B &nbsp; I &nbsp; U &nbsp; • Liste &nbsp; H2 &nbsp; Lien</div><textarea defaultValue={product.detailedDescription} rows={13} className={`${field} rounded-t-none resize-y`} /></label><button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black"><Plus size={16} /> Ajouter un bloc éditorial</button></div></div>}
         {active === "Médias" && <div><h2 className="text-xl font-black">Photos et galerie</h2><p className="mt-1 text-sm text-slate-500">La première image est utilisée comme visuel principal.</p><button className="mt-6 flex w-full flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 px-5 py-10 text-center transition hover:border-[#007f8f]"><UploadCloud size={28} className="text-[#007f8f]" /><span className="mt-3 text-sm font-black">Déposer des images ou parcourir</span><span className="mt-1 text-xs text-slate-400">JPG, PNG ou WEBP · 10 Mo maximum</span></button><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{product.images.length ? product.images.map((image, index) => <article key={image} className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"><div className="aspect-square p-4"><img src={image} alt="" className="h-full w-full object-contain" /></div><div className="flex items-center justify-between border-t border-slate-200 bg-white p-3"><span className="inline-flex items-center gap-2 text-[10px] font-black"><GripVertical size={14} />{index === 0 ? "Image principale" : `Image ${index + 1}`}</span><button className="text-slate-400 hover:text-red-600"><Trash2 size={15} /></button></div></article>) : <div className="col-span-full rounded-2xl border border-slate-200 p-8 text-center"><ImagePlus className="mx-auto text-slate-300" /><p className="mt-2 text-sm font-black">Aucune image</p></div>}</div></div>}
