@@ -22,7 +22,9 @@
     "db:studio": "prisma studio",
     "postinstall": "prisma generate",
     "erp:sync": "tsx scripts/sync-erp-db.ts",
-    "erp:refresh": "npm run import:erp && npm run erp:sync"
+    "erp:refresh": "npm run import:erp && npm run erp:sync",
+    "shipping:backfill": "tsx scripts/backfill-product-shipping.ts",
+    "prebuild": "prisma generate"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",

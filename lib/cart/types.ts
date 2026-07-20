@@ -11,6 +11,9 @@ export type CartItem = {
   name: string;
   code?: string;
   family?: string;
+  supplier?: string;
+  weightKg?: number;
+  shippingMode?: "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
   imageUrl?: string;
   unitPriceHT: number;
   quantity: number;
@@ -24,7 +27,7 @@ export type CartItem = {
 export type CartTotals = {
   itemCount: number;
   subtotalHT: number;
-  estimatedShippingHT: number;
+  estimatedShippingHT: number | null;
   vat: number;
   totalTTC: number;
 };

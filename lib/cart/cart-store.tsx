@@ -33,8 +33,8 @@ function readStoredCart(): CartItem[] {
 function calculateTotals(items: CartItem[]): CartTotals {
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const subtotalHT = items.reduce((sum, item) => sum + item.unitPriceHT * item.quantity, 0);
-  const estimatedShippingHT = subtotalHT > 0 ? (subtotalHT >= 1500 ? 0 : 89) : 0;
-  const vat = (subtotalHT + estimatedShippingHT) * VAT_RATE;
+  const estimatedShippingHT = 0;
+  const vat = subtotalHT * VAT_RATE;
 
   return {
     itemCount,

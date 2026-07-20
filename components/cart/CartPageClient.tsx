@@ -1,8 +1,10 @@
 "use client";
 
-import { ArrowRight, CheckCircle2, Minus, PackageCheck, Plus, RotateCcw, ShieldCheck, Trash2, Truck, Wrench } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowRight, CheckCircle2, Minus, PackageCheck, Phone, Plus, RotateCcw, ShieldCheck, Trash2, Truck, Wrench } from "lucide-react";
 import Container from "@/components/ui/Container";
 import { formatCartPrice, useCart } from "@/lib/cart/cart-store";
+import { calculateCartShipping } from "@/lib/shipping";
 
 type CartSuggestion = {
   title: string;
@@ -62,8 +64,28 @@ function getCartSuggestions(items: ReturnType<typeof useCart>["items"]): CartSug
 
 export default function CartPageClient() {
   const { items, totals, updateQuantity, removeItem, clearCart } = useCart();
+  const [postcode, setPostcode] = useState("");
   const hasItems = items.length > 0;
   const suggestedProducts = getCartSuggestions(items);
+  const shipping = useMemo(
+    () => calculateCartShipping(items.map((item) => ({
+      kind: item.kind,
+      code: item.code,
+      supplier: item.supplier,
+      family: item.family,
+      weightKg: item.weightKg,
+      shippingMode: item.shippingMode,
+      quantity: item.quantity,
+    })), postcode),
+    [items, postcode],
+  );
+  const shippingHT = shipping.amountHT;
+  const confirmedShippingHT = shipping.confirmedAmountHT;
+  const vat = (totals.subtotalHT + confirmedShippingHT) * 0.2;
+  const totalTTC = totals.subtotalHT + confirmedShippingHT + vat;
+  const requiresPostcode = shipping.lines.some((line) => line.reason === "Code postal requis");
+  const missingWeight = shipping.lines.some((line) => line.reason.toLowerCase().includes("poids"));
+  const hasMixedShipping = Object.values(shipping.modeCounts).filter((count) => count > 0).length > 1;
 
   return (
     <main className="bg-slate-50 text-slate-950">
@@ -89,7 +111,7 @@ export default function CartPageClient() {
               </div>
               <div>
                 <p className="text-slate-400">Livraison</p>
-                <p className="mt-1 text-2xl text-white">{totals.estimatedShippingHT === 0 && totals.subtotalHT > 0 ? "Offerte" : formatCartPrice(totals.estimatedShippingHT)}</p>
+                <p className="mt-1 text-2xl text-white">{shippingHT === null ? (confirmedShippingHT > 0 ? `${formatCartPrice(confirmedShippingHT)} + devis` : "Sur devis") : shippingHT === 0 && totals.subtotalHT > 0 ? "Incluse" : formatCartPrice(shippingHT)}</p>
               </div>
             </div>
           </div>
@@ -118,7 +140,7 @@ export default function CartPageClient() {
         ) : (
           <div className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_420px]">
             <section className="grid gap-5">
-              {items.map((item) => (
+              {items.map((item, itemIndex) => (
                 <article key={item.id} className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm">
                   <div className="grid gap-5 p-5 md:grid-cols-[150px_minmax(0,1fr)_180px] md:p-6">
                     <div className="flex aspect-square items-center justify-center overflow-hidden rounded-[1.5rem] bg-slate-100">
@@ -144,6 +166,16 @@ export default function CartPageClient() {
                       <h2 className="mt-3 text-2xl font-black leading-tight text-slate-950">{item.name}</h2>
                       {item.code ? <p className="mt-1 text-sm font-bold text-slate-500">Référence : {item.code}</p> : null}
                       {item.delay ? <p className="mt-3 text-sm font-black text-[#007f8f]">{item.delay}</p> : null}
+                      {shipping.lines[itemIndex] ? (
+                        <div className={`mt-4 rounded-2xl border p-4 ${shipping.lines[itemIndex].mode === "included" ? "border-emerald-200 bg-emerald-50" : shipping.lines[itemIndex].mode === "messagerie" ? "border-sky-200 bg-sky-50" : shipping.lines[itemIndex].mode === "affretement" ? "border-orange-200 bg-orange-50" : "border-slate-200 bg-slate-50"}`}>
+                          <p className="flex items-center gap-2 text-sm font-black text-slate-950">
+                            {shipping.lines[itemIndex].mode === "quote" ? <Phone size={17} /> : <Truck size={17} />}
+                            {shipping.lines[itemIndex].label}
+                            {shipping.lines[itemIndex].amountHT !== null && shipping.lines[itemIndex].amountHT > 0 ? ` · ${formatCartPrice(shipping.lines[itemIndex].amountHT)} HT` : ""}
+                          </p>
+                          <p className="mt-1 text-xs font-bold leading-5 text-slate-600">{shipping.lines[itemIndex].description}</p>{shipping.lines[itemIndex].weightKg ? <p className="mt-2 text-[11px] font-black text-slate-500">Poids expédié : {shipping.lines[itemIndex].weightKg} kg</p> : null}{shipping.lines[itemIndex].amountHT === null ? <p className="mt-2 text-[11px] font-black text-orange-700">{shipping.lines[itemIndex].reason}</p> : null}
+                        </div>
+                      ) : null}
 
                       {item.technicalLines?.length ? (
                         <div className="mt-4 flex flex-wrap gap-2">
@@ -208,15 +240,27 @@ export default function CartPageClient() {
 
             <aside className="h-fit rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm lg:sticky lg:top-28">
               <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">Récapitulatif</p>
+              <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+                <label htmlFor="shipping-postcode" className="text-xs font-black uppercase tracking-[0.16em] text-slate-600">Code postal de livraison</label>
+                <input id="shipping-postcode" value={postcode} onChange={(event) => setPostcode(event.target.value.replace(/\D/g, "").slice(0, 5))} inputMode="numeric" placeholder="Ex. 69400" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-lg font-black outline-none transition focus:border-[#007f8f]" />
+                <p className="mt-2 text-xs font-bold text-slate-500">Le code postal permet de déterminer les solutions de livraison disponibles et leur tarif lorsque celui-ci peut être calculé immédiatement.</p>
+                {postcode.length > 0 && !shipping.postcodeValid ? <p className="mt-2 text-xs font-black text-red-600">Saisissez un code postal français à 5 chiffres.</p> : null}
+              </div>
+
+              {hasMixedShipping ? <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50 p-4"><p className="text-xs font-black uppercase tracking-[0.16em] text-cyan-800">Plusieurs solutions de livraison</p><p className="mt-2 text-xs font-bold leading-5 text-slate-600">Votre panier contient des équipements nécessitant des prises en charge différentes. Le détail et le montant définitif seront repris dans votre confirmation de commande.</p></div> : null}
+
+              {requiresPostcode && postcode.length === 0 ? <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 p-4 text-xs font-bold leading-5 text-orange-800">Renseignez le code postal pour obtenir les tarifs calculables.</div> : null}
+              {missingWeight ? <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 p-4 text-xs font-bold leading-5 text-red-700">Au moins un produit nécessite encore un poids ou une validation transport. Son tarif restera sur devis.</div> : null}
+
               <div className="mt-5 space-y-3 text-sm font-bold text-slate-600">
                 <div className="flex justify-between gap-4"><span>Sous-total HT</span><span className="font-black text-slate-950">{formatCartPrice(totals.subtotalHT)}</span></div>
-                <div className="flex justify-between gap-4"><span>Transport estimatif HT</span><span className="font-black text-slate-950">{totals.estimatedShippingHT === 0 ? "Offert" : formatCartPrice(totals.estimatedShippingHT)}</span></div>
-                <div className="flex justify-between gap-4"><span>TVA estimée</span><span className="font-black text-slate-950">{formatCartPrice(totals.vat)}</span></div>
+                <div className="flex justify-between gap-4"><span>Transport HT</span><span className="text-right font-black text-slate-950">{shippingHT === null ? (confirmedShippingHT > 0 ? `${formatCartPrice(confirmedShippingHT)} + devis` : "Sur devis") : shippingHT === 0 ? "Inclus" : formatCartPrice(shippingHT)}</span></div>
+                <div className="flex justify-between gap-4"><span>TVA estimée</span><span className="font-black text-slate-950">{formatCartPrice(vat)}</span></div>
               </div>
               <div className="mt-5 border-t border-slate-200 pt-5">
                 <div className="flex items-end justify-between gap-4">
                   <span className="text-sm font-black uppercase text-slate-500">Total TTC</span>
-                  <span className="text-3xl font-black text-slate-950">{formatCartPrice(totals.totalTTC)}</span>
+                  <span className="text-right text-3xl font-black text-slate-950">{shippingHT === null ? <><span className="block">{formatCartPrice(totalTTC)}</span><span className="mt-1 block text-xs text-orange-600">+ transport sur devis</span></> : formatCartPrice(totalTTC)}</span>
                 </div>
               </div>
 
@@ -224,12 +268,12 @@ export default function CartPageClient() {
                 Commander <ArrowRight size={18} />
               </a>
               <p className="mt-3 text-xs font-bold leading-5 text-slate-500">
-                Le paiement en ligne pourra être branché ensuite. Les frais de transport définitifs pourront être recalculés au checkout.
+                Les frais disponibles sont affichés ci-dessus. Lorsqu’une étude complémentaire est nécessaire, le montant définitif du transport est précisé dans votre confirmation de commande ou votre devis.
               </p>
 
               <div className="mt-6 grid gap-3 text-sm font-bold text-slate-700">
-                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4"><ShieldCheck className="mt-0.5 text-[#007f8f]" size={19} /> Paiement sécurisé à brancher</div>
-                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4"><Truck className="mt-0.5 text-[#007f8f]" size={19} /> Transport industriel estimé</div>
+                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4"><ShieldCheck className="mt-0.5 text-[#007f8f]" size={19} /> Validation sécurisée de la commande</div>
+                <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4"><Truck className="mt-0.5 text-[#007f8f]" size={19} /> Solution de transport adaptée</div>
                 <div className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4"><Wrench className="mt-0.5 text-[#007f8f]" size={19} /> Produits configurés modifiables</div>
               </div>
             </aside>
@@ -239,7 +283,7 @@ export default function CartPageClient() {
         <section className="mt-10 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.25em] text-[#007f8f]">Cross selling intelligent</p>
+              <p className="text-sm font-black uppercase tracking-[0.25em] text-[#007f8f]">Sélection complémentaire</p>
               <h2 className="mt-2 text-3xl font-black text-slate-950">Complétez votre commande</h2>
             </div>
             <a href="/catalogue" className="text-sm font-black text-orange-600">Voir tout le catalogue →</a>

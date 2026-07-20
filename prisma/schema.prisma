@@ -67,9 +67,22 @@ enum PaymentStatus {
   FAILED
 }
 
+enum PaymentMethod {
+  BANK_TRANSFER
+  CARD
+  INVOICE
+}
+
 enum AddressType {
   BILLING
   SHIPPING
+}
+
+enum ShippingMode {
+  INCLUDED
+  MESSAGERIE
+  AFFRETEMENT
+  QUOTE
 }
 
 
@@ -136,6 +149,8 @@ model Product {
   minPriceHt            Decimal?          @db.Decimal(12, 2)
   maxPriceHt            Decimal?          @db.Decimal(12, 2)
   stock                  Int               @default(0)
+  weightKg               Decimal?          @db.Decimal(12, 3)
+  shippingMode           ShippingMode      @default(QUOTE)
   leadTime               String?
   imageReference         String?
   publicationStatus     PublicationStatus @default(DRAFT)
@@ -172,6 +187,7 @@ model Product {
   @@index([publicationStatus])
   @@index([featured])
   @@index([experienceType])
+  @@index([shippingMode])
   @@index([configuratorFamily])
 }
 
@@ -183,6 +199,8 @@ model ProductVariant {
   label           String?
   priceHt         Decimal  @db.Decimal(12, 2)
   stock           Int      @default(0)
+  weightKg        Decimal? @db.Decimal(12, 3)
+  shippingMode    ShippingMode?
   leadTime        String?
   imageReference  String?
   options         Json?
@@ -276,9 +294,14 @@ model Customer {
   email       String            @unique
   firstName   String?
   lastName    String?
-  company     String?
-  phone       String?
-  vatNumber   String?
+  company      String?
+  siret        String?           @unique
+  jobTitle     String?
+  phone        String?
+  vatNumber    String?
+  passwordHash String?
+  lastLoginAt DateTime?
+  previousLoginAt DateTime?
   addresses   CustomerAddress[]
   orders      Order[]
   createdAt   DateTime          @default(now())
@@ -311,6 +334,9 @@ model Order {
   reference          String        @unique
   status             OrderStatus   @default(PENDING_PAYMENT)
   paymentStatus      PaymentStatus @default(PENDING)
+  paymentMethod      PaymentMethod @default(BANK_TRANSFER)
+  paymentReference   String?       @unique
+  paymentInstructionsSentAt DateTime?
   currency           String        @default("EUR")
   subtotalHt         Decimal       @db.Decimal(12, 2)
   taxAmount          Decimal       @db.Decimal(12, 2)

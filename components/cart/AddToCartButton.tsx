@@ -9,6 +9,9 @@ export default function AddToCartButton({
   name,
   code,
   family,
+  supplier,
+  weightKg,
+  shippingMode,
   imageUrl,
   priceHT,
   delay,
@@ -20,6 +23,9 @@ export default function AddToCartButton({
   name: string;
   code?: string;
   family?: string;
+  supplier?: string;
+  weightKg?: number;
+  shippingMode?: "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
   imageUrl?: string;
   priceHT: number;
   delay?: string;
@@ -37,6 +43,9 @@ export default function AddToCartButton({
       name,
       code,
       family,
+      supplier,
+      weightKg,
+      shippingMode,
       imageUrl,
       unitPriceHT: priceHT,
       delay,

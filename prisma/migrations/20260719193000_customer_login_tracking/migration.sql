@@ -1,0 +1,3 @@
+ALTER TABLE "Customer"
+ADD COLUMN "lastLoginAt" TIMESTAMP(3),
+ADD COLUMN "previousLoginAt" TIMESTAMP(3);

@@ -1,0 +1,16 @@
+import Link from "next/link";
+import { ArrowRight, CalendarDays, Package, Truck } from "lucide-react";
+import { getCurrentCustomer } from "@/lib/auth/session";
+import { formatDate, formatMoney, getCustomerOrders, type CustomerOrderStatus } from "@/lib/account/orders";
+import OrderStatusBadge from "@/components/account/OrderStatusBadge";
+
+export const metadata = { title: "Mes commandes | OYSTE" };
+
+export default async function CustomerOrdersPage() {
+  const customer = (await getCurrentCustomer())!;
+  const orders = await getCustomerOrders(customer.id);
+  return <section className="overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-sm">
+    <div className="border-b border-slate-100 px-6 py-6 md:px-8"><p className="text-xs font-black uppercase tracking-[.2em] text-[#007f8f]">Historique</p><h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Mes commandes</h2><p className="mt-2 text-sm text-slate-500">Consultez leur état d’avancement, leur montant et leurs informations de livraison.</p></div>
+    {orders.length === 0 ? <div className="px-6 py-20 text-center"><span className="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-slate-100 text-slate-400"><Package size={28}/></span><h3 className="mt-5 text-lg font-black">Vous n’avez encore aucune commande</h3><p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">Lorsque votre première commande sera confirmée, elle sera automatiquement disponible dans cet espace.</p><Link href="/catalogue" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3 text-xs font-black text-white">Voir le catalogue<ArrowRight size={15}/></Link></div> : <div className="divide-y divide-slate-100">{orders.map((order) => <article key={order.id} className="p-6 transition hover:bg-slate-50 md:px-8"><div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between"><div><div className="flex flex-wrap items-center gap-3"><h3 className="text-lg font-black text-slate-950">{order.reference}</h3><OrderStatusBadge status={order.status as CustomerOrderStatus}/></div><div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-500"><span className="flex items-center gap-1.5"><CalendarDays size={14}/>{formatDate(order.createdAt)}</span><span className="flex items-center gap-1.5"><Package size={14}/>{order._count.items} article{order._count.items > 1 ? "s" : ""}</span><span className="flex items-center gap-1.5"><Truck size={14}/>{order.deliveryMode || "Mode à confirmer"}</span></div></div><div className="flex items-center justify-between gap-6 lg:justify-end"><div className="text-right"><p className="text-[10px] font-black uppercase text-slate-400">Total TTC</p><p className="mt-1 text-xl font-black text-slate-950">{formatMoney(order.totalTtc, order.currency)}</p></div><Link href={`/compte/commandes/${order.id}`} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 text-[#007f8f] transition hover:border-[#007f8f] hover:bg-cyan-50" aria-label={`Voir la commande ${order.reference}`}><ArrowRight size={18}/></Link></div></div></article>)}</div>}
+  </section>;
+}

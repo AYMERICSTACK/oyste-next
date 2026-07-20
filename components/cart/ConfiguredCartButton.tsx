@@ -26,7 +26,7 @@ export default function ConfiguredCartButton({
       kind: "configured",
       name,
       code,
-      family: "Potence configurée",
+      family: code?.match(/^(PFI|PFT|PMI|PMT|PMA|PMAM)/i)?.[1]?.toUpperCase() || "Potence configurée",
       unitPriceHT: priceHT,
       quantity: 1,
       delay: "Fabrication selon configuration",
