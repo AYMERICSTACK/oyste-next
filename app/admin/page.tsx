@@ -1,21 +1,133 @@
 import Link from "next/link";
-import { ArrowRight, CircleDollarSign, Clock3, Factory, PackageCheck, ShoppingCart, Truck } from "lucide-react";
-import OrdersTable from "@/components/admin/OrdersTable";
-import { formatAdminPrice, orders } from "@/lib/admin/orders-data";
+import {
+  ArrowRight,
+  BadgeEuro,
+  Boxes,
+  CircleDollarSign,
+  CreditCard,
+  Factory,
+  ShoppingCart,
+  TrendingDown,
+  TrendingUp,
+  Truck,
+  Users,
+} from "lucide-react";
+import DashboardCharts from "@/components/admin/DashboardCharts";
+import DashboardOperations from "@/components/admin/DashboardOperations";
+import DashboardRankings from "@/components/admin/DashboardRankings";
+import { getDashboardData, type DashboardMetric } from "@/lib/admin/dashboard-data";
+import { formatAdminPrice } from "@/lib/admin/orders-data";
 
-export default function AdminDashboardPage() {
-  const monthRevenue = orders.filter((order) => order.paymentStatus === "paid").reduce((sum, order) => sum + order.totalHt, 0);
-  const inProduction = orders.filter((order) => ["engineering", "production", "quality-control"].includes(order.status)).length;
-  const toShip = orders.filter((order) => order.status === "ready-to-ship").length;
-  return <main className="mx-auto w-full max-w-[1600px] p-4 md:p-7 xl:p-9">
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"><div><p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">Vendredi 17 juillet 2026</p><h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 md:text-4xl">Pilotage OYSTE</h1><p className="mt-2 text-sm text-slate-500">Commandes, production et expéditions réunies dans un seul espace.</p></div><Link href="/admin/commandes" className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-xs font-black uppercase tracking-wide text-white transition hover:bg-[#006d79]">Voir les commandes <ArrowRight size={16} /></Link></div>
-    <section className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">{[
-      { label: "Nouvelles commandes", value: "6", hint: "2 depuis ce matin", icon: ShoppingCart, tone: "text-orange-600 bg-orange-50" },
-      { label: "À encaisser", value: "2", hint: "8 460 € TTC", icon: Clock3, tone: "text-amber-700 bg-amber-50" },
-      { label: "En production", value: String(inProduction), hint: "Étude + atelier", icon: Factory, tone: "text-violet-700 bg-violet-50" },
-      { label: "À expédier", value: String(toShip), hint: "Aujourd’hui", icon: Truck, tone: "text-sky-700 bg-sky-50" },
-      { label: "CA du mois", value: formatAdminPrice(monthRevenue), hint: "+14,2 % vs juin", icon: CircleDollarSign, tone: "text-emerald-700 bg-emerald-50" },
-    ].map((card) => { const Icon = card.icon; return <article key={card.label} className="rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-start justify-between"><div><p className="text-[9px] font-black uppercase tracking-[0.15em] text-slate-400">{card.label}</p><p className="mt-3 text-2xl font-black tracking-tight text-slate-950">{card.value}</p></div><div className={`flex h-10 w-10 items-center justify-center rounded-2xl ${card.tone}`}><Icon size={19} /></div></div><p className="mt-4 text-xs font-bold text-slate-500">{card.hint}</p></article>; })}</section>
-    <section className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_360px]"><div><div className="mb-3 flex items-center justify-between"><div><h2 className="text-lg font-black">Dernières commandes</h2><p className="mt-1 text-xs text-slate-500">Les dossiers les plus récents à suivre.</p></div><Link href="/admin/commandes" className="text-xs font-black text-[#006d79]">Tout afficher</Link></div><OrdersTable records={orders.slice(0, 5)} compact /></div><div className="space-y-6"><article className="rounded-[1.4rem] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><PackageCheck size={20} /></div><div><h2 className="text-lg font-black">Flux opérationnel</h2><p className="text-xs text-slate-500">État des commandes actives</p></div></div><div className="mt-6 space-y-4">{[{ label: "Étude", value: 1, width: "24%" }, { label: "Fabrication", value: 1, width: "48%" }, { label: "Contrôle qualité", value: 1, width: "70%" }, { label: "Prêtes à expédier", value: 1, width: "94%" }].map((item) => <div key={item.label}><div className="mb-2 flex justify-between text-xs"><span className="font-black text-slate-700">{item.label}</span><span className="font-black">{item.value}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#007f8f]" style={{ width: item.width }} /></div></div>)}</div></article><article className="rounded-[1.4rem] bg-[#07131f] p-5 text-white shadow-xl"><p className="text-[9px] font-black uppercase tracking-[0.22em] text-cyan-300">Point d’attention</p><h2 className="mt-2 text-xl font-black">1 expédition aujourd’hui</h2><p className="mt-2 text-xs leading-5 text-white/55">La commande CMD-2026-0713 est emballée et attend le transporteur à 14 h.</p><Link href="/admin/expeditions" className="mt-5 inline-flex items-center gap-2 text-xs font-black text-orange-400">Ouvrir la logistique <ArrowRight size={14} /></Link></article></div></section>
-  </main>;
+const numberFormatter = new Intl.NumberFormat("fr-FR");
+const dateFormatter = new Intl.DateTimeFormat("fr-FR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+type MetricCardProps = {
+  label: string;
+  metric: DashboardMetric;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  format?: "number" | "currency";
+  caption: string;
+  href: string;
+  accent: string;
+};
+
+function MetricCard({ label, metric, icon: Icon, format = "number", caption, href, accent }: MetricCardProps) {
+  const isPositive = metric.change >= 0;
+  const TrendIcon = isPositive ? TrendingUp : TrendingDown;
+  const value = format === "currency" ? formatAdminPrice(metric.value) : numberFormatter.format(metric.value);
+
+  return (
+    <Link
+      href={href}
+      className="group relative overflow-hidden rounded-[1.5rem] border border-slate-200/80 bg-white p-5 shadow-[0_16px_45px_-34px_rgba(15,23,42,0.5)] transition duration-300 hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_22px_55px_-32px_rgba(15,23,42,0.45)]"
+    >
+      <div className={`absolute inset-x-0 top-0 h-1 ${accent}`} />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+          <p className="mt-3 text-[1.7rem] font-black tracking-[-0.04em] text-slate-950">{value}</p>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-slate-950/10 transition group-hover:scale-105">
+          <Icon size={19} />
+        </div>
+      </div>
+      <div className="mt-5 flex items-end justify-between gap-3 border-t border-slate-100 pt-4">
+        <div>
+          <div className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-black ${isPositive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+            <TrendIcon size={12} />
+            {Math.abs(metric.change).toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %
+          </div>
+          <p className="mt-2 text-[11px] font-semibold text-slate-400">{caption}</p>
+        </div>
+        <ArrowRight size={15} className="mb-1 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#007f8f]" />
+      </div>
+    </Link>
+  );
+}
+
+export default async function AdminDashboardPage() {
+  const dashboard = await getDashboardData();
+  const today = dateFormatter.format(new Date());
+
+  const metrics: MetricCardProps[] = [
+    { label: "Chiffre d’affaires", metric: dashboard.revenue, icon: CircleDollarSign, format: "currency", caption: "vs mois précédent", href: "/admin/commandes", accent: "bg-emerald-500" },
+    { label: "Commandes", metric: dashboard.orders, icon: ShoppingCart, caption: "créées ce mois", href: "/admin/commandes", accent: "bg-orange-500" },
+    { label: "Clients", metric: dashboard.customers, icon: Users, caption: "nouveaux ce mois", href: "/admin/clients", accent: "bg-cyan-500" },
+    { label: "Produits", metric: dashboard.products, icon: Boxes, caption: "ajoutés ce mois", href: "/admin/catalogue", accent: "bg-slate-700" },
+    { label: "Production", metric: dashboard.production, icon: Factory, caption: "dossiers actifs", href: "/admin/production", accent: "bg-violet-500" },
+    { label: "Expéditions", metric: dashboard.shipments, icon: Truck, caption: "traitées ce mois", href: "/admin/expeditions", accent: "bg-sky-500" },
+    { label: "Paiements", metric: dashboard.payments, icon: CreditCard, caption: "encaissés ce mois", href: "/admin/commandes", accent: "bg-teal-500" },
+    { label: "Panier moyen", metric: dashboard.averageOrder, icon: BadgeEuro, format: "currency", caption: "vs mois précédent", href: "/admin/commandes", accent: "bg-amber-500" },
+  ];
+
+  return (
+    <main className="mx-auto w-full max-w-[1600px] p-4 md:p-7 xl:p-9">
+      <section className="relative overflow-hidden rounded-[2rem] bg-[#07131f] px-5 py-7 text-white shadow-[0_30px_80px_-45px_rgba(2,12,27,0.9)] sm:px-7 lg:px-9 lg:py-9">
+        <div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-cyan-400/10 blur-3xl" />
+        <div className="absolute -bottom-24 left-1/3 h-56 w-56 rounded-full bg-orange-500/10 blur-3xl" />
+        <div className="relative flex flex-col gap-7 xl:flex-row xl:items-end xl:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-cyan-300">Cockpit opérationnel</span>
+              <span className="text-[11px] font-bold capitalize text-white/45">{today}</span>
+            </div>
+            <h1 className="mt-5 max-w-3xl text-3xl font-black tracking-[-0.04em] sm:text-4xl lg:text-5xl">Pilotez toute l’activité OYSTE depuis un seul écran.</h1>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-white/55">Commerce, paiements, production et logistique sont réunis dans une vue claire, alimentée directement par la base de données.</p>
+          </div>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-5 py-4 backdrop-blur">
+              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/40">À encaisser</p>
+              <p className="mt-2 text-xl font-black text-orange-300">{formatAdminPrice(dashboard.pendingPaymentsAmount)}</p>
+            </div>
+            <Link href="/admin/commandes" className="inline-flex items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-xs font-black uppercase tracking-wide text-slate-950 transition hover:bg-cyan-100">Voir les commandes <ArrowRight size={15} /></Link>
+          </div>
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((metric) => <MetricCard key={metric.label} {...metric} />)}
+      </section>
+
+      <DashboardCharts points={dashboard.chartPoints} />
+
+      <DashboardOperations
+        recentOrders={dashboard.recentOrders}
+        recentCustomers={dashboard.recentCustomers}
+        pendingOrders={dashboard.pendingOrders}
+        productionQueue={dashboard.productionQueue}
+        todayShipments={dashboard.todayShipments}
+      />
+
+      <DashboardRankings
+        products={dashboard.topProducts}
+        customers={dashboard.topCustomers}
+        categories={dashboard.topCategories}
+      />
+    </main>
+  );
 }
