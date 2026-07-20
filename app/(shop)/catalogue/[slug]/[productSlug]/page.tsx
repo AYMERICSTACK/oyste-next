@@ -219,6 +219,9 @@ export default async function CatalogProductPage({
           productName={product.name}
           productCode={product.code}
           parentCode={product.parentCode || product.code}
+          supplier={product.manufacturer}
+          productWeightKg={product.weightKg}
+          productShippingMode={product.shippingMode}
           variants={variants}
           optionSchema={product.optionSchema || []}
           isConfiguratorProduct={isConfigurable}

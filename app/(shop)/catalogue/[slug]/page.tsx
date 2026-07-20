@@ -28,6 +28,31 @@ import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-reposito
 import { notFound } from "next/navigation";
 import { getProductImageUrl } from "@/lib/product-images";
 
+
+function extractCapacity(product: { features?: Array<{ label: string; value: string }>; name: string; description: string }) {
+  const feature = product.features?.find((item) => /cmu|capacit|charge/i.test(item.label));
+  const source = feature?.value || `${product.name} ${product.description}`;
+  const tonne = source.match(/(\d+(?:[.,]\d+)?)\s*t(?:onne)?s?\b/i);
+  if (tonne) {
+    const value = Number(tonne[1].replace(",", ".")) * 1000;
+    return { label: `${value.toLocaleString("fr-FR")} kg`, value };
+  }
+  const kg = source.match(/(\d[\d\s]*(?:[.,]\d+)?)\s*kg\b/i);
+  if (kg) {
+    const value = Number(kg[1].replace(/\s/g, "").replace(",", "."));
+    return Number.isFinite(value) ? { label: `${value.toLocaleString("fr-FR")} kg`, value } : { label: "Non renseignée", value: null };
+  }
+  return { label: "Non renseignée", value: null };
+}
+
+function getProductTypeLabel(product: { name: string; description: string; features?: Array<{ label: string; value: string }> }, configurable: boolean) {
+  if (configurable) return "Configurable";
+  const source = `${product.name} ${product.description} ${(product.features || []).map((item) => `${item.label} ${item.value}`).join(" ")}`;
+  if (/électrique|electrique|motorisé|motorise/i.test(source)) return "Électrique";
+  if (/manuel|manuelle/i.test(source)) return "Manuel";
+  return "Standard";
+}
+
 export function generateStaticParams() {
   return catalogueUniverses
     .filter((item) => item.slug !== "levage")
@@ -70,6 +95,8 @@ export default async function CatalogueUniversePage({
   const facets = getCategoryFacets(products);
   const premiumProducts: PremiumCatalogItem[] = products.map((product) => {
     const isConfigurable = getProductExperienceType(product) === "CONFIGURABLE" || isPotenceProduct(product);
+    const capacity = extractCapacity(product);
+    const marketingBadges = getProductMarketingBadges(product);
     return {
       id: product.id,
       code: product.code,
@@ -80,12 +107,17 @@ export default async function CatalogueUniversePage({
       imageUrl: getProductImageUrl(product.imageRef || product.code, product.code),
       priceLabel: isConfigurable ? "Configuration sur mesure" : formatPriceRange(product),
       minPriceHT: product.minPriceHT ?? product.priceHT ?? null,
-      badge: getProductMarketingBadges(product)[0] || "Catalogue OYSTE",
+      badge: marketingBadges[0] || "Catalogue OYSTE",
+      badges: marketingBadges,
       documentCount: getProductAvailableDocumentCount(product),
       variantCount: product.variantCount || product.variants?.length || 1,
       experienceType: isConfigurable ? "CONFIGURABLE" : "STANDARD",
       stock: product.stock,
       delay: product.delay,
+      manufacturer: product.manufacturer || "Non renseigné",
+      capacityLabel: capacity.label,
+      capacityKg: capacity.value,
+      productType: getProductTypeLabel(product, isConfigurable),
     };
   });
   const isFamilyView = Boolean(selectedFamilySlug);

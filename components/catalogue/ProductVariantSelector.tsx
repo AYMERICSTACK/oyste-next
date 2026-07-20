@@ -43,6 +43,9 @@ export default function ProductVariantSelector({
   productName,
   productCode,
   parentCode,
+  supplier,
+  productWeightKg,
+  productShippingMode,
   variants,
   optionSchema,
   isConfiguratorProduct = false,
@@ -55,6 +58,9 @@ export default function ProductVariantSelector({
   productName: string;
   productCode: string;
   parentCode: string;
+  supplier?: string;
+  productWeightKg?: number | null;
+  productShippingMode?: "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
   variants: CatalogueVariant[];
   optionSchema: CatalogueOption[];
   isConfiguratorProduct?: boolean;
@@ -284,6 +290,9 @@ export default function ProductVariantSelector({
                 name={selectedVariant?.label || selectedVariant?.name || productName}
                 code={selectedVariant?.code || productCode}
                 family={familyLabel}
+                supplier={supplier}
+                weightKg={selectedVariant?.weightKg ?? productWeightKg ?? undefined}
+                shippingMode={selectedVariant?.shippingMode ?? productShippingMode}
                 imageUrl={imageUrl}
                 priceHT={selectedVariant?.priceHT || 0}
                 delay={selectedVariant?.delay}
@@ -315,6 +324,9 @@ export default function ProductVariantSelector({
               name={selectedVariant?.label || selectedVariant?.name || productName}
               code={selectedVariant?.code || productCode}
               family={familyLabel}
+              supplier={supplier}
+              weightKg={selectedVariant?.weightKg ?? productWeightKg ?? undefined}
+              shippingMode={selectedVariant?.shippingMode ?? productShippingMode}
               imageUrl={imageUrl}
               priceHT={selectedVariant?.priceHT || 0}
               delay={selectedVariant?.delay}

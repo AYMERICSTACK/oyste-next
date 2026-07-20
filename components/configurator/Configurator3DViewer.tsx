@@ -487,24 +487,6 @@ export default function Configurator3DViewer({
         <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsMeshDebuggerOpen((value) => !value)}
-            className="rounded-full border border-white/15 bg-slate-950/75 p-2 text-white/70 backdrop-blur transition hover:border-cyan-400/60 hover:text-cyan-200"
-            aria-label="Ouvrir l’explorateur des composants 3D"
-            title="Explorer les composants du modèle"
-          >
-            <Layers3 size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsCalibratorOpen((value) => !value)}
-            className="rounded-full border border-white/15 bg-slate-950/75 p-2 text-white/70 backdrop-blur transition hover:border-orange-400/60 hover:text-orange-300"
-            aria-label="Ouvrir le calibrateur de caméra"
-            title="Calibrer le cadrage"
-          >
-            <Crosshair size={14} />
-          </button>
-          <button
-            type="button"
             onClick={() => cameraRigRef.current?.reset()}
             className="rounded-full border border-white/15 bg-slate-950/75 p-2 text-white/70 backdrop-blur transition hover:border-white/30 hover:text-white"
             aria-label="Recentrer la vue 3D"

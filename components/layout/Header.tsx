@@ -1,21 +1,15 @@
-import { ChevronDown, User } from "lucide-react";
+import { User } from "lucide-react";
+import { getCurrentCustomer } from "@/lib/auth/session";
 import Container from "@/components/ui/Container";
 import TopBar from "./TopBar";
 import CartLink from "@/components/cart/CartLink";
 import SearchBar from "@/components/catalogue/SearchBar";
+import { getCmsContent } from "@/lib/cms";
 
-const navItems = [
-  { label: "Levage", href: "/catalogue/levage", dropdown: true },
-  { label: "Manutention", href: "/catalogue/manutention-au-sol", dropdown: true },
-  { label: "Motorisation SEW", href: "/catalogue/motorisation-sew", dropdown: true },
-  { label: "Stockage", href: "/catalogue/stockage-emballage", dropdown: true },
-  { label: "Accès hauteur", href: "/catalogue/acces-hauteur", dropdown: true },
-  { label: "Services", href: "/services", dropdown: true },
-  { label: "Réalisations", href: "/realisations", dropdown: false },
-  { label: "Contact", href: "/contact", dropdown: false },
-];
 
-export default function Header() {
+
+export default async function Header() {
+  const [customer, cms] = await Promise.all([getCurrentCustomer(), getCmsContent()]);
   return (
     <>
       <TopBar />
@@ -31,20 +25,14 @@ export default function Header() {
           </a>
 
           <nav className="hidden flex-1 items-center justify-center gap-7 text-[13px] font-black uppercase tracking-tight text-slate-950 xl:flex">
-            {navItems.map((item) => (
+            {cms.navigation.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
                 className="group flex items-center gap-1.5 whitespace-nowrap transition hover:text-[#007f8f]"
               >
                 {item.label}
-                {item.dropdown && (
-                  <ChevronDown
-                    size={14}
-                    strokeWidth={3}
-                    className="transition group-hover:translate-y-0.5"
-                  />
-                )}
+                
               </a>
             ))}
           </nav>
@@ -52,9 +40,9 @@ export default function Header() {
           <div className="ml-auto flex shrink-0 items-center gap-3">
             <SearchBar compact />
 
-            <button className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition hover:border-[#007f8f] hover:text-[#007f8f] md:flex">
+            <a href={customer ? "/compte" : "/connexion"} aria-label={customer ? "Mon espace professionnel" : "Se connecter"} className="hidden h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 transition hover:border-[#007f8f] hover:text-[#007f8f] md:flex">
               <User size={19} />
-            </button>
+            </a>
 
             <CartLink />
 

@@ -3,7 +3,7 @@ import OysteManualTrolleyManualHoist3DLab from "@/components/3d/OysteManualTroll
 
 export const metadata = {
   title: "3D Lab · Chariot manuel + palan manuel | OYSTE",
-  description: "Laboratoire 3D dédié à la variante chariot manuel et palan manuel.",
+  description: "Visualisation 3D de la configuration avec chariot manuel et palan manuel.",
 };
 
 export default function ManualTrolleyManualHoistLabPage() {

@@ -9,6 +9,7 @@ import Button from "@/components/ui/Button";
 import Container from "@/components/ui/Container";
 import SectionHeader from "@/components/ui/SectionHeader";
 import { mainFamilies, serviceHighlights } from "@/data/catalogue";
+import { getCmsContent } from "@/lib/cms";
 
 const advantages = [
   {
@@ -30,7 +31,8 @@ const advantages = [
 
 const univers = mainFamilies.slice(0, 5);
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { home } = await getCmsContent();
   return (
     <main className="bg-white text-slate-950">
       <section className="relative overflow-hidden bg-gradient-to-br from-white via-slate-50 to-slate-100">
@@ -39,15 +41,12 @@ export default function HomePage() {
         <Container className="relative grid min-h-[520px] items-center gap-10 py-10 lg:grid-cols-[0.9fr_1.1fr] xl:min-h-[560px] xl:py-12">
           <div className="relative z-10 max-w-3xl">
             <h1 className="text-4xl font-black leading-[0.96] tracking-tight text-slate-950 md:text-6xl xl:text-7xl">
-              Votre partenaire
-              <span className="block text-[#007f8f]">
-                en levage industriel<span className="text-orange-600">.</span>
-              </span>
+              {home.heroTitle}
+              <span className="block text-[#007f8f]">{home.heroAccent}</span>
             </h1>
 
             <p className="mt-6 max-w-xl text-lg leading-8 text-slate-700 md:text-xl md:leading-9">
-              Plus de 2 000 références et des solutions complètes pour équiper,
-              sécuriser et optimiser vos ateliers.
+              {home.heroText}
             </p>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 text-sm font-black text-slate-950 md:text-base">
@@ -66,11 +65,11 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-5">
-              <Button href="/catalogue/levage">
-                Découvrir le catalogue <ArrowRight size={20} />
+              <Button href={home.primaryHref}>
+                {home.primaryLabel} <ArrowRight size={20} />
               </Button>
-              <Button href="/assistant" variant="secondary">
-                Trouver ma solution <SlidersHorizontal size={20} />
+              <Button href={home.secondaryHref} variant="secondary">
+                {home.secondaryLabel} <SlidersHorizontal size={20} />
               </Button>
             </div>
           </div>
@@ -78,7 +77,7 @@ export default function HomePage() {
           <div className="relative hidden lg:block">
             <div className="relative ml-auto overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-2xl shadow-slate-300/50">
               <img
-                src="/images/hero-potence.png"
+                src={home.heroImage}
                 alt="Potence industrielle OYSTE avec palan KITO"
                 className="h-[430px] w-full object-cover object-center xl:h-[470px]"
               />

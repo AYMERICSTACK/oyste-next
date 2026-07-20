@@ -2,8 +2,8 @@ import Link from "next/link";
 import Oyste3DLab from "@/components/3d/Oyste3DLab";
 
 export const metadata = {
-  title: "OYSTE 3D Lab | PFI",
-  description: "Laboratoire 3D OYSTE pour tester les modèles CAO simplifiés dans le configurateur.",
+  title: "Visualisation 3D | OYSTE",
+  description: "Visualisation 3D des équipements et configurations OYSTE.",
 };
 
 export default function ThreeDLabPage() {

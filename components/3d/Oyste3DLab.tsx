@@ -2582,7 +2582,7 @@ export default function Oyste3DLab() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-700">
-                      V18.9.3 — Universal Mesh Picker
+                      Outils de visualisation 3D
                     </p>
                     <h1 className="mt-2 text-2xl font-black text-slate-950">
                       Éditeur de scène 3D

@@ -17,6 +17,8 @@ export type CatalogueVariant = {
   priceHT: number | null;
   delay: string;
   stock: number | null;
+  weightKg?: number | null;
+  shippingMode?: ProductShippingMode;
   imageRef: string;
   features: CatalogueFeature[];
   options: Record<string, string>;
@@ -28,6 +30,7 @@ export type CatalogueOption = {
 };
 
 export type ProductExperienceType = "STANDARD" | "CONFIGURABLE";
+export type ProductShippingMode = "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
 
 export type CatalogueFaqItem = {
   question: string;
@@ -53,6 +56,8 @@ export type CatalogueProduct = {
   maxPriceHT?: number | null;
   delay: string;
   stock: number | null;
+  weightKg?: number | null;
+  shippingMode?: ProductShippingMode;
   imageRef: string;
   features: CatalogueFeature[];
   variantCount?: number;

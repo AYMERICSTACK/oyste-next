@@ -100,6 +100,9 @@ export default function CrossSellingSection({
                       name={item.name}
                       code={item.code}
                       family={formatCategoryLabel(item.categoryPath)}
+                      supplier={item.manufacturer}
+                      weightKg={item.weightKg ?? undefined}
+                      shippingMode={item.shippingMode}
                       imageUrl={imageUrl}
                       priceHT={quickAddPrice}
                       delay={item.delay}

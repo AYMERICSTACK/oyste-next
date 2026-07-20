@@ -41,10 +41,15 @@ function asRecord(value: Prisma.JsonValue | null): Record<string, unknown> {
     : {};
 }
 
-function asStringRecord(value: Prisma.JsonValue | null): Record<string, string> {
+function asStringRecord(
+  value: Prisma.JsonValue | null,
+): Record<string, string> {
   const source = asRecord(value);
+
   return Object.fromEntries(
-    Object.entries(source).filter((entry): entry is [string, string] => typeof entry[1] === "string"),
+    Object.entries(source).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
   );
 }
 
@@ -53,21 +58,37 @@ function asOptionSchema(value: Prisma.JsonValue | null): CatalogueOption[] {
 
   return value.flatMap((item) => {
     if (!item || typeof item !== "object" || Array.isArray(item)) return [];
-    const option = item as Record<string, unknown>;
-    if (typeof option.label !== "string" || !Array.isArray(option.values)) return [];
 
-    return [{
-      label: option.label,
-      values: option.values.filter((entry): entry is string => typeof entry === "string"),
-    }];
+    const option = item as Record<string, unknown>;
+
+    if (typeof option.label !== "string" || !Array.isArray(option.values)) {
+      return [];
+    }
+
+    return [
+      {
+        label: option.label,
+        values: option.values.filter(
+          (entry): entry is string => typeof entry === "string",
+        ),
+      },
+    ];
   });
 }
 
-function mapFeature(feature: { label: string; value: string }): CatalogueFeature {
-  return { label: feature.label, value: feature.value };
+function mapFeature(feature: {
+  label: string;
+  value: string;
+}): CatalogueFeature {
+  return {
+    label: feature.label,
+    value: feature.value,
+  };
 }
 
-function mapVariant(variant: DatabaseProduct["variants"][number]): CatalogueVariant {
+function mapVariant(
+  variant: DatabaseProduct["variants"][number],
+): CatalogueVariant {
   return {
     id: variant.id,
     code: variant.code,
@@ -77,6 +98,8 @@ function mapVariant(variant: DatabaseProduct["variants"][number]): CatalogueVari
     priceHT: Number(variant.priceHt),
     delay: variant.leadTime || "",
     stock: variant.stock,
+    weightKg: variant.weightKg === null ? null : Number(variant.weightKg),
+    shippingMode: variant.shippingMode ?? undefined,
     imageRef: variant.imageReference || "",
     features: variant.features.map(mapFeature),
     options: asStringRecord(variant.options),
@@ -85,10 +108,22 @@ function mapVariant(variant: DatabaseProduct["variants"][number]): CatalogueVari
 
 function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
   const source = asRecord(product.sourceData) as SourceProductData;
-  const categoryPath = source.categoryPath || product.category?.path || product.category?.name || "";
+
+  const categoryPath =
+    source.categoryPath ||
+    product.category?.path ||
+    product.category?.name ||
+    "";
+
   const categories = Array.isArray(source.categories)
-    ? source.categories.filter((item): item is string => typeof item === "string")
-    : categoryPath.split(/\\|>/g).map((item: string) => item.trim()).filter(Boolean);
+    ? source.categories.filter(
+        (item): item is string => typeof item === "string",
+      )
+    : categoryPath
+        .split(/\|>/g)
+        .map((item: string) => item.trim())
+        .filter(Boolean);
+
   const variants = product.variants.map(mapVariant);
 
   const mapped: CatalogueProduct = {
@@ -110,6 +145,8 @@ function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
     maxPriceHT: product.maxPriceHt === null ? null : Number(product.maxPriceHt),
     delay: product.leadTime || "",
     stock: product.stock,
+    weightKg: product.weightKg === null ? null : Number(product.weightKg),
+    shippingMode: product.shippingMode ?? undefined,
     imageRef: product.imageReference || "",
     features: product.features.map(mapFeature),
     variantCount: variants.length || 1,
@@ -119,6 +156,7 @@ function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
   };
 
   const categorySlug = getNormalizedCategorySlug(mapped);
+
   return {
     ...mapped,
     categorySlug,
@@ -131,10 +169,13 @@ export async function getDatabaseProductsByCategory(
   familySlug?: string,
 ): Promise<CatalogueProduct[]> {
   const normalizedSlug = normalizeCategoryQuery(categorySlug);
+
   const products = await prisma.product.findMany({
     where: {
       publicationStatus: "PUBLISHED",
-      category: { slug: normalizedSlug },
+      category: {
+        slug: normalizedSlug,
+      },
     },
     include: catalogueProductInclude,
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -148,24 +189,36 @@ export async function getDatabaseProductBySlug(
   productSlug: string,
 ): Promise<CatalogueProduct | undefined> {
   const product = await prisma.product.findUnique({
-    where: { slug: productSlug },
+    where: {
+      slug: productSlug,
+    },
     include: catalogueProductInclude,
   });
 
-  if (!product || product.publicationStatus !== "PUBLISHED") return undefined;
+  if (!product || product.publicationStatus !== "PUBLISHED") {
+    return undefined;
+  }
 
   const mapped = mapDatabaseProduct(product);
-  return mapped.categorySlug === normalizeCategoryQuery(categorySlug) ? mapped : undefined;
+
+  return mapped.categorySlug === normalizeCategoryQuery(categorySlug)
+    ? mapped
+    : undefined;
 }
 
-export async function getDatabaseFeaturedProducts(limit = 6): Promise<CatalogueProduct[]> {
+export async function getDatabaseFeaturedProducts(
+  limit = 6,
+): Promise<CatalogueProduct[]> {
   const products = await prisma.product.findMany({
-    where: { publicationStatus: "PUBLISHED" },
+    where: {
+      publicationStatus: "PUBLISHED",
+    },
     include: catalogueProductInclude,
     orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
   });
 
   const mapped = products.map(mapDatabaseProduct);
+
   const priority = [
     "levage",
     "manutention-au-sol",
@@ -175,7 +228,9 @@ export async function getDatabaseFeaturedProducts(limit = 6): Promise<CatalogueP
   ];
 
   const selected = priority.flatMap((slug) =>
-    mapped.filter((product: CatalogueProduct) => product.categorySlug === slug).slice(0, 2),
+    mapped
+      .filter((product: CatalogueProduct) => product.categorySlug === slug)
+      .slice(0, 2),
   );
 
   return selected.slice(0, limit);
