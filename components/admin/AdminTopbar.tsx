@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { Bell, ExternalLink, Menu } from "lucide-react";
+import { ExternalLink, Menu } from "lucide-react";
 import AdminGlobalSearch from "@/components/admin/search/AdminGlobalSearch";
+import AdminNotificationsCenter from "@/components/admin/AdminNotificationsCenter";
 
 export default function AdminTopbar() {
   return (
@@ -12,7 +13,7 @@ export default function AdminTopbar() {
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <Link href="/configurateur" className="hidden items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black text-slate-700 transition hover:border-slate-400 sm:flex">Voir la boutique <ExternalLink size={15} /></Link>
-        <button type="button" className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><Bell size={18} /><span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-orange-500 ring-2 ring-white" /></button>
+        <AdminNotificationsCenter />
       </div>
     </header>
   );
