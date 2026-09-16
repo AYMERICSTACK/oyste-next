@@ -43,24 +43,30 @@ export type StripeConnectionStatus = {
 
 function getModeFromKey(value: string | undefined): StripeMode {
   if (!value) return "unknown";
+
   if (
     value.startsWith("sk_test_") ||
     value.startsWith("pk_test_") ||
     value.startsWith("rk_test_")
-  )
+  ) {
     return "test";
+  }
+
   if (
     value.startsWith("sk_live_") ||
     value.startsWith("pk_live_") ||
     value.startsWith("rk_live_")
-  )
+  ) {
     return "live";
+  }
+
   return "unknown";
 }
 
 function getCredentials() {
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
+
   return {
     secretKey: secretKey || null,
     publishableKey: publishableKey || null,
@@ -76,7 +82,9 @@ export function isStripeConfigured() {
 export async function testStripeConnection(): Promise<StripeConnectionStatus> {
   const checkedAt = new Date().toISOString();
   const credentials = getCredentials();
+
   const publishableKeyConfigured = Boolean(credentials.publishableKey);
+
   const keysModeMatch =
     !credentials.publishableKey ||
     credentials.secretMode === "unknown" ||
@@ -119,16 +127,19 @@ export async function testStripeConnection(): Promise<StripeConnectionStatus> {
 
     if (!response.ok) {
       let detail = "";
+
       try {
         const body = (await response.json()) as {
           error?: { message?: string };
         };
+
         detail = body.error?.message?.trim() || "";
       } catch {
         // Stripe peut renvoyer une réponse non JSON lors d'un incident externe.
       }
 
       const suffix = detail ? ` ${detail}` : "";
+
       throw new Error(
         response.status === 401 || response.status === 403
           ? `Clé Stripe refusée.${suffix}`
@@ -137,6 +148,7 @@ export async function testStripeConnection(): Promise<StripeConnectionStatus> {
     }
 
     const account = (await response.json()) as StripeAccountResponse;
+
     const accountName =
       account.business_profile?.name?.trim() ||
       account.settings?.dashboard?.display_name?.trim() ||
@@ -144,15 +156,17 @@ export async function testStripeConnection(): Promise<StripeConnectionStatus> {
       null;
 
     let message = "Connexion Stripe opérationnelle.";
-    if (!keysModeMatch)
+
+    if (!keysModeMatch) {
       message =
         "Connexion réussie, mais les clés publique et secrète ne sont pas dans le même mode.";
-    else if (!publishableKeyConfigured)
+    } else if (!publishableKeyConfigured) {
       message =
         "Connexion réussie. Ajoutez aussi la clé publique Stripe avant le checkout.";
-    else if (!account.details_submitted)
+    } else if (!account.details_submitted) {
       message =
         "Connexion réussie. La configuration du compte Stripe reste à finaliser.";
+    }
 
     return {
       configured: true,
@@ -212,7 +226,11 @@ export type StripeCheckoutSession = {
 
 function requireSecretKey() {
   const key = process.env.STRIPE_SECRET_KEY?.trim();
-  if (!key) throw new Error("STRIPE_SECRET_KEY est manquante.");
+
+  if (!key) {
+    throw new Error("STRIPE_SECRET_KEY est manquante.");
+  }
+
   return key;
 }
 
@@ -222,6 +240,7 @@ async function stripeRequest<T>(
 ): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
   try {
     const response = await fetch(`${STRIPE_API_URL}${path}`, {
       ...init,
@@ -233,18 +252,25 @@ async function stripeRequest<T>(
       cache: "no-store",
       signal: controller.signal,
     });
+
     if (!response.ok) {
       let detail = "";
+
       try {
         const body = (await response.json()) as {
           error?: { message?: string };
         };
+
         detail = body.error?.message?.trim() || "";
-      } catch {}
+      } catch {
+        // Réponse Stripe non JSON éventuelle.
+      }
+
       throw new Error(
         detail || `Stripe a répondu avec le statut ${response.status}.`,
       );
     }
+
     return (await response.json()) as T;
   } finally {
     clearTimeout(timeout);
@@ -262,11 +288,15 @@ export async function createStripeCheckoutSession(input: {
   cancelUrl: string;
 }) {
   const body = new URLSearchParams();
+
+  body.set("mode", "payment");
   body.set("payment_method_types[0]", "card");
+
   body.set("client_reference_id", input.orderId);
   body.set("customer_email", input.customerEmail);
   body.set("success_url", input.successUrl);
   body.set("cancel_url", input.cancelUrl);
+
   body.set("line_items[0][quantity]", "1");
   body.set("line_items[0][price_data][currency]", input.currency.toLowerCase());
   body.set("line_items[0][price_data][unit_amount]", String(input.amountCents));
@@ -274,21 +304,27 @@ export async function createStripeCheckoutSession(input: {
     "line_items[0][price_data][product_data][name]",
     `Commande OYSTE ${input.reference}`,
   );
+
   body.set("metadata[orderId]", input.orderId);
   body.set("metadata[customerId]", input.customerId);
   body.set("metadata[reference]", input.reference);
+
   body.set("payment_intent_data[metadata][orderId]", input.orderId);
   body.set("payment_intent_data[metadata][reference]", input.reference);
 
   return stripeRequest<StripeCheckoutSession>("/checkout/sessions", {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
     body,
   });
 }
 
 export async function retrieveStripeCheckoutSession(sessionId: string) {
   return stripeRequest<StripeCheckoutSession>(
-    `/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=payment_intent`,
+    `/checkout/sessions/${encodeURIComponent(
+      sessionId,
+    )}?expand[]=payment_intent`,
   );
 }
