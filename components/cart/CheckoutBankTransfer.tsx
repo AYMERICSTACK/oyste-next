@@ -15,9 +15,9 @@ export default function CheckoutBankTransfer({ customer, billingAddress }: { cus
   const router = useRouter();
   const searchParams = useSearchParams();
   const { items, clearCart } = useCart();
-  const [form, setForm] = useState({ company: customer.company || "", firstName: customer.firstName || "", lastName: customer.lastName || "", address1: "", address2: "", postalCode: "", city: "", country: "FR", requestedDate: "", customerNote: "" });
+  const [form, setForm] = useState({ company: billingAddress?.company || customer.company || "", firstName: billingAddress?.firstName || customer.firstName || "", lastName: billingAddress?.lastName || customer.lastName || "", address1: billingAddress?.address1 || "", address2: billingAddress?.address2 || "", postalCode: billingAddress?.postalCode || "", city: billingAddress?.city || "", country: billingAddress?.country || "FR", requestedDate: "", customerNote: "" });
   const [loading, setLoading] = useState(false);
-  const [useBillingAddress, setUseBillingAddress] = useState(false);
+  const [useBillingAddress, setUseBillingAddress] = useState(Boolean(billingAddress));
   const [paymentMethod, setPaymentMethod] = useState<"CARD" | "BANK_TRANSFER" | null>(null);
   const [error, setError] = useState("");
 

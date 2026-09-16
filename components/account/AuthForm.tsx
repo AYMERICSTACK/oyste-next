@@ -31,7 +31,11 @@ export default function AuthForm({ mode }: { mode: Mode }) {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || "Une erreur est survenue.");
-      router.push("/compte");
+      const requestedRedirect = new URLSearchParams(window.location.search).get("redirect");
+      const redirectTarget = requestedRedirect?.startsWith("/") && !requestedRedirect.startsWith("//")
+        ? requestedRedirect
+        : "/compte";
+      router.push(redirectTarget);
       router.refresh();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Une erreur est survenue.");
