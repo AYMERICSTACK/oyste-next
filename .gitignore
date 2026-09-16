@@ -104,3 +104,12 @@ Oxatis-All-ADEI-49840(2).csv
 
 .vscode/settings.json
 .idea/
+
+
+# clé authentification stripe
+stripe_backup_code.txt
+
+# connexion stockmann
+stockman-auth.json
+stockman-debug.png
+kito-weight-audit.txt

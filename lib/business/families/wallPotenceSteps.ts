@@ -8,8 +8,16 @@ import {
   wallPostWidthChoices,
 } from "../options/wallPotenceOptions";
 
-export function buildWallPotenceSteps(noteRef = "NOTEPM"): BusinessStep[] {
-  return [
+type WallPotenceStepsOptions = {
+  noteRef?: string;
+  includeUnderBeamHeight?: boolean;
+};
+
+export function buildWallPotenceSteps({
+  noteRef = "NOTEPM",
+  includeUnderBeamHeight = false,
+}: WallPotenceStepsOptions = {}): BusinessStep[] {
+  const structureSteps: BusinessStep[] = [
     {
       id: "capacity",
       kind: "search",
@@ -38,7 +46,7 @@ export function buildWallPotenceSteps(noteRef = "NOTEPM"): BusinessStep[] {
       title: "Comment souhaitez-vous fixer la potence sur le poteau ?",
       required: true,
       showWhen: [{ answerId: "wallSupport", equals: "metal-post" }],
-      help: "Choisissez le principe de fixation le plus adapté à votre poteau métallique.",
+      help: "Choisissez le principe de fixation adapté à votre poteau métallique ou béton.",
       choices: wallPostFixingChoices,
     },
     {
@@ -46,17 +54,27 @@ export function buildWallPotenceSteps(noteRef = "NOTEPM"): BusinessStep[] {
       kind: "exclusive-choice",
       title: "Quelle est la largeur du poteau ?",
       required: true,
-      showWhen: [{ answerId: "wallSupport", equals: "metal-post" }],
+      showWhen: [
+        { answerId: "wallSupport", equals: "metal-post" },
+        { answerId: "postFixing", notEquals: "standard-bolted" },
+      ],
       help: "Choisissez la largeur maximale correspondant à votre poteau. Le kit sera sélectionné automatiquement.",
       choices: wallPostWidthChoices,
     },
-    {
+  ];
+
+  if (includeUnderBeamHeight) {
+    structureSteps.push({
       id: "underBeamHeight",
       kind: "exclusive-choice",
       title: "Quelle hauteur sous fer souhaitez-vous ?",
       required: true,
       help: "La hauteur sous fer correspond à la distance entre le sol et la poutre de roulement.",
-    },
+    });
+  }
+
+  return [
+    ...structureSteps,
     {
       id: "mechanicalOptions",
       kind: "option-group",
@@ -161,7 +179,7 @@ export function buildWallPotenceSteps(noteRef = "NOTEPM"): BusinessStep[] {
       id: "hoistTrolleyMovement",
       kind: "exclusive-choice",
       title: "Comment souhaitez-vous déplacer le palan ?",
-      showWhen: [{ answerId: "hoistType", equals: "electric" }],
+      showWhen: [{ answerId: "hoist", equals: "yes" }],
       help: "Le déplacement correspond au mouvement du palan le long de la poutre.",
       choices: [
         {
@@ -205,6 +223,13 @@ export function buildWallPotenceSteps(noteRef = "NOTEPM"): BusinessStep[] {
             "Commande filaire suspendue au palan, simple et directe.",
         },
       ],
+    },
+    {
+      id: "hoistOptions",
+      kind: "option-group",
+      title: "Souhaitez-vous ajouter une option au palan ?",
+      showWhen: [{ answerId: "hoistType", equals: "electric" }],
+      help: "Les options sélectionnées sont ajoutées automatiquement à la solution.",
     },
   ];
 }

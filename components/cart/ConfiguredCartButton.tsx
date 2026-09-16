@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CheckCircle2, ShoppingCart } from "lucide-react";
 import { useCart } from "@/lib/cart/cart-store";
-import type { CartTechnicalLine } from "@/lib/cart/types";
+import type { CartTechnicalLine, PfiShippingConfiguration, WallPotenceShippingConfiguration } from "@/lib/cart/types";
 
 export default function ConfiguredCartButton({
   name,
@@ -11,12 +11,16 @@ export default function ConfiguredCartButton({
   priceHT,
   editHref,
   technicalLines,
+  pfiShipping,
+  wallPotenceShipping,
 }: {
   name: string;
   code?: string;
   priceHT: number;
   editHref: string;
   technicalLines: CartTechnicalLine[];
+  pfiShipping?: PfiShippingConfiguration;
+  wallPotenceShipping?: WallPotenceShippingConfiguration;
 }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
@@ -33,6 +37,8 @@ export default function ConfiguredCartButton({
       href: "/configurateur/resultat",
       editHref,
       technicalLines,
+      pfiShipping,
+      wallPotenceShipping,
     });
     setAdded(true);
     window.setTimeout(() => setAdded(false), 1800);

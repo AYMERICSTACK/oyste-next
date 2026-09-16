@@ -30,12 +30,37 @@ function isTruthyCode(value: string) {
   return value.length > 0 && value.toLowerCase() !== "nan";
 }
 
+function getOptionalNumber(row: RawRow, ...keys: string[]) {
+  const raw = getString(row, ...keys);
+  if (!raw) return undefined;
+  const parsed = Number.parseFloat(raw.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function convertWeightToKg(value: number | undefined, unitPower: number | undefined) {
+  if (value === undefined || value <= 0 || unitPower === undefined) return undefined;
+  return value * Math.pow(10, unitPower);
+}
+
+function convertLengthToCm(value: number | undefined, unitPower: number | undefined) {
+  if (value === undefined || value <= 0 || unitPower === undefined) return undefined;
+  return value * Math.pow(10, unitPower + 2);
+}
+
 function normalizeProduct(row: RawRow): ErpProduct | null {
   const ref = normalizeCode(getString(row, "ref", "Ref", "REF"));
   if (!isTruthyCode(ref)) return null;
 
   const label = getString(row, "label", "Label", "LABEL") || ref;
   const parsed = parseErpReference(ref, label);
+  const rawWeight = getOptionalNumber(row, "weight", "Weight", "poids", "Poids");
+  const rawWeightUnit = getOptionalNumber(row, "weight_units", "WeightUnits", "poids_unite");
+  const rawLength = getOptionalNumber(row, "length", "Length", "longueur", "Longueur");
+  const rawWidth = getOptionalNumber(row, "width", "Width", "largeur", "Largeur");
+  const rawHeight = getOptionalNumber(row, "height", "Height", "hauteur", "Hauteur");
+  const rawLengthUnit = getOptionalNumber(row, "length_units", "LengthUnits", "size_units");
+  const rawWidthUnit = getOptionalNumber(row, "width_units", "WidthUnits") ?? rawLengthUnit;
+  const rawHeightUnit = getOptionalNumber(row, "height_units", "HeightUnits") ?? rawLengthUnit;
 
   return {
     ref,
@@ -51,6 +76,10 @@ function normalizeProduct(row: RawRow): ErpProduct | null {
     spanMm: parsed.spanMm,
     heightMm: parsed.heightMm,
     widthMm: parsed.widthMm,
+    weightKg: convertWeightToKg(rawWeight, rawWeightUnit),
+    packageLengthCm: convertLengthToCm(rawLength, rawLengthUnit),
+    packageWidthCm: convertLengthToCm(rawWidth, rawWidthUnit),
+    packageHeightCm: convertLengthToCm(rawHeight, rawHeightUnit),
   };
 }
 

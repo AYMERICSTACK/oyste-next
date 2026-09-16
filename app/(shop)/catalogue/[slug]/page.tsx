@@ -20,13 +20,13 @@ import {
   getProductAvailableDocumentCount,
   getProductExperienceType,
   getProductMarketingBadges,
+  getProductMediaImages,
   getSubFamilyBySlug,
   filterProductsByFamily,
   isPotenceProduct,
 } from "@/lib/catalogue/repository";
 import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-repository";
 import { notFound } from "next/navigation";
-import { getProductImageUrl } from "@/lib/product-images";
 
 
 function extractCapacity(product: { features?: Array<{ label: string; value: string }>; name: string; description: string }) {
@@ -104,7 +104,7 @@ export default async function CatalogueUniversePage({
       family: formatCategoryLabel(product.categoryPath),
       description: getCustomerProductDescription(product),
       href: product.href,
-      imageUrl: getProductImageUrl(product.imageRef || product.code, product.code),
+      imageUrl: getProductMediaImages(product)[0] || "",
       priceLabel: isConfigurable ? "Configuration sur mesure" : formatPriceRange(product),
       minPriceHT: product.minPriceHT ?? product.priceHT ?? null,
       badge: marketingBadges[0] || "Catalogue OYSTE",

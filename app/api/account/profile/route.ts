@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentCustomer } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { isValidSiren, normalizeSiren, normalizeVatNumber } from "@/lib/auth/siret";
 
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 
@@ -11,6 +12,9 @@ export async function PATCH(request: Request) {
 
     const body = await request.json();
     const company = String(body.company ?? "").trim();
+    const siren = normalizeSiren(String(customer.siren ?? customer.siret?.slice(0, 9) ?? ""));
+    const vatNumber = normalizeVatNumber(String(body.vatNumber ?? "")) || null;
+    const electronicBillingAddress = String(body.electronicBillingAddress ?? "").trim() || null;
     const firstName = String(body.firstName ?? "").trim();
     const lastName = String(body.lastName ?? "").trim();
     const phone = String(body.phone ?? "").trim();
@@ -22,10 +26,17 @@ export async function PATCH(request: Request) {
     const city = String(body.city ?? "").trim();
     const country = String(body.country ?? "FR").trim().toUpperCase();
 
-    if (!company || !firstName || !lastName || !phone || !email || !address1 || !postalCode || !city || !country) {
+    if (!company || !siren || !firstName || !lastName || !phone || !email || !address1 || !postalCode || !city || !country) {
       return NextResponse.json({ error: "Merci de remplir tous les champs obligatoires." }, { status: 400 });
     }
     if (!EMAIL_PATTERN.test(email)) return NextResponse.json({ error: "L’adresse e-mail n’est pas valide." }, { status: 400 });
+    if (!isValidSiren(siren)) return NextResponse.json({ error: "Le numéro SIREN doit contenir 9 chiffres et être valide." }, { status: 400 });
+    if (vatNumber && !/^[A-Z]{2}[A-Z0-9]{2,13}$/.test(vatNumber)) return NextResponse.json({ error: "Le numéro de TVA intracommunautaire n’est pas valide." }, { status: 400 });
+
+    if (!customer.siren) {
+      const existingSiren = await (prisma.customer as any).findUnique({ where: { siren }, select: { id: true } });
+      if (existingSiren && existingSiren.id !== customer.id) return NextResponse.json({ error: "Une entreprise est déjà enregistrée avec ce SIREN." }, { status: 409 });
+    }
     if (email !== customer.email) {
       const existing = await (prisma.customer as any).findUnique({ where: { email }, select: { id: true } });
       if (existing && existing.id !== customer.id) return NextResponse.json({ error: "Cette adresse e-mail est déjà utilisée par un autre compte." }, { status: 409 });
@@ -33,10 +44,10 @@ export async function PATCH(request: Request) {
 
     const existingBilling = await (prisma.customerAddress as any).findFirst({ where: { customerId: customer.id, type: "BILLING" }, select: { id: true } });
     await prisma.$transaction(async (transaction) => {
-      await (transaction.customer as any).update({ where: { id: customer.id }, data: { company, firstName, lastName, phone, jobTitle, email } });
+      await (transaction.customer as any).update({ where: { id: customer.id }, data: { company, siren, vatNumber, electronicBillingAddress, firstName, lastName, phone, jobTitle, email } });
       const addressData = { company, firstName, lastName, address1, address2, postalCode, city, country };
       if (existingBilling) await (transaction.customerAddress as any).update({ where: { id: existingBilling.id }, data: addressData });
-      else await (transaction.customerAddress as any).create({ data: { ...addressData, type: "BILLING", label: "Adresse professionnelle", customerId: customer.id } });
+      else await (transaction.customerAddress as any).create({ data: { ...addressData, type: "BILLING", label: "Adresse de facturation", customerId: customer.id } });
     });
 
     return NextResponse.json({ success: true });

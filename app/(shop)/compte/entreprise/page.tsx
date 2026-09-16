@@ -35,7 +35,10 @@ export default async function CompanyAccountPage() {
         <CompanyProfileForm
           customer={{
             company: customer.company ?? "",
+            siren: customer.siren ?? "",
             siret: customer.siret ?? "",
+            vatNumber: customer.vatNumber ?? "",
+            electronicBillingAddress: customer.electronicBillingAddress ?? "",
             firstName: customer.firstName ?? "",
             lastName: customer.lastName ?? "",
             jobTitle: customer.jobTitle ?? "",
@@ -62,7 +65,7 @@ export default async function CompanyAccountPage() {
 
       <div className="flex items-start gap-3 rounded-2xl border border-cyan-100 bg-cyan-50/70 p-4 text-sm leading-6 text-[#006d7a]">
         <ShieldCheck className="mt-0.5 shrink-0" size={19} />
-        <p><strong>Le SIRET ne peut pas être modifié en ligne.</strong> Il identifie juridiquement votre entreprise. En cas de changement de structure, contactez l’équipe OYSTE afin que votre compte soit vérifié.</p>
+        <p><strong>Le SIRET est verrouillé après validation.</strong> Le SIREN est déduit automatiquement de celui-ci et conservé par OYSTE pour les besoins réglementaires. En cas de changement de structure, contactez l’équipe OYSTE afin que votre compte soit vérifié.</p>
       </div>
     </div>
   );

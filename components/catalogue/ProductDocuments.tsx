@@ -43,18 +43,18 @@ export default function ProductDocuments({
             </span>
             <div>
               <p className="text-sm font-black uppercase tracking-[0.22em] text-slate-500">Documents techniques</p>
-              <h2 className="mt-1 text-2xl font-black text-slate-950">Fiche technique</h2>
+              <h2 className="mt-1 text-2xl font-black text-slate-950">Documentation du produit</h2>
             </div>
           </div>
-          <p className="mt-4 max-w-xl text-sm font-bold leading-7 text-slate-600">
-            Téléchargez la documentation technique disponible pour ce produit.
+          <p className="mt-4 max-w-3xl text-sm font-bold leading-7 text-slate-600">
+            Retrouvez au même endroit les fiches techniques, notices, plans et documents de conformité disponibles pour ce produit.
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {availableDocumentCount > 0 ? (
             <span className="rounded-full bg-[#007f8f]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-[#005466]">
-              Fiche technique disponible
+              {availableDocumentCount} document{availableDocumentCount > 1 ? "s" : ""} disponible{availableDocumentCount > 1 ? "s" : ""}
             </span>
           ) : (
             <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
@@ -105,7 +105,7 @@ export default function ProductDocuments({
       )}
 
       {secondaryAvailableDocuments.length > 0 || requestDocuments.length > 0 ? (
-        <div className="mt-6 grid gap-3">
+        <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           {secondaryAvailableDocuments.map((document) => {
             const identity = getDocumentIdentity(document);
 

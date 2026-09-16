@@ -1,13 +1,97 @@
 import type { ShippingCartResult, ShippingLineResult, ShippingProductInput } from "./types";
 import { isStockmannSupplier } from "./stockmann";
 import { calculateMessagerie, getMessagerieWeight } from "./messagerie";
-import { calculateAffretement } from "./affretement";
+import { calculateAffretement, calculateAffretementC0 } from "./affretement";
+import { calculatePfiFreight } from "./pfi-freight";
+import { calculatePftFreight } from "./pft-freight";
+import { calculateWallPotenceFreight } from "./wall-potence-freight";
 import { normalizePostcode } from "./zones";
+import { isAdeiTripodCode, resolveAdeiTripodShipping } from "./adei-tripod-shipping";
+import { calculateAdeiOfficialTransport, getAdeiTransportSource } from "./adei-official-transport";
 
 const CONFIGURATOR_FAMILIES = /^(PFI|PFT|PMI|PMT|PMA|PMAM|PORT)/i;
 
 export function resolveShippingLine(product: ShippingProductInput, postcode?: string): ShippingLineResult {
   const quantity = Math.max(1, product.quantity || 1);
+
+  if (product.pfiShipping) {
+    const family = product.pfiShipping.family ?? "PFI";
+    const result = family === "PFT"
+      ? calculatePftFreight({ ...product.pfiShipping, postcode })
+      : calculatePfiFreight({ ...product.pfiShipping, postcode });
+    return {
+      mode: result.amountHT === null ? "quote" : "affretement",
+      label: result.amountHT === null ? "Transport spécialisé · prix à confirmer" : "Transport spécialisé",
+      description: `Livraison par affrètement calculée selon la configuration ${family} et la destination.`,
+      amountHT: result.amountHT === null ? null : result.amountHT * quantity,
+      reason: result.reason,
+      coefficient: result.coefficient,
+      rateCode: result.rateCode,
+      bracket: result.bracket,
+    };
+  }
+
+  if (product.wallPotenceShipping) {
+    const result = calculateWallPotenceFreight({
+      ...product.wallPotenceShipping,
+      postcode,
+      quantity,
+    });
+    return {
+      mode: result.mode,
+      label:
+        result.amountHT === null
+          ? "Transport · prix à confirmer"
+          : result.mode === "messagerie"
+            ? "Expédition standard"
+            : "Transport spécialisé",
+      description:
+        result.mode === "messagerie"
+          ? "Expédition calculée selon le poids de la potence et la destination."
+          : "Livraison par affrètement selon la destination.",
+      amountHT: result.amountHT,
+      weightKg: result.weightKg,
+      reason: result.reason,
+      rateCode: result.rateCode,
+      bracket: result.bracket,
+    };
+  }
+  // ADEI : grille ERP officielle. Les autres fournisseurs et les calculateurs
+  // spécialisés ci-dessus conservent intégralement leur comportement.
+  if (/^ADEI$/i.test(String(product.supplier || "").trim()) && product.kind === "catalogue") {
+    const ref = getAdeiTransportSource(product.code);
+    const code = String(product.code || "").trim().toUpperCase();
+    const excluded = /^(PALBAF|PALBAR|PALBAG|PADC)/.test(code);
+    const isLsr = ref.lsrWeightKg !== undefined;
+    const isPorti = /^PORTI/.test(code);
+    const isTripod = isAdeiTripodCode(code);
+    const isHook = /^CROCHET/.test(code);
+    const tripod = isTripod ? resolveAdeiTripodShipping(product) : null;
+    const mode = isLsr || isPorti ? "messagerie"
+      : isTripod ? (tripod?.mode === "MESSAGERIE" ? "messagerie" : tripod?.mode === "AFFRETEMENT" ? "affretement" : undefined)
+      : undefined;
+    const coefficient = tripod?.affretementCoefficient;
+    const hasAssignment = Boolean(ref.assignment);
+    if (!excluded && (hasAssignment || isLsr || isPorti || isTripod || product.shippingMode === "MESSAGERIE")) {
+      const result = isTripod && !tripod
+        ? { mode: "quote" as const, amountHT: null, reason: "Dimensions et poids du tripode à confirmer." }
+        : calculateAdeiOfficialTransport({
+            code: product.code, postcode, quantity, weightKg: product.weightKg,
+            mode, coefficient,
+          });
+      return {
+        ...result,
+        mode: result.amountHT === null ? "quote" : result.mode,
+        label: result.amountHT === null ? "Transport · prix à confirmer" : result.mode === "messagerie" ? "Expédition standard" : "Transport spécialisé",
+        description: result.mode === "messagerie" ? "Expédition calculée selon le poids et la destination." : "Livraison par transport spécialisé, calculée selon votre département.",
+      };
+    }
+    // Une référence ADEI sans règle validée ne doit pas hériter d'une
+    // ancienne grille ou d'un coefficient déduit arbitrairement du poids.
+    if (excluded || isHook || /^PORT/.test(code) || /^PAL/.test(code) || product.shippingMode === "AFFRETEMENT") {
+      return { mode: "quote", label: "Transport sur devis", description: "Le transport sera confirmé après étude de la commande.", amountHT: null, reason: "Règle transport ADEI à confirmer." };
+    }
+  }
   const persistedMode = product.shippingMode;
 
   if (persistedMode === "INCLUDED" || (!persistedMode && isStockmannSupplier(product.supplier))) {
@@ -31,7 +115,16 @@ export function resolveShippingLine(product: ShippingProductInput, postcode?: st
   const affretement = calculateAffretement(totalWeight, postcode);
 
   if (persistedMode === "AFFRETEMENT") {
-    return { mode: affretement.amountHT === null ? "quote" : "affretement", label: affretement.amountHT === null ? "Transport spécialisé · prix à confirmer" : "Transport spécialisé", description: "Solution de transport adaptée aux caractéristiques de l’équipement.", ...affretement };
+    const isAdeiTripod = /^ADEI$/i.test(String(product.supplier || "").trim()) && isAdeiTripodCode(product.code);
+    const result = isAdeiTripod ? calculateAffretementC0(totalWeight, postcode) : affretement;
+    return {
+      mode: result.amountHT === null ? "quote" : "affretement",
+      label: result.amountHT === null ? "Transport spécialisé · prix à confirmer" : "Transport spécialisé",
+      description: isAdeiTripod
+        ? "Livraison du tripode ADEI par affrètement selon la destination · coefficient C0."
+        : "Solution de transport adaptée aux caractéristiques de l’équipement.",
+      ...result,
+    };
   }
 
   if (persistedMode === "QUOTE") {

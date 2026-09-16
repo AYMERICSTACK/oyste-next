@@ -4,3 +4,4 @@ export * from "./messagerie";
 export * from "./affretement";
 export * from "./stockmann";
 export * from "./zones";
+export * from "./pfi-freight";

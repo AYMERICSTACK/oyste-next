@@ -54,14 +54,14 @@ export const catalogueUniverses: CatalogueUniverse[] = [
     slug: "levage",
     title: "Levage",
     subtitle: "Palans, portiques et potences",
-    countLabel: "8 familles",
+    countLabel: "9 familles",
     description:
-      "Accessoires de levage, charges d’essai, élévateurs de charge, palans, portiques, potences et tripodes. Les potences murales et sur fût passent par le configurateur.",
+      "Accessoires de levage, charges d’essai, élévateurs de charge, palans, treuils, portiques, potences et tripodes. Les potences murales et sur fût passent par le configurateur.",
     icon: Factory,
     accent: "bg-[#007f8f]",
     href: "/catalogue/levage",
     mode: "catalogue",
-    tags: ["Palan", "Portique", "Potence", "Tripode"],
+    tags: ["Palan", "Treuil", "Portique", "Potence"],
   },
   {
     slug: "manutention-au-sol",

@@ -16,6 +16,18 @@ export function calculateMessagerie(code: string | undefined, postcode: string |
   const prices = MESSAGERIE_PRICES[department];
   if (!prices) return { amountHT: null, weightKg: totalWeight, reason: "Destination hors grille messagerie" };
   const index = MESSAGERIE_BANDS.findIndex((band) => totalWeight >= band.min && totalWeight <= band.max);
-  if (index < 0) return { amountHT: null, weightKg: totalWeight, reason: "Poids hors grille messagerie (31 à 200 kg)" };
-  return { amountHT: prices[index] ?? null, weightKg: totalWeight, reason: "Tarif calculé selon département et tranche de poids" };
+  if (index >= 0) return { amountHT: prices[index] ?? null, weightKg: totalWeight, reason: "Tarif calculé selon département et tranche de poids" };
+
+  // La grille fournisseur prévoit la messagerie jusqu’à 250 kg.
+  // Au-delà de 200 kg, le tarif est prolongé au prorata du tarif 200 kg.
+  if (totalWeight > 200 && totalWeight <= 250) {
+    const priceAt200Kg = prices[prices.length - 1];
+    return {
+      amountHT: priceAt200Kg === undefined ? null : Number((priceAt200Kg * totalWeight / 200).toFixed(2)),
+      weightKg: totalWeight,
+      reason: "Tarif messagerie calculé au poids jusqu’à 250 kg",
+    };
+  }
+
+  return { amountHT: null, weightKg: totalWeight, reason: "Poids hors grille messagerie (31 à 250 kg)" };
 }

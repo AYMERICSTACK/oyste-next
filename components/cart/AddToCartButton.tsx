@@ -18,6 +18,7 @@ export default function AddToCartButton({
   href,
   technicalLines = [],
   label = "Ajouter au panier",
+  cartItemId,
   className = "",
 }: {
   name: string;
@@ -32,6 +33,7 @@ export default function AddToCartButton({
   href?: string;
   technicalLines?: CartTechnicalLine[];
   label?: string;
+  cartItemId?: string;
   className?: string;
 }) {
   const { addItem } = useCart();
@@ -39,6 +41,7 @@ export default function AddToCartButton({
 
   function handleClick() {
     addItem({
+      id: cartItemId,
       kind: "catalogue",
       name,
       code,

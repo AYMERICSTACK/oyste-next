@@ -4,6 +4,7 @@ import {
   formatPriceRange,
   getCustomerProductDescription,
   getProductAvailableDocumentCount,
+  getProductMediaImages,
   isPotenceProduct,
   type CatalogueProduct,
 } from "@/lib/catalogue/repository";
@@ -25,6 +26,7 @@ export default function CatalogProductGrid({ products }: { products: CataloguePr
             href={product.href}
             cta={isPotence ? "Voir la fiche" : "Voir la fiche"}
             imageRef={product.imageRef || product.code}
+            imageUrl={getProductMediaImages(product)[0]}
             badge={
               isPotence
                 ? "Potence configurable"

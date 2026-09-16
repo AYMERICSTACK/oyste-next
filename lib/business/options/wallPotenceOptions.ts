@@ -8,8 +8,8 @@ export const wallFixingSupportChoices: BusinessChoice[] = [
   },
   {
     id: "metal-post",
-    label: "Poteau métallique",
-    description: "La potence est fixée sur un poteau existant avec un kit adapté.",
+    label: "Poteau métallique / poteau béton",
+    description: "La potence est fixée sur un poteau existant avec le principe de fixation adapté.",
   },
 ];
 
@@ -23,6 +23,11 @@ export const wallPostFixingChoices: BusinessChoice[] = [
     id: "belt",
     label: "À ceinturer",
     description: "Le kit entoure le poteau pour une fixation répartie autour du support.",
+  },
+  {
+    id: "standard-bolted",
+    label: "Standard à boulonner",
+    description: "Fixation standard par boulons traversants, à la charge du client.",
   },
 ];
 

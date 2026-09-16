@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Building2, LayoutDashboard, Package } from "lucide-react";
+import { Building2, FileText, LayoutDashboard, Package } from "lucide-react";
 
 const links = [
   { href: "/compte", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
   { href: "/compte/commandes", label: "Mes commandes", icon: Package },
+  { href: "/compte/factures", label: "Mes factures", icon: FileText },
   { href: "/compte/entreprise", label: "Mon entreprise", icon: Building2 },
 ];
 

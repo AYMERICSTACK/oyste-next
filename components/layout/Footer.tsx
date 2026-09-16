@@ -203,7 +203,7 @@ export default async function Footer() {
                 <MapPin size={18} className="mt-0.5 shrink-0 text-[#67c7d1]" />
                 <span>
                   <span className="block text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                    Intervention
+                    Secteur
                   </span>
                   <span className="mt-1 block font-bold">{footer.area}</span>
                 </span>

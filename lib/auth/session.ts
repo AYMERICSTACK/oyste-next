@@ -60,6 +60,6 @@ export async function getCurrentCustomer() {
   if (!payload) return null;
   return (prisma.customer as any).findUnique({
     where: { id: payload.customerId },
-    select: { id: true, email: true, firstName: true, lastName: true, company: true, siret: true, jobTitle: true, phone: true, createdAt: true, lastLoginAt: true, previousLoginAt: true },
+    select: { id: true, email: true, firstName: true, lastName: true, company: true, siren: true, siret: true, vatNumber: true, jobTitle: true, phone: true, createdAt: true, lastLoginAt: true, previousLoginAt: true },
   });
 }

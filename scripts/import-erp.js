@@ -156,15 +156,72 @@ function getFamilyLabel(code, category) {
   return code;
 }
 
+function getOptionalNumber(row, ...keys) {
+  const raw = getString(row, ...keys);
+  if (!raw) return undefined;
+  const parsed = Number.parseFloat(raw.replace(",", "."));
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function convertWeightToKg(value, unitPower) {
+  if (value === undefined || value <= 0 || unitPower === undefined) return undefined;
+  return value * Math.pow(10, unitPower);
+}
+
+function convertLengthToCm(value, unitPower) {
+  if (value === undefined || value <= 0 || unitPower === undefined) return undefined;
+  return value * Math.pow(10, unitPower + 2);
+}
+
+function parseTransportDataFromDescription(description) {
+  const text = String(description ?? "")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&times;/gi, "x")
+    .replace(/&#215;/gi, "x")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ");
+
+  const weightMatch = text.match(/Poids\s*=\s*(\d+(?:[,.]\d+)?)\s*kg/i);
+  const dimensionsMatch = text.match(
+    /Dimensions?\s+(?:pour\s+)?transport\s*=\s*(\d+(?:[,.]\d+)?)\s*[x×]\s*(\d+(?:[,.]\d+)?)\s*[x×]\s*(\d+(?:[,.]\d+)?)\s*(mm|cm|m)\b/i,
+  );
+
+  const weightKg = parseNumber(weightMatch?.[1]);
+  if (!dimensionsMatch) return { weightKg };
+
+  const factorToCm = dimensionsMatch[4].toLowerCase() === "mm"
+    ? 0.1
+    : dimensionsMatch[4].toLowerCase() === "m"
+      ? 100
+      : 1;
+
+  return {
+    weightKg,
+    packageLengthCm: parseNumber(dimensionsMatch[1]) * factorToCm,
+    packageWidthCm: parseNumber(dimensionsMatch[2]) * factorToCm,
+    packageHeightCm: parseNumber(dimensionsMatch[3]) * factorToCm,
+  };
+}
+
 function normalizeProduct(row) {
   const ref = normalizeCode(getString(row, "ref", "Ref", "REF"));
   if (!isTruthyCode(ref)) return null;
   const label = getString(row, "label", "Label", "LABEL") || ref;
   const parsed = parseErpReference(ref, label);
+  const rawWeight = getOptionalNumber(row, "weight", "Weight", "poids", "Poids");
+  const rawWeightUnit = getOptionalNumber(row, "weight_units", "WeightUnits", "poids_unite");
+  const rawLength = getOptionalNumber(row, "length", "Length", "longueur", "Longueur");
+  const rawWidth = getOptionalNumber(row, "width", "Width", "largeur", "Largeur");
+  const rawHeight = getOptionalNumber(row, "height", "Height", "hauteur", "Hauteur");
+  const rawLengthUnit = getOptionalNumber(row, "length_units", "LengthUnits", "size_units");
+  const rawWidthUnit = getOptionalNumber(row, "width_units", "WidthUnits") ?? rawLengthUnit;
+  const rawHeightUnit = getOptionalNumber(row, "height_units", "HeightUnits") ?? rawLengthUnit;
+  const description = getString(row, "description", "Description") || undefined;
+  const descriptionShipping = parseTransportDataFromDescription(description);
   return {
     ref,
     label,
-    description: getString(row, "description", "Description") || undefined,
+    description,
     costPrice: getNumber(row, "cost_price", "costPrice", "Cost_price", "price", "Prix"),
     family: parsed.family,
     category: parsed.category,
@@ -175,6 +232,10 @@ function normalizeProduct(row) {
     spanMm: parsed.spanMm,
     heightMm: parsed.heightMm,
     widthMm: parsed.widthMm,
+    weightKg: convertWeightToKg(rawWeight, rawWeightUnit) ?? descriptionShipping.weightKg,
+    packageLengthCm: convertLengthToCm(rawLength, rawLengthUnit) ?? descriptionShipping.packageLengthCm,
+    packageWidthCm: convertLengthToCm(rawWidth, rawWidthUnit) ?? descriptionShipping.packageWidthCm,
+    packageHeightCm: convertLengthToCm(rawHeight, rawHeightUnit) ?? descriptionShipping.packageHeightCm,
   };
 }
 

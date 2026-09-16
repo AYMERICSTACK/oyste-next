@@ -96,6 +96,8 @@ export type ConfiguratorPriceBreakdown = {
   hoistTotal: number;
   complementsTotal: number;
   totalHt: number;
+  weightKg?: number;
+  weightComplete?: boolean;
 };
 
 
@@ -120,6 +122,8 @@ export type HoistDetail = {
   componentLines: ConfiguratorComponentLine[];
   notes: HoistDetailNote[];
   totalHt: number;
+  weightKg?: number;
+  weightComplete?: boolean;
 };
 
 export type ConfiguratorInstallationSummary = {

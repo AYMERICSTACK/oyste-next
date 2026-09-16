@@ -10,7 +10,8 @@ import {
   Truck,
   Wrench,
 } from "lucide-react";
-import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { notFound, redirect } from "next/navigation";
 import Container from "@/components/ui/Container";
 import ProductCard from "@/components/catalogue/ProductCard";
 import CrossSellingSection from "@/components/catalogue/CrossSellingSection";
@@ -20,6 +21,7 @@ import ProductDocuments from "@/components/catalogue/ProductDocuments";
 import ProductFaq from "@/components/catalogue/ProductFaq";
 import ProductApplications from "@/components/catalogue/ProductApplications";
 import ProductTrustStrip from "@/components/catalogue/ProductTrustStrip";
+import ProductQuickNav from "@/components/catalogue/ProductQuickNav";
 import {
   formatCategoryLabel,
   formatPriceRange,
@@ -43,62 +45,124 @@ import {
 import {
   getDatabaseProductBySlug,
   getDatabaseProductsByCategory,
+  getDatabaseStockmanFamilyVariants,
 } from "@/lib/catalogue/database-repository";
 
-export default async function CatalogProductPage({
+export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string; productSlug: string }>;
+}): Promise<Metadata> {
+  const { slug, productSlug } = await params;
+  const product = await getDatabaseProductBySlug(slug, productSlug);
+
+  if (!product) return {};
+
+  const title = product.seoTitle?.trim() || `${product.name} | OYSTE`;
+  const description = product.seoDescription?.trim() || getCustomerProductDescription(product);
+  const images = getProductMediaImages(product);
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: `/catalogue/${slug}/${productSlug}`,
+    },
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      images: images[0] ? [{ url: images[0], alt: product.name }] : undefined,
+    },
+  };
+}
+
+export default async function CatalogProductPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string; productSlug: string }>;
+  searchParams: Promise<{ variant?: string | string[] }>;
 }) {
   const { slug, productSlug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const initialVariantCode = Array.isArray(resolvedSearchParams.variant)
+    ? resolvedSearchParams.variant[0]
+    : resolvedSearchParams.variant;
   const product = await getDatabaseProductBySlug(slug, productSlug);
 
   if (!product) return notFound();
 
+  if (slug === "produit" && product.categorySlug && product.categorySlug !== "produit") {
+    redirect(`/catalogue/${product.categorySlug}/${product.slug}`);
+  }
+
+  const stockmanFamily = product.variants?.length
+    ? { variants: [], optionSchema: [] }
+    : await getDatabaseStockmanFamilyVariants(product.id);
+
   const variants = product.variants?.length
     ? product.variants
-    : [
-        {
-          id: product.id,
-          code: product.code,
-          supplierCode: product.supplierCode,
-          name: product.name,
-          label: product.name,
-          priceHT: product.priceHT,
-          delay: product.delay,
-          stock: product.stock,
-          imageRef: product.imageRef,
-          features: product.features,
-          options: {},
-        },
-      ];
+    : stockmanFamily.variants.length > 1
+      ? stockmanFamily.variants
+      : [
+          {
+            id: product.id,
+            code: product.code,
+            supplierCode: product.supplierCode,
+            name: product.name,
+            label: product.name,
+            priceHT: product.priceHT,
+            delay: product.delay,
+            stock: product.stock,
+            weightKg: product.weightKg,
+            shippingMode: product.shippingMode,
+            imageRef: product.imageRef,
+            features: product.features,
+            options: {},
+          },
+        ];
 
-  const highlights = getProductHighlights(product);
-  const heroDescription = getCustomerProductDescription(product);
-  const experienceType = getProductExperienceType(product);
+  const effectiveOptionSchema = product.optionSchema?.length
+    ? product.optionSchema
+    : stockmanFamily.optionSchema;
+
+  // La famille Stockman est reconstruite dynamiquement pour les produits importés
+  // séparément. Toutes les zones de la fiche doivent utiliser cette vue résolue,
+  // pas seulement le sélecteur de variantes.
+  const variantCount = Math.max(1, variants.length);
+  const resolvedProduct = {
+    ...product,
+    variants,
+    variantCount,
+    optionSchema: effectiveOptionSchema,
+  };
+
+  const highlights = getProductHighlights(resolvedProduct);
+  const heroDescription = getCustomerProductDescription(resolvedProduct);
+  const experienceType = getProductExperienceType(resolvedProduct);
   const isConfigurable = experienceType === "CONFIGURABLE";
-  const configuratorFamily = getProductConfiguratorFamily(product);
-  const configuratorHref = getProductConfiguratorHref(product);
+  const configuratorFamily = getProductConfiguratorFamily(resolvedProduct);
+  const configuratorHref = getProductConfiguratorHref(resolvedProduct);
   const categoryProducts = await getDatabaseProductsByCategory(product.categorySlug);
-  const relatedProducts = getRelatedProductsFrom(categoryProducts, product, 3);
-  const crossSellProducts = getCrossSellProductsFrom(categoryProducts, product, 4);
-  const variantCount = product.variantCount || variants.length || 1;
-  const technicalRows = getProductTechnicalRows(product);
-  const configurationColumns = getProductConfigurationColumns(product);
-  const configurationRows = getProductConfigurationRows(product, 12);
+  const relatedProducts = getRelatedProductsFrom(categoryProducts, resolvedProduct, 3);
+  const crossSellProducts = getCrossSellProductsFrom(categoryProducts, resolvedProduct, 4);
+  const technicalRows = getProductTechnicalRows(resolvedProduct);
+  const configurationColumns = getProductConfigurationColumns(resolvedProduct);
+  const configurationRows = getProductConfigurationRows(resolvedProduct, 12);
   const hiddenConfigurationCount = Math.max(0, variantCount - configurationRows.length);
-  const documents = getProductDocuments(product);
-  const availableDocumentCount = getProductAvailableDocumentCount(product);
-  const mediaImages = getProductMediaImages(product);
-  const trustBadges = getProductTrustBadges(product);
+  const documents = getProductDocuments(resolvedProduct);
+  const availableDocumentCount = getProductAvailableDocumentCount(resolvedProduct);
+  const mediaImages = getProductMediaImages(resolvedProduct);
+  const trustBadges = getProductTrustBadges(resolvedProduct);
   const familyLabel = formatCategoryLabel(product.categoryPath);
-  const marketingBadges = getProductMarketingBadges(product);
+  const marketingBadges = getProductMarketingBadges(resolvedProduct);
   const catalogueBadges = Array.from(
     new Map(
       [...marketingBadges, ...trustBadges].map((badge) => [badge.trim().toLocaleLowerCase("fr"), badge.trim()]),
     ).values(),
   ).slice(0, 6);
-  const faq = getProductFaq(product);
+  const faq = getProductFaq(resolvedProduct);
 
   return (
     <main className="bg-slate-50 text-slate-950">
@@ -215,6 +279,11 @@ export default async function CatalogProductPage({
       </section>
 
       <Container className="py-12 lg:py-16">
+        <ProductQuickNav
+          showFaq={faq.length > 0}
+          showProducts={crossSellProducts.length > 0 || relatedProducts.length > 0}
+        />
+
         <ProductVariantSelector
           productName={product.name}
           productCode={product.code}
@@ -223,7 +292,8 @@ export default async function CatalogProductPage({
           productWeightKg={product.weightKg}
           productShippingMode={product.shippingMode}
           variants={variants}
-          optionSchema={product.optionSchema || []}
+          optionSchema={effectiveOptionSchema}
+          initialVariantCode={initialVariantCode}
           isConfiguratorProduct={isConfigurable}
           configuratorHref={configuratorHref}
           galleryImages={mediaImages}
@@ -238,35 +308,37 @@ export default async function CatalogProductPage({
 
         <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_0.65fr]">
           <div className="grid gap-6">
-            <SmartProductDescription product={product} />
+            <div id="presentation-produit" className="scroll-mt-28">
+              <SmartProductDescription product={product} />
+            </div>
 
-            <ProductFaq items={faq} />
-
-            <section className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
-              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
-                <div>
-                  <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">Données produit</p>
-                  <h2 className="mt-2 text-3xl font-black text-slate-950">Tableau technique</h2>
-                  <p className="mt-3 max-w-3xl text-sm font-bold leading-7 text-slate-600">
-                    Les informations disponibles sont consolidées depuis la fiche, les variantes et les caractéristiques importées. Elles servent de base au choix de la bonne référence avant achat.
-                  </p>
-                </div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-[#007f8f]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#005466]">
-                  <TableProperties size={16} /> {technicalRows.length} champs
-                </span>
-              </div>
-
-              <div className="mt-7 overflow-hidden rounded-[1.5rem] border border-slate-200">
-                {technicalRows.map((row, index) => (
-                  <div
-                    key={`${row.label}-${row.value}`}
-                    className={`grid gap-2 px-5 py-4 text-sm md:grid-cols-[0.42fr_0.58fr] ${index % 2 === 0 ? "bg-slate-50" : "bg-white"}`}
-                  >
-                    <p className="font-black text-slate-950">{row.label}</p>
-                    <p className="font-bold text-slate-600">{row.value}</p>
+            <section id="caracteristiques-techniques" className="scroll-mt-28 rounded-[2.5rem] border border-slate-200 bg-white p-5 shadow-sm lg:p-6">
+              <details className="group">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-5 rounded-[1.5rem] bg-slate-50 px-5 py-5 transition hover:bg-slate-100">
+                  <div className="flex items-center gap-4">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600">
+                      <TableProperties size={20} />
+                    </span>
+                    <div>
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Données produit</p>
+                      <h2 className="mt-1 text-2xl font-black text-slate-950">Tableau technique</h2>
+                      <p className="mt-1 text-sm font-bold text-slate-500">{technicalRows.length} caractéristiques disponibles</p>
+                    </div>
                   </div>
-                ))}
-              </div>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-xl font-black text-[#007f8f] shadow-sm transition group-open:rotate-45">+</span>
+                </summary>
+
+                <div className="mt-5 overflow-hidden rounded-[1.5rem] border border-slate-200">
+                  {technicalRows.map((row, index) => (
+                    <div
+                      key={`${row.label}-${row.value}`}
+                      className={`grid gap-1 px-5 py-3.5 text-sm md:grid-cols-[0.42fr_0.58fr] ${index % 2 === 0 ? "bg-slate-50" : "bg-white"}`}
+                    >
+                      <p className="font-black text-slate-950">{row.label}</p>
+                      <p className="font-bold text-slate-600">{row.value}</p>
+                    </div>
+                  ))}
+                </div>
 
               {configurationRows.length > 0 ? (
                 <div className="mt-8 rounded-[1.75rem] border border-slate-200 bg-slate-50 p-4 lg:p-5">
@@ -325,6 +397,7 @@ export default async function CatalogProductPage({
                   ) : null}
                 </div>
               ) : null}
+              </details>
             </section>
           </div>
 
@@ -360,12 +433,19 @@ export default async function CatalogProductPage({
               </div>
             </section>
 
-            <ProductDocuments
-              documents={documents}
-              availableDocumentCount={availableDocumentCount}
-              productName={product.name}
-            />
           </aside>
+        </div>
+
+        <div className="mt-8 scroll-mt-28">
+          <ProductDocuments
+            documents={documents}
+            availableDocumentCount={availableDocumentCount}
+            productName={product.name}
+          />
+        </div>
+
+        <div className="mt-8">
+          <ProductFaq items={faq} />
         </div>
 
         <div className="mt-10">
@@ -375,7 +455,10 @@ export default async function CatalogProductPage({
         <CrossSellingSection product={product} products={crossSellProducts} />
 
         {relatedProducts.length > 0 ? (
-          <section className="mt-14 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
+          <section
+            id={crossSellProducts.length > 0 ? undefined : "produits-associes"}
+            className="scroll-mt-28 mt-14 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8"
+          >
             <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">Produits associés</p>
@@ -397,6 +480,7 @@ export default async function CatalogProductPage({
                   href={related.href}
                   cta={getProductExperienceType(related) === "CONFIGURABLE" ? "Voir puis configurer" : "Voir la fiche"}
                   imageRef={related.imageRef}
+                  imageUrl={getProductMediaImages(related)[0]}
                   badge={(related.variantCount || related.variants?.length || 1) > 1 ? `${related.variantCount || related.variants?.length} variantes` : "Catalogue OYSTE"}
                   documentCount={getProductAvailableDocumentCount(related)}
                 />

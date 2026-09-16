@@ -1213,11 +1213,6 @@ export default function VisualConfigPreview({
         />
       </div>
 
-      {isLarge ? (
-        <div className="mt-4 rounded-2xl border border-[#007f8f]/20 bg-[#007f8f]/5 p-4 text-sm font-bold leading-6 text-[#005466]">
-          La visualisation reprend directement le modèle GLB et le preset validé dans le 3D Lab : potence, chariot, palan et équipements électriques correspondent à la solution sélectionnée.
-        </div>
-      ) : null}
     </div>
   );
 }

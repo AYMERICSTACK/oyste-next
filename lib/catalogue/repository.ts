@@ -18,6 +18,9 @@ export type CatalogueVariant = {
   delay: string;
   stock: number | null;
   weightKg?: number | null;
+  packageLengthCm?: number | null;
+  packageWidthCm?: number | null;
+  packageHeightCm?: number | null;
   shippingMode?: ProductShippingMode;
   imageRef: string;
   features: CatalogueFeature[];
@@ -51,12 +54,17 @@ export type CatalogueProduct = {
   categories: string[];
   description: string;
   detailedDescription: string;
+  seoTitle?: string;
+  seoDescription?: string;
   priceHT: number | null;
   minPriceHT?: number | null;
   maxPriceHT?: number | null;
   delay: string;
   stock: number | null;
   weightKg?: number | null;
+  packageLengthCm?: number | null;
+  packageWidthCm?: number | null;
+  packageHeightCm?: number | null;
   shippingMode?: ProductShippingMode;
   imageRef: string;
   features: CatalogueFeature[];
@@ -71,6 +79,19 @@ export type CatalogueProduct = {
   videoUrls?: string[];
   relatedProductCodes?: string[];
   accessoryProductCodes?: string[];
+  media?: Array<{
+    url: string;
+    altText?: string | null;
+    isPrimary?: boolean;
+    sortOrder?: number;
+  }>;
+  documents?: Array<{
+    name: string;
+    type: "TECHNICAL_SHEET" | "INSTALLATION_MANUAL" | "DIMENSION_DRAWING" | "CERTIFICATE" | "COMMERCIAL_DOCUMENT" | "OTHER";
+    url: string;
+    isPublic?: boolean;
+    sortOrder?: number;
+  }>;
 };
 
 export type CatalogueCategory = {
@@ -165,6 +186,7 @@ export const catalogueSubFamilies: Record<string, CatalogueSubFamily[]> = {
     { title: "Charge d'essai", href: "/catalogue/levage?famille=charge-dessai" },
     { title: "Élévateur de charge", href: "/catalogue/levage?famille=elevateur-de-charge" },
     { title: "Palan", href: "/catalogue/levage?famille=palan" },
+    { title: "Treuil", href: "/catalogue/levage?famille=treuil" },
     { title: "Portique", href: "/catalogue/levage?famille=portique" },
     { title: "Potence murale", href: "/catalogue/levage?famille=potence-murale", mode: "catalogue" },
     { title: "Potence sur fût", href: "/catalogue/levage?famille=potence-sur-fut", mode: "catalogue" },
@@ -206,7 +228,7 @@ export const catalogueCategoryContent: Record<string, { breadcrumb: string; titl
     breadcrumb: "Catalogue manutention OYSTE > Levage",
     title: "Levage",
     description:
-      "OYSTE regroupe ici les équipements de levage standards : accessoires de levage, charges d'essai, élévateurs de charge, palans, portiques et tripodes. Les potences disposent de fiches catalogue dédiées pour présenter les modèles, puis orientent vers le configurateur afin de garantir une solution adaptée.",
+      "OYSTE regroupe ici les équipements de levage standards : accessoires de levage, charges d'essai, élévateurs de charge, palans, treuils, portiques et tripodes. Les potences disposent de fiches catalogue dédiées pour présenter les modèles, puis orientent vers le configurateur afin de garantir une solution adaptée.",
   },
   "manutention-au-sol": {
     breadcrumb: "Catalogue manutention OYSTE > Manutention au sol",
@@ -495,7 +517,40 @@ function getCategoryTrail(product: Pick<CatalogueProduct, "categoryPath" | "name
     .toLowerCase();
 }
 
+const LEVAGE_FAMILY_SLUGS = new Set([
+  "accessoires-de-levage",
+  "charge-dessai",
+  "elevateur-de-charge",
+  "palan",
+  "treuil",
+  "portique",
+  "potence-murale",
+  "potence-sur-fut",
+  "tripode",
+]);
+
+function getExplicitLevageFamilySlug(product: Pick<CatalogueProduct, "categoryPath">) {
+  const segments = (product.categoryPath || "")
+    .split(/\\|>/g)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+
+  if (slugifyCatalogueLabel(segments[0] || "") !== "levage") return null;
+
+  const familySlug = slugifyCatalogueLabel(segments[1] || "");
+  return LEVAGE_FAMILY_SLUGS.has(familySlug) ? familySlug : null;
+}
+
 export function productMatchesFamily(product: CatalogueProduct, familySlug: string) {
+  const explicitLevageFamily = getExplicitLevageFamilySlug(product);
+
+  // Le chemin de catégorie ERP est la source de vérité. Un produit classé dans
+  // `Levage\Accessoires de levage\...` ne doit pas basculer dans « Palan »
+  // simplement parce que sa désignation contient le mot « palan ».
+  if (explicitLevageFamily && LEVAGE_FAMILY_SLUGS.has(familySlug)) {
+    return explicitLevageFamily === familySlug;
+  }
+
   const value = getCategoryTrail(product);
 
   if (familySlug === "accessoires-de-levage") {
@@ -503,7 +558,8 @@ export function productMatchesFamily(product: CatalogueProduct, familySlug: stri
   }
   if (familySlug === "charge-dessai") return value.includes("charge d'essai") || value.includes("charge dessai");
   if (familySlug === "elevateur-de-charge") return value.includes("elevateur de charge") || value.includes("leve palette");
-  if (familySlug === "palan") return /(palan|chariot porte palan|treuil)/.test(value);
+  if (familySlug === "palan") return /(palan|chariot porte palan)/.test(value) && !value.includes("treuil");
+  if (familySlug === "treuil") return value.includes("treuil");
   if (familySlug === "portique") return value.includes("portique");
   if (familySlug === "potence-murale") return isPotenceProduct(product) && /(murale|mural|pmi|pmt|pma|pmam)/.test(value);
   if (familySlug === "potence-sur-fut") return isPotenceProduct(product) && /(sur fut|sur fût|fut|fût|pfi|pft)/.test(value);
@@ -842,11 +898,19 @@ function getProductMediaReferences(product: CatalogueProduct, variantLimit = 24)
 }
 
 export function getProductMediaImages(product: CatalogueProduct) {
+  const databaseImages = (product.media || [])
+    .filter((media) => Boolean(media.url))
+    .sort((a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary)) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((media) => media.url);
+
+  if (databaseImages.length) return Array.from(new Set(databaseImages));
   return getImportedProductImagesExact(...getProductMediaReferences(product));
 }
 
 
 export function getProductAvailableDocumentCount(product: CatalogueProduct) {
+  const databaseDocuments = (product.documents || []).filter((document) => document.isPublic !== false && Boolean(document.url));
+  if (databaseDocuments.length) return databaseDocuments.length;
   return getImportedProductDocumentsExact(...getProductMediaReferences(product)).length;
 }
 
@@ -862,8 +926,38 @@ function getDocumentReference(filename?: string) {
 }
 
 export function getProductDocuments(product: CatalogueProduct): ProductDocument[] {
-  const importedDocuments = getImportedProductDocumentsExact(...getProductMediaReferences(product));
+  const mapKind = (type: NonNullable<CatalogueProduct["documents"]>[number]["type"]): ProductDocumentKind => {
+    if (type === "INSTALLATION_MANUAL") return "manual";
+    if (type === "DIMENSION_DRAWING") return "dimensional-drawing";
+    if (type === "CERTIFICATE") return "declaration";
+    return "technical-sheet";
+  };
 
+  const databaseDocuments: ProductDocument[] = (product.documents || [])
+    .filter((document) => document.isPublic !== false && Boolean(document.url))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((document) => ({
+      kind: mapKind(document.type),
+      title:
+        document.type === "TECHNICAL_SHEET" ? "Fiche technique"
+        : document.type === "INSTALLATION_MANUAL" ? "Notice d'utilisation"
+        : document.type === "DIMENSION_DRAWING" ? "Plan d'encombrement"
+        : document.type === "CERTIFICATE" ? "Certificat / conformité"
+        : document.name || "Document technique",
+      description: document.name || "Document fournisseur",
+      status: "available" as const,
+      href: document.url,
+      filename: document.name,
+      filetype: document.url.split(".").pop()?.split(/[?#]/)[0]?.toLowerCase() || "pdf",
+      reference: product.code,
+      displayName: document.name,
+      source: "media-manifest" as const,
+      isVisible: true,
+    }));
+
+  if (databaseDocuments.length) return databaseDocuments;
+
+  const importedDocuments = getImportedProductDocumentsExact(...getProductMediaReferences(product));
   const technicalSheets: ProductDocument[] = importedDocuments.map((document) => {
     const extension = document.filename?.split(".").pop()?.toLowerCase() || "pdf";
     const reference = getDocumentReference(document.filename);
@@ -882,59 +976,17 @@ export function getProductDocuments(product: CatalogueProduct): ProductDocument[
     };
   });
 
-  const futureDocumentTypes: ProductDocument[] = [
-    {
-      kind: "manual",
-      title: "Notice d'utilisation",
-      description: "Notice d'installation, d'utilisation ou de maintenance.",
-      status: "disabled",
-      href: "#",
-      source: "future",
-      isVisible: false,
-    },
-    {
-      kind: "dimensional-drawing",
-      title: "Plan d'encombrement",
-      description: "Plan coté, schéma d'encombrement ou plan de principe.",
-      status: "disabled",
-      href: "#",
-      source: "future",
-      isVisible: false,
-    },
-    {
-      kind: "declaration",
-      title: "Déclaration de conformité",
-      description: "Déclaration CE, certificat ou document de conformité fournisseur.",
-      status: "disabled",
-      href: "#",
-      source: "future",
-      isVisible: false,
-    },
-    {
-      kind: "exploded-view",
-      title: "Vue éclatée",
-      description: "Vue pièces, nomenclature ou document de maintenance détaillé.",
-      status: "disabled",
-      href: "#",
-      source: "future",
-      isVisible: false,
-    },
-  ];
+  if (technicalSheets.length > 0) return technicalSheets;
 
-  if (technicalSheets.length > 0) return [...technicalSheets, ...futureDocumentTypes];
-
-  return [
-    {
-      kind: "technical-sheet",
-      title: "Fiche technique",
-      description: "Documentation disponible sur demande.",
-      status: "on-request",
-      href: "#demande-devis",
-      source: "request",
-      isVisible: true,
-    },
-    ...futureDocumentTypes,
-  ];
+  return [{
+    kind: "technical-sheet",
+    title: "Fiche technique",
+    description: "Documentation disponible sur demande.",
+    status: "on-request",
+    href: "#demande-devis",
+    source: "request",
+    isVisible: true,
+  }];
 }
 
 export function getProductTrustBadges(product: CatalogueProduct) {

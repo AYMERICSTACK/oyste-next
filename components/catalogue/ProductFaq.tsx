@@ -5,7 +5,7 @@ export default function ProductFaq({ items }: { items: CatalogueFaqItem[] }) {
   if (!items.length) return null;
 
   return (
-    <section className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
+    <section id="faq-produit" className="scroll-mt-28 rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
       <div className="flex items-start gap-4">
         <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#007f8f]/10 text-[#007f8f]">
           <HelpCircle size={23} />

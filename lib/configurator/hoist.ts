@@ -7,10 +7,48 @@ import type {
   HoistDetail,
   HoistDetailNote,
 } from "./types";
-import { calculateSellingPrice } from "./pricing";
+import { calculateHoistSellingPrice } from "./pricing";
 
 const EQ_LIMIT_KG = 1000;
 const MANUAL_HOIST_BASE_HEIGHT_M = 3;
+const MANUAL_TROLLEY_CHAIN_BASE_HEIGHT_M = 2.5;
+
+const MANUAL_HOIST_BASE_WEIGHT_KG: Record<number, number> = {
+  500: 9,
+  1000: 12,
+  1500: 18,
+  1600: 19,
+  2000: 19,
+  3000: 31,
+  5000: 40,
+};
+
+const MANUAL_CHAIN_WEIGHT_PER_M_KG: Record<number, number> = {
+  500: 0.5,
+  1000: 0.8,
+  1500: 1.4,
+  1600: 1.4,
+  2000: 1.4,
+  3000: 2.2,
+  5000: 4,
+};
+
+const EQ_BASE_WEIGHT_KG: Record<number, number> = {
+  125: 30,
+  150: 30,
+  250: 30,
+  500: 32,
+  1000: 42,
+};
+
+const ER2_WEIGHT_DATA: Record<number, { base: number; extraPerM: number }> = {
+  1600: { base: 72, extraPerM: 2.3 },
+  2000: { base: 89, extraPerM: 2.3 },
+  2500: { base: 100, extraPerM: 2.8 },
+  3000: { base: 105, extraPerM: 4.7 },
+  3200: { base: 105, extraPerM: 4.7 },
+  5000: { base: 128, extraPerM: 5.6 },
+};
 
 const CAPACITY_CODE_BY_KG: Record<number, string[]> = {
   125: ["001"],
@@ -145,6 +183,32 @@ function findManualExtraMeterComponent(capacityKg: number) {
   );
 }
 
+function findManualTrolley(capacityKg: number, movement: "push" | "chain") {
+  const normalizedCapacity = capacityKg === 1600 ? 2000 : capacityKg;
+  return findErpProduct(`${movement === "chain" ? "HTG" : "HTP"}${normalizedCapacity}A`);
+}
+
+function findManualManeuverChainComponent() {
+  return findErpProduct("MSUPMANZING_YALE_VSIII_YL360_HTG");
+}
+
+function hasChoice(answers: Answers, answerId: string, choiceId: string) {
+  const value = answers[answerId];
+  return Array.isArray(value) ? value.includes(choiceId) : value === choiceId;
+}
+
+function getElectricTechnicalWeight(capacityKg: number, liftingHeightM: number) {
+  if (capacityKg <= EQ_LIMIT_KG) {
+    return EQ_BASE_WEIGHT_KG[capacityKg] ?? EQ_BASE_WEIGHT_KG[1000];
+  }
+  const data = ER2_WEIGHT_DATA[capacityKg] ?? Object.entries(ER2_WEIGHT_DATA)
+    .map(([capacity, value]) => ({ capacity: Number(capacity), value }))
+    .filter((item) => item.capacity >= capacityKg)
+    .sort((a, b) => a.capacity - b.capacity)[0]?.value;
+  if (!data) return undefined;
+  return data.base + Math.max(0, liftingHeightM - 3) * data.extraPerM;
+}
+
 function getElectricHoistPrefix(answers: Answers, capacityKg: number) {
   const base = capacityKg <= EQ_LIMIT_KG ? "EQ" : "ER2";
   const movement = answers.hoistTrolleyMovement === "motorized" ? "M" : "SP";
@@ -177,8 +241,8 @@ function createDetailLine({
     label,
     description,
     quantity,
-    unitPrice: calculateSellingPrice(unitCost),
-    totalPrice: calculateSellingPrice(unitCost * quantity),
+    unitPrice: calculateHoistSellingPrice(unitCost),
+    totalPrice: calculateHoistSellingPrice(unitCost * quantity),
   };
 }
 
@@ -203,6 +267,14 @@ function buildElectricLineNotes(answers: Answers, liftingHeightM: number) {
           : "Sélection automatique pour une hauteur de 7 à 15 m.",
     },
   ];
+
+  if (answers.hoistTrolleyMovement === "push") {
+    notes.push({
+      label: "Raccordement électrique",
+      value: "À la charge du client",
+      description: "Le raccordement du palan à la ligne d’alimentation doit être réalisé sur site.",
+    });
+  }
 
   if (isButtonBoxCommand(answers)) {
     notes.push({
@@ -245,7 +317,7 @@ function getElectricQuantity({
   }
 
   if (componentMatches(code, label, [/CROCHET BAS INOX/, /CRO_INOX/])) {
-    return 0;
+    return hasChoice(answers, "hoistOptions", "stainless-hook") ? 1 : 0;
   }
 
   if (
@@ -364,7 +436,21 @@ function buildElectricHoistDetail(answers: Answers): HoistDetail | undefined {
         ]
       : [];
 
-  const lines = componentLines.length ? componentLines : fallbackLine;
+  const lines = componentLines.length ? [...componentLines] : [...fallbackLine];
+
+  if (answers.environment === "exterieur") {
+    const outdoorBox = findErpProduct("COFBABA");
+    if (outdoorBox) {
+      lines.push(createDetailLine({
+        id: `hoist-outdoor-${outdoorBox.ref}`,
+        label: outdoorBox.label,
+        description: outdoorBox.ref,
+        quantity: 1,
+        unitCost: outdoorBox.costPrice,
+      }));
+    }
+  }
+
   const totalHt = roundPrice(
     lines.reduce((total, line) => total + line.totalPrice, 0),
   );
@@ -393,74 +479,83 @@ function buildElectricHoistDetail(answers: Answers): HoistDetail | undefined {
     componentLines: lines,
     notes: buildElectricLineNotes(answers, liftingHeightM),
     totalHt,
+    weightKg: getElectricTechnicalWeight(capacityKg, liftingHeightM),
+    weightComplete: answers.hoistTrolleyMovement === "push",
   };
 }
 
 function buildManualHoistDetail(answers: Answers): HoistDetail | undefined {
   const capacityKg = parseNumber(answers.capacity);
-  if (!capacityKg) return undefined;
+  const movement = answers.hoistTrolleyMovement;
+  if (!capacityKg || (movement !== "push" && movement !== "chain")) return undefined;
 
   const hoist = findManualHoist(capacityKg);
+  const trolley = findManualTrolley(capacityKg, movement);
   const liftingHeightM = getLiftingHeightMeters(answers);
   const extraMeters = Math.max(0, liftingHeightM - MANUAL_HOIST_BASE_HEIGHT_M);
-  const extraMeterComponent =
-    extraMeters > 0 ? findManualExtraMeterComponent(capacityKg) : undefined;
+  const extraMeterComponent = extraMeters > 0 ? findManualExtraMeterComponent(capacityKg) : undefined;
+  const maneuverExtraMeters = movement === "chain"
+    ? Math.max(0, liftingHeightM - MANUAL_TROLLEY_CHAIN_BASE_HEIGHT_M)
+    : 0;
+  const maneuverChain = maneuverExtraMeters > 0 ? findManualManeuverChainComponent() : undefined;
 
   const lines: ConfiguratorComponentLine[] = [];
-
-  if (hoist) {
-    lines.push(
-      createDetailLine({
-        id: `hoist-manual-${hoist.ref}`,
-        label: hoist.label,
-        description: hoist.ref,
-        quantity: 1,
-        unitCost: hoist.costPrice,
-      }),
-    );
+  for (const product of [hoist, trolley]) {
+    if (!product) continue;
+    lines.push(createDetailLine({
+      id: `hoist-manual-${product.ref}`,
+      label: product.label,
+      description: product.ref,
+      quantity: 1,
+      unitCost: product.costPrice,
+    }));
   }
 
   if (extraMeterComponent && extraMeters > 0) {
-    lines.push(
-      createDetailLine({
-        id: `hoist-manual-extra-${extraMeterComponent.ref}`,
-        label: extraMeterComponent.label,
-        description: extraMeterComponent.ref,
-        quantity: extraMeters,
-        unitCost: extraMeterComponent.costPrice,
-      }),
-    );
+    lines.push(createDetailLine({
+      id: `hoist-manual-extra-${extraMeterComponent.ref}`,
+      label: extraMeterComponent.label,
+      description: extraMeterComponent.ref,
+      quantity: extraMeters,
+      unitCost: extraMeterComponent.costPrice,
+    }));
   }
+
+  if (maneuverChain && maneuverExtraMeters > 0) {
+    lines.push(createDetailLine({
+      id: `hoist-manual-maneuver-${maneuverChain.ref}`,
+      label: maneuverChain.label,
+      description: maneuverChain.ref,
+      quantity: maneuverExtraMeters,
+      unitCost: maneuverChain.costPrice,
+    }));
+  }
+
+  const knownWeight = (MANUAL_HOIST_BASE_WEIGHT_KG[capacityKg] ?? 0)
+    + extraMeters * (MANUAL_CHAIN_WEIGHT_PER_M_KG[capacityKg] ?? 0)
+    + maneuverExtraMeters * (MANUAL_CHAIN_WEIGHT_PER_M_KG[capacityKg] ?? 0);
 
   return {
     mode: "manual",
     familyPrefix: "VSIII",
     reference: hoist?.ref,
-    title: "Palan manuel avec chariot par poussée",
+    title: movement === "chain"
+      ? "Palan manuel avec chariot par chaîne"
+      : "Palan manuel avec chariot par poussée",
     subtitle: `${capacityKg} kg · ${liftingHeightM} m de levage`,
     capacityKg,
     liftingHeightM,
-    trolleyMovementLabel: "Chariot par poussée",
+    trolleyMovementLabel: movement === "chain" ? "Chariot par chaîne HTG" : "Chariot par poussée HTP",
     componentLines: lines,
     notes: [
-      {
-        label: "Hauteur incluse",
-        value: "3 m",
-        description: "Base standard du palan manuel.",
-      },
-      ...(extraMeters > 0
-        ? [
-            {
-              label: "Levage supplémentaire",
-              value: `${extraMeters} m`,
-              description: "Ajouté automatiquement au-delà des 3 m inclus.",
-            },
-          ]
-        : []),
+      { label: "Hauteur de levage incluse", value: "3 m", description: "Base standard du palan manuel Yale VSIII." },
+      ...(movement === "chain" ? [{ label: "Chaîne de manœuvre incluse", value: "2,5 m", description: "Les mètres supplémentaires sont calculés automatiquement." }] : []),
+      ...(extraMeters > 0 ? [{ label: "Levage supplémentaire", value: `${extraMeters} m`, description: "Ajouté automatiquement au-delà des 3 m inclus." }] : []),
+      ...(maneuverExtraMeters > 0 ? [{ label: "Chaîne de manœuvre supplémentaire", value: `${maneuverExtraMeters} m`, description: "Ajoutée automatiquement au-delà des 2,5 m inclus." }] : []),
     ],
-    totalHt: roundPrice(
-      lines.reduce((total, line) => total + line.totalPrice, 0),
-    ),
+    totalHt: roundPrice(lines.reduce((total, line) => total + line.totalPrice, 0)),
+    weightKg: knownWeight || undefined,
+    weightComplete: false,
   };
 }
 
@@ -473,7 +568,7 @@ export function getSelectedHoistInfo(answers: Answers) {
     return {
       mode: "manual" as const,
       capacityKg,
-      title: detail?.title ?? "Palan manuel avec chariot par poussée",
+      title: detail?.title ?? "Palan manuel Yale VSIII",
       mainRef: detail?.reference,
       mainLabel: detail?.reference,
       extraMeters: Math.max(

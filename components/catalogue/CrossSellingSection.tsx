@@ -32,7 +32,7 @@ export default function CrossSellingSection({
   const productFamily = formatCategoryLabel(product.categoryPath);
 
   return (
-    <section className="mt-14 overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm">
+    <section id="produits-associes" className="scroll-mt-28 mt-14 overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm">
       <div className="relative bg-slate-950 p-6 text-white lg:p-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(249,115,22,0.24),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(0,127,143,0.24),transparent_36%)]" />
         <div className="relative flex flex-col justify-between gap-4 md:flex-row md:items-end">

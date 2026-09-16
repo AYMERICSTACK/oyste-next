@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle2, Save, TriangleAlert } from "lucide-react";
 
 type Props = {
-  customer: { company: string; siret: string; firstName: string; lastName: string; jobTitle: string; phone: string; email: string };
+  customer: { company: string; siren: string; siret: string; vatNumber: string; electronicBillingAddress: string; firstName: string; lastName: string; jobTitle: string; phone: string; email: string };
   address: { address1: string; address2: string; postalCode: string; city: string; country: string };
 };
 
@@ -41,8 +41,10 @@ export default function CompanyProfileForm({ customer, address }: Props) {
 
   return (
     <form onSubmit={submit} className="grid gap-5 sm:grid-cols-2">
-      <label className={`${label} sm:col-span-2`}>Société *<input name="company" required defaultValue={customer.company} autoComplete="organization" className={input} /></label>
+      <label className={`${label} sm:col-span-2`}>Raison sociale *<input name="company" required defaultValue={customer.company} autoComplete="organization" className={input} /></label>
       <label className={`${label} sm:col-span-2`}>SIRET<input value={customer.siret} disabled aria-describedby="siret-help" className={input} /><span id="siret-help" className="mt-2 block text-[11px] font-medium normal-case tracking-normal text-slate-400">Modification uniquement après vérification par l’équipe OYSTE.</span></label>
+      <label className={`${label} sm:col-span-2`}>N° TVA intracommunautaire<input name="vatNumber" defaultValue={customer.vatNumber} placeholder="Ex. FR12345678901" className={input} /><span className="mt-2 block text-[11px] font-medium normal-case tracking-normal text-slate-400">À renseigner si votre entreprise dispose d’un numéro de TVA intracommunautaire.</span></label>
+      <label className={`${label} sm:col-span-2`}>Adresse électronique de facturation<input name="electronicBillingAddress" defaultValue={customer.electronicBillingAddress} placeholder="Identifiant déclaré dans l’Annuaire de la facturation électronique" className={input} /><span className="mt-2 block text-[11px] font-medium normal-case tracking-normal text-slate-400">Identifiant de réception des factures électroniques déclaré dans l’Annuaire de la facturation électronique.</span></label>
       <label className={label}>Prénom *<input name="firstName" required defaultValue={customer.firstName} autoComplete="given-name" className={input} /></label>
       <label className={label}>Nom *<input name="lastName" required defaultValue={customer.lastName} autoComplete="family-name" className={input} /></label>
       <label className={label}>Fonction<input name="jobTitle" defaultValue={customer.jobTitle} autoComplete="organization-title" className={input} /></label>
@@ -50,7 +52,7 @@ export default function CompanyProfileForm({ customer, address }: Props) {
       <label className={`${label} sm:col-span-2`}>Adresse e-mail de connexion *<input name="email" required type="email" defaultValue={customer.email} autoComplete="email" className={input} /></label>
 
       <div className="my-2 border-t border-slate-100 sm:col-span-2" />
-      <div className="sm:col-span-2"><h4 className="font-black text-slate-950">Adresse professionnelle</h4><p className="mt-1 text-xs text-slate-500">Utilisée comme adresse de facturation par défaut.</p></div>
+      <div className="sm:col-span-2"><h4 className="font-black text-slate-950">Adresse de facturation</h4><p className="mt-1 text-xs text-slate-500">Utilisée par défaut pour vos commandes et documents commerciaux.</p></div>
       <label className={`${label} sm:col-span-2`}>Adresse *<input name="address1" required defaultValue={address.address1} autoComplete="street-address" className={input} /></label>
       <label className={`${label} sm:col-span-2`}>Complément d’adresse<input name="address2" defaultValue={address.address2} className={input} /></label>
       <label className={label}>Code postal *<input name="postalCode" required defaultValue={address.postalCode} autoComplete="postal-code" className={input} /></label>

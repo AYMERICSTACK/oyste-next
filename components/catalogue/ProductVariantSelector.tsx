@@ -1,5 +1,7 @@
 "use client";
 
+import { formatCmuText, formatTechnicalValue } from "@/lib/catalogue/format-cmu-display";
+
 import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
@@ -7,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  FileQuestion,
   Headphones,
   ImageIcon,
   Layers3,
@@ -20,6 +23,8 @@ import Button from "@/components/ui/Button";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import { getProductImageUrl } from "@/lib/product-images";
 import ProductMediaFrame from "./ProductMediaFrame";
+import { getSupplierLeadTimeInfo } from "@/lib/catalogue/supplier-lead-time";
+import { calculateKitoDynamicWeightKg, getKitoChainWeightRule, getRequestedKitoLiftM } from "@/lib/shipping/kito-chain-weight";
 import {
   formatPriceHT,
   type CatalogueOption,
@@ -39,6 +44,68 @@ function findMatchingVariant(
   );
 }
 
+function buildOptionSchema(
+  variants: CatalogueVariant[],
+  configuredSchema: CatalogueOption[],
+) {
+  if (configuredSchema.length) return configuredSchema;
+
+  const valuesByLabel = new Map<string, Set<string>>();
+  for (const variant of variants) {
+    for (const [label, value] of Object.entries(variant.options || {})) {
+      if (!label || !value) continue;
+      if (!valuesByLabel.has(label)) valuesByLabel.set(label, new Set());
+      valuesByLabel.get(label)?.add(value);
+    }
+  }
+
+  return Array.from(valuesByLabel.entries()).map(([label, values]) => ({
+    label,
+    values: Array.from(values),
+  }));
+}
+
+function optionCombinationExists(
+  variants: CatalogueVariant[],
+  current: Record<string, string>,
+  label: string,
+  value: string,
+) {
+  // Une option de premier niveau doit rester cliquable dès lors qu'au moins
+  // une variante existe avec cette valeur. On ne doit pas la griser simplement
+  // parce que les autres choix courants appartiennent à une autre branche.
+  const directCandidates = variants.filter(
+    (variant) => variant.options?.[label] === value,
+  );
+  if (!directCandidates.length) return false;
+
+  // Si une combinaison exacte existe avec les autres choix courants, parfait.
+  const exactExists = directCandidates.some((variant) =>
+    Object.entries(current).every(([optionLabel, optionValue]) => {
+      if (optionLabel === label || !optionValue) return true;
+      return variant.options?.[optionLabel] === optionValue;
+    }),
+  );
+  if (exactExists) return true;
+
+  // Sinon la valeur reste disponible : updateOption choisira automatiquement
+  // la variante sœur la plus proche en conservant le maximum des autres choix.
+  return true;
+}
+
+type KitoChainPricingResponse = {
+  baseLiftM: number;
+  sellingPricePerMeterHT: number;
+};
+
+function stockLabel(stock: number | null | undefined) {
+  if (typeof stock !== "number") return "Disponibilité à confirmer";
+  if (stock <= 0) return "Sur demande";
+  if (stock === 1) return "1 en stock";
+  return `${stock} en stock`;
+}
+
+
 export default function ProductVariantSelector({
   productName,
   productCode,
@@ -48,6 +115,7 @@ export default function ProductVariantSelector({
   productShippingMode,
   variants,
   optionSchema,
+  initialVariantCode,
   isConfiguratorProduct = false,
   configuratorHref = "/configurateur",
   productHref,
@@ -63,6 +131,7 @@ export default function ProductVariantSelector({
   productShippingMode?: "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
   variants: CatalogueVariant[];
   optionSchema: CatalogueOption[];
+  initialVariantCode?: string;
   isConfiguratorProduct?: boolean;
   configuratorHref?: string;
   productHref?: string;
@@ -70,28 +139,128 @@ export default function ProductVariantSelector({
   galleryImages?: string[];
   documentCount?: number;
 }) {
+  const effectiveOptionSchema = useMemo(
+    () => buildOptionSchema(variants, optionSchema),
+    [optionSchema, variants],
+  );
+
   const initialOptions = useMemo(() => {
-    const firstVariant = variants[0];
+    const requestedVariant = initialVariantCode
+      ? variants.find(
+          (variant) =>
+            variant.code.trim().toLocaleLowerCase("fr") ===
+            initialVariantCode.trim().toLocaleLowerCase("fr"),
+        )
+      : null;
+    const initialVariant = requestedVariant || variants[0];
+
     return Object.fromEntries(
-      optionSchema.map((option) => [option.label, firstVariant?.options?.[option.label] || option.values[0] || ""]),
+      effectiveOptionSchema.map((option) => [
+        option.label,
+        initialVariant?.options?.[option.label] || option.values[0] || "",
+      ]),
     );
-  }, [optionSchema, variants]);
+  }, [effectiveOptionSchema, initialVariantCode, variants]);
 
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>(initialOptions);
+
+  useEffect(() => {
+    setSelectedOptions(initialOptions);
+  }, [initialOptions]);
+
   const selectedVariant = findMatchingVariant(variants, selectedOptions);
-  const imageUrl = getProductImageUrl(
+  const variantTechnicalLines = useMemo(
+    () => Object.entries(selectedVariant?.options || {}).map(([label, value]) => ({ label, value })),
+    [selectedVariant],
+  );
+  const existingKitoLiftM = getRequestedKitoLiftM(variantTechnicalLines);
+  const kitoChainRule = /^KITO$/i.test(String(supplier || "").trim())
+    ? getKitoChainWeightRule(selectedVariant?.code || productCode)
+    : null;
+  const needsDynamicKitoLift = Boolean(kitoChainRule && existingKitoLiftM === null);
+  const [kitoLiftM, setKitoLiftM] = useState<number | null>(null);
+  const [kitoChainPricing, setKitoChainPricing] = useState<KitoChainPricingResponse | null>(null);
+  const [kitoPricingLoading, setKitoPricingLoading] = useState(false);
+
+  useEffect(() => {
+    const code = selectedVariant?.code || productCode;
+    const rule = /^KITO$/i.test(String(supplier || "").trim())
+      ? getKitoChainWeightRule(code)
+      : null;
+    const hasLiftAlready = getRequestedKitoLiftM(
+      Object.entries(selectedVariant?.options || {}).map(([label, value]) => ({ label, value })),
+    ) !== null;
+
+    if (!rule || hasLiftAlready) {
+      setKitoLiftM(null);
+      setKitoChainPricing(null);
+      setKitoPricingLoading(false);
+      return;
+    }
+
+    setKitoLiftM(rule.baseLiftM);
+    setKitoChainPricing(null);
+    setKitoPricingLoading(true);
+    const controller = new AbortController();
+
+    fetch(`/api/catalogue/kito-chain-pricing?code=${encodeURIComponent(code)}`, {
+      signal: controller.signal,
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Tarif chaîne indisponible");
+        return (await response.json()) as KitoChainPricingResponse;
+      })
+      .then((pricing) => setKitoChainPricing(pricing))
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setKitoChainPricing(null);
+      })
+      .finally(() => setKitoPricingLoading(false));
+
+    return () => controller.abort();
+  }, [productCode, selectedVariant?.code, selectedVariant?.options, supplier]);
+  const leadTimeInfo = getSupplierLeadTimeInfo({
+    supplier,
+    stock: selectedVariant?.stock,
+    configuredDelay: selectedVariant?.delay,
+    isConfiguratorProduct,
+  });
+  const resolvedImageUrl = getProductImageUrl(
     selectedVariant?.imageRef || productCode,
     selectedVariant?.code || productCode,
     parentCode,
   );
-  const images = useMemo(
-    () => Array.from(new Set([imageUrl, ...galleryImages].filter(Boolean))).slice(0, 8),
-    [galleryImages, imageUrl],
-  );
+
+  const isGenericFallback =
+    resolvedImageUrl === "/images/hero-potence.png";
+
+  // Une vraie image fournisseur doit toujours gagner sur le visuel générique
+  // OYSTE. Le fallback n'est conservé que lorsqu'aucun média produit n'existe.
+  const preferredImage =
+    galleryImages[0] || (!isGenericFallback ? resolvedImageUrl : null) || resolvedImageUrl;
+
+  const images = useMemo(() => {
+    const ordered = galleryImages.length
+      ? [...galleryImages, ...(isGenericFallback ? [] : [resolvedImageUrl])]
+      : [resolvedImageUrl];
+
+    return Array.from(new Set(ordered.filter(Boolean))).slice(0, 8);
+  }, [galleryImages, isGenericFallback, resolvedImageUrl]);
+
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
-  const activeImage = selectedGalleryImage && images.includes(selectedGalleryImage) ? selectedGalleryImage : imageUrl;
+
+  useEffect(() => {
+    // Quand la variante change, revenir sur son meilleur visuel disponible.
+    setSelectedGalleryImage(null);
+  }, [selectedVariant?.code]);
+
+  const activeImage =
+    selectedGalleryImage && images.includes(selectedGalleryImage)
+      ? selectedGalleryImage
+      : preferredImage;
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const hasOptions = variants.length > 1 && optionSchema.length > 0;
+  const hasOptions = variants.length > 1 && effectiveOptionSchema.length > 0;
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -104,10 +273,39 @@ export default function ProductVariantSelector({
 
   function updateOption(label: string, value: string) {
     setSelectedOptions((current) => {
-      const next = { ...current, [label]: value };
-      const directMatch = findMatchingVariant(variants, next);
-      if (directMatch) return { ...directMatch.options, [label]: value };
-      return next;
+      const requested = { ...current, [label]: value };
+
+      const exact = variants.find((variant) =>
+        Object.entries(requested).every(
+          ([optionLabel, optionValue]) =>
+            !optionValue || variant.options?.[optionLabel] === optionValue,
+        ),
+      );
+      if (exact) return { ...exact.options };
+
+      // Si la combinaison n'existe pas, on garde le choix de l'utilisateur
+      // et on sélectionne la variante disponible qui respecte ce choix tout
+      // en conservant le maximum des autres options déjà sélectionnées.
+      const candidates = variants.filter(
+        (variant) => variant.options?.[label] === value,
+      );
+
+      const best = candidates
+        .map((variant) => ({
+          variant,
+          score: Object.entries(current).reduce(
+            (score, [optionLabel, optionValue]) =>
+              optionLabel !== label &&
+              optionValue &&
+              variant.options?.[optionLabel] === optionValue
+                ? score + 1
+                : score,
+            0,
+          ),
+        }))
+        .sort((a, b) => b.score - a.score)[0]?.variant;
+
+      return best ? { ...best.options } : requested;
     });
   }
 
@@ -118,11 +316,33 @@ export default function ProductVariantSelector({
     setSelectedGalleryImage(images[nextIndex]);
   }
 
-  const cartTechnicalLines = Object.entries(selectedVariant?.options || {}).map(([label, value]) => ({ label, value }));
+  const effectiveKitoLiftM = needsDynamicKitoLift && kitoChainRule
+    ? Math.max(kitoChainRule.baseLiftM, kitoLiftM ?? kitoChainRule.baseLiftM)
+    : existingKitoLiftM;
+  const extraKitoLiftM = needsDynamicKitoLift && kitoChainRule && effectiveKitoLiftM !== null
+    ? Math.max(0, effectiveKitoLiftM - kitoChainRule.baseLiftM)
+    : 0;
+  const kitoChainSupplementHT = extraKitoLiftM > 0 && kitoChainPricing
+    ? Math.round(extraKitoLiftM * kitoChainPricing.sellingPricePerMeterHT * 100) / 100
+    : 0;
+  const displayedPriceHT = (selectedVariant?.priceHT || 0) + kitoChainSupplementHT;
+  const cartTechnicalLines = needsDynamicKitoLift && effectiveKitoLiftM !== null
+    ? [...variantTechnicalLines, { label: "Hauteur de levage", value: `${effectiveKitoLiftM} m` }]
+    : variantTechnicalLines;
+  const displayedWeightKg = calculateKitoDynamicWeightKg({
+    supplier,
+    code: selectedVariant?.code || productCode,
+    baseWeightKg: selectedVariant?.weightKg ?? productWeightKg ?? undefined,
+    technicalLines: cartTechnicalLines,
+  });
+  const dynamicKitoPricingReady = extraKitoLiftM <= 0 || Boolean(kitoChainPricing);
+  const kitoCartItemId = needsDynamicKitoLift && effectiveKitoLiftM !== null
+    ? `catalogue:${selectedVariant?.code || productCode}:lift:${effectiveKitoLiftM}`
+    : undefined;
 
   return (
     <>
-      <section className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
+      <section id="galerie-produit" className="scroll-mt-28 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
         <div className="overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm lg:sticky lg:top-24">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
             <div>
@@ -190,7 +410,7 @@ export default function ProductVariantSelector({
                 {isConfiguratorProduct ? "Votre solution sur mesure" : "Référence sélectionnée"}
               </p>
               <h2 className="mt-3 text-3xl font-black text-slate-950">
-                {selectedVariant?.label || selectedVariant?.name || productName}
+                {formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
               </h2>
               <p className="mt-2 text-sm font-bold text-slate-500">
                 Code article · {selectedVariant?.code || productCode}
@@ -203,30 +423,139 @@ export default function ProductVariantSelector({
 
           {hasOptions ? (
             <div className="mt-7 rounded-3xl border border-[#007f8f]/20 bg-[#007f8f]/5 p-5">
-              <div className="flex items-center gap-3">
-                <SlidersHorizontal size={19} className="text-[#007f8f]" />
-                <p className="text-sm font-black uppercase tracking-[0.25em] text-[#005466]">
-                  Choisir votre variante
-                </p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-[#007f8f] shadow-sm">
+                  <SlidersHorizontal size={18} />
+                </span>
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.22em] text-[#005466]">
+                    Choisissez votre configuration
+                  </p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
+                    Les choix impossibles sont automatiquement écartés. La référence, le prix, le stock et le poids se mettent à jour instantanément.
+                  </p>
+                </div>
               </div>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                {optionSchema.map((option) => (
-                  <label key={option.label} className="grid gap-2 text-sm font-black text-slate-700">
-                    {option.label}
-                    <select
-                      value={selectedOptions[option.label] || ""}
-                      onChange={(event) => updateOption(option.label, event.target.value)}
-                      className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-950 outline-none focus:border-[#007f8f]"
-                    >
-                      {option.values.map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+
+              <div className="mt-5 grid gap-5">
+                {effectiveOptionSchema.map((option) => (
+                  <fieldset key={option.label}>
+                    <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-600">
+                      {option.label}
+                    </legend>
+                    <div className="flex flex-wrap gap-2">
+                      {option.values.map((value) => {
+                        const active = selectedOptions[option.label] === value;
+                        const available = optionCombinationExists(
+                          variants,
+                          selectedOptions,
+                          option.label,
+                          value,
+                        );
+
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => updateOption(option.label, value)}
+                            disabled={!available && !active}
+                            className={`rounded-xl border px-4 py-2.5 text-sm font-black transition ${
+                              active
+                                ? "border-[#007f8f] bg-[#007f8f] text-white shadow-sm"
+                                : available
+                                  ? "border-slate-200 bg-white text-slate-700 hover:border-[#007f8f]/50 hover:text-[#005466]"
+                                  : "cursor-not-allowed border-slate-100 bg-slate-100 text-slate-300"
+                            }`}
+                          >
+                            {formatTechnicalValue(option.label, value)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </fieldset>
                 ))}
               </div>
+
+              {selectedVariant ? (
+                <div className="mt-5 grid gap-3 rounded-2xl bg-white p-4 sm:grid-cols-3">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Référence</p>
+                    <p className="mt-1 text-sm font-black text-slate-950">{selectedVariant.code}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Stock</p>
+                    <p className="mt-1 text-sm font-black text-slate-950">{stockLabel(selectedVariant.stock)}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Poids</p>
+                    <p className="mt-1 text-sm font-black text-slate-950">
+                      {selectedVariant.weightKg ? `${selectedVariant.weightKg} kg` : "À confirmer"}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {needsDynamicKitoLift && kitoChainRule ? (
+            <div className="mt-7 rounded-3xl border border-orange-200 bg-orange-50 p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">Hauteur de levage KITO</p>
+                  <p className="mt-1 text-sm font-bold leading-5 text-slate-600">
+                    Hauteur standard : {kitoChainRule.baseLiftM} m. Le supplément de chaîne est calculé automatiquement au mètre.
+                  </p>
+                </div>
+                <label className="block min-w-[170px]">
+                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-600">Hauteur souhaitée</span>
+                  <div className="flex items-center rounded-xl border border-orange-200 bg-white px-3 shadow-sm">
+                    <input
+                      type="number"
+                      min={kitoChainRule.baseLiftM}
+                      step="1"
+                      value={effectiveKitoLiftM ?? kitoChainRule.baseLiftM}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        setKitoLiftM(Number.isFinite(value) ? Math.max(kitoChainRule.baseLiftM, value) : kitoChainRule.baseLiftM);
+                      }}
+                      className="w-full bg-transparent py-3 text-right text-base font-black text-slate-950 outline-none"
+                      aria-label="Hauteur de levage KITO en mètres"
+                    />
+                    <span className="ml-2 text-sm font-black text-slate-500">m</span>
+                  </div>
+                </label>
+              </div>
+
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Chaîne supplémentaire</p>
+                  <p className="mt-1 text-sm font-black text-slate-950">+{extraKitoLiftM} m</p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Supplément HT</p>
+                  <p className="mt-1 text-sm font-black text-slate-950">
+                    {extraKitoLiftM <= 0
+                      ? "0 €"
+                      : kitoPricingLoading
+                        ? "Calcul..."
+                        : kitoChainPricing
+                          ? formatPriceHT(kitoChainSupplementHT)
+                          : "À confirmer"}
+                  </p>
+                </div>
+                <div className="rounded-2xl bg-white p-4">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Poids calculé</p>
+                  <p className="mt-1 text-sm font-black text-slate-950">
+                    {typeof displayedWeightKg === "number" && displayedWeightKg > 0 ? `${displayedWeightKg} kg` : "À confirmer"}
+                  </p>
+                </div>
+              </div>
+
+              {extraKitoLiftM > 0 && !kitoPricingLoading && !kitoChainPricing ? (
+                <p className="mt-3 text-xs font-bold text-orange-800">
+                  Le tarif ERP du mètre supplémentaire n'est pas disponible pour cette référence : commande sur devis pour cette hauteur.
+                </p>
+              ) : null}
             </div>
           ) : null}
 
@@ -237,12 +566,18 @@ export default function ProductVariantSelector({
                   {isConfiguratorProduct ? "Prix calculé après configuration" : "Prix HT"}
                 </p>
                 <p className="mt-2 text-3xl font-black text-orange-400">
-                  {isConfiguratorProduct ? "Sur mesure" : formatPriceHT(selectedVariant?.priceHT)}
+                  {isConfiguratorProduct ? "Sur mesure" : formatPriceHT(displayedPriceHT)}
                 </p>
               </div>
               <div className="rounded-2xl bg-white/10 px-4 py-3">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Disponibilité</p>
-                <p className="mt-1 text-sm font-black text-white">{selectedVariant?.delay || "Délai confirmé à la commande"}</p>
+                <p className="mt-1 text-sm font-black text-white">{leadTimeInfo.label}</p>
+                <p className="mt-1 max-w-[360px] text-[10px] font-semibold leading-4 text-slate-300">{leadTimeInfo.note}</p>
+                {leadTimeInfo.url ? (
+                  <a href={leadTimeInfo.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[10px] font-black text-cyan-300 underline underline-offset-2">
+                    Voir les délais COMEGÉ
+                  </a>
+                ) : null}
               </div>
             </div>
           </div>
@@ -285,21 +620,26 @@ export default function ProductVariantSelector({
               <Button href={configuratorHref} className="w-full justify-center py-4 text-base">
                 Configurer ce produit <ArrowRight size={18} />
               </Button>
-            ) : (
+            ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
               <AddToCartButton
-                name={selectedVariant?.label || selectedVariant?.name || productName}
+                name={formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
                 code={selectedVariant?.code || productCode}
                 family={familyLabel}
                 supplier={supplier}
-                weightKg={selectedVariant?.weightKg ?? productWeightKg ?? undefined}
+                weightKg={typeof displayedWeightKg === "number" ? displayedWeightKg : selectedVariant?.weightKg ?? productWeightKg ?? undefined}
                 shippingMode={selectedVariant?.shippingMode ?? productShippingMode}
-                imageUrl={imageUrl}
-                priceHT={selectedVariant?.priceHT || 0}
+                imageUrl={preferredImage}
+                priceHT={displayedPriceHT}
                 delay={selectedVariant?.delay}
                 href={productHref}
                 technicalLines={cartTechnicalLines}
+                cartItemId={kitoCartItemId}
               />
-            )}
+            ) : (
+              <Button href="#demande-devis" className="w-full justify-center py-4 text-base">
+                Demander un devis <FileQuestion size={18} />
+              </Button>
+            ))}
             <Button href="#documents-techniques" variant="ghost" className="w-full justify-center">
               Documents techniques {documentCount > 0 ? `(${documentCount})` : ""} <Download size={18} />
             </Button>
@@ -312,28 +652,33 @@ export default function ProductVariantSelector({
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-black text-slate-950">{selectedVariant?.label || productName}</p>
             <p className="mt-0.5 text-sm font-black text-orange-600">
-              {isConfiguratorProduct ? "Sur mesure" : formatPriceHT(selectedVariant?.priceHT)}
+              {isConfiguratorProduct ? "Sur mesure" : formatPriceHT(displayedPriceHT)}
             </p>
           </div>
           {isConfiguratorProduct ? (
             <a href={configuratorHref} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
               Configurer <ArrowRight size={17} />
             </a>
-          ) : (
+          ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
             <AddToCartButton
-              name={selectedVariant?.label || selectedVariant?.name || productName}
+              name={formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
               code={selectedVariant?.code || productCode}
               family={familyLabel}
               supplier={supplier}
-              weightKg={selectedVariant?.weightKg ?? productWeightKg ?? undefined}
+              weightKg={typeof displayedWeightKg === "number" ? displayedWeightKg : selectedVariant?.weightKg ?? productWeightKg ?? undefined}
               shippingMode={selectedVariant?.shippingMode ?? productShippingMode}
-              imageUrl={imageUrl}
-              priceHT={selectedVariant?.priceHT || 0}
+              imageUrl={preferredImage}
+              priceHT={displayedPriceHT}
               delay={selectedVariant?.delay}
               href={productHref}
               technicalLines={cartTechnicalLines}
+              cartItemId={kitoCartItemId}
             />
-          )}
+          ) : (
+            <a href="#demande-devis" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white">
+              Devis <FileQuestion size={17} />
+            </a>
+          ))}
         </div>
       </div>
 

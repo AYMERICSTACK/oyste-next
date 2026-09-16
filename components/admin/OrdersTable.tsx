@@ -26,7 +26,23 @@ export default function OrdersTable({ records, compact = false }: { records: Ord
         <tbody>{filtered.map((order) => <tr key={order.id} className="group border-b border-slate-100 transition last:border-0 hover:bg-slate-50/80">
           <td className="px-5 py-4"><Link href={`/admin/commandes/${order.id}`} className="font-black text-slate-950 hover:text-[#007f8f]">{order.reference}</Link><p className="mt-1 text-[10px] text-slate-400">{new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }).format(new Date(order.createdAt))}</p></td>
           <td className="px-4 py-4"><p className="text-sm font-black text-slate-850">{order.customer.name}</p><p className="mt-1 text-xs text-slate-500">{order.customer.company}</p></td>
-          <td className="px-4 py-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#007f8f]/10 text-[11px] font-black text-[#006d79]">{order.family}</span><div><p className="max-w-[190px] truncate text-xs font-black text-slate-800">{order.familyLabel}</p><p className="mt-1 text-[10px] text-slate-400">{order.capacity} · {order.reach}</p></div></div></td>
+          <td className="px-4 py-4">
+            {order.family === "CATALOGUE" ? (
+              <div className="min-w-[220px]">
+                <span className="inline-flex rounded-md bg-[#007f8f]/10 px-2 py-1 text-[9px] font-black uppercase tracking-[0.12em] text-[#006d79]">Catalogue</span>
+                <p className="mt-2 max-w-[240px] text-xs font-black leading-4 text-slate-800">{order.familyLabel}</p>
+                {order.items?.[0] ? <p className="mt-1 text-[10px] font-medium text-slate-400">{order.items[0].reference || "Référence à confirmer"} · Qté {order.items[0].quantity}</p> : null}
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#007f8f]/10 text-[11px] font-black text-[#006d79]">{order.family}</span>
+                <div>
+                  <p className="max-w-[190px] truncate text-xs font-black text-slate-800">{order.familyLabel}</p>
+                  <p className="mt-1 text-[10px] text-slate-400">{order.capacity} · {order.reach}</p>
+                </div>
+              </div>
+            )}
+          </td>
           <td className="px-4 py-4"><span className={`inline-flex items-center gap-1.5 text-xs font-black ${order.paymentStatus === "paid" ? "text-emerald-700" : "text-amber-700"}`}><CreditCard size={14} />{paymentStatusLabels[order.paymentStatus]}</span></td>
           <td className="px-4 py-4"><OrderStatusBadge status={order.status} /></td>
           <td className="px-4 py-4"><div className="w-28"><div className="mb-1 flex justify-between text-[9px] font-black text-slate-400"><span>{order.productionOwner}</span><span>{order.progress}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#007f8f]" style={{ width: `${order.progress}%` }} /></div></div></td>

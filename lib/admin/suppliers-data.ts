@@ -1,4 +1,5 @@
 import { adminCatalogueProducts } from "@/lib/admin/catalogue-admin";
+import { prisma } from "@/lib/db/prisma";
 
 export type AdminSupplier = {
   id: string;
@@ -66,4 +67,71 @@ export const supplierStats = {
 
 export function getAdminSupplier(id: string) {
   return adminSuppliers.find((supplier) => supplier.id === id);
+}
+
+
+export async function getAdminSuppliersFromDatabase(): Promise<AdminSupplier[]> {
+  const suppliers = await prisma.supplier.findMany({
+    include: {
+      products: {
+        select: {
+          priceHt: true,
+          publicationStatus: true,
+          leadTime: true,
+          updatedAt: true,
+          description: true,
+          detailedDescription: true,
+          _count: { select: { media: true, documents: true } },
+        },
+      },
+    },
+    orderBy: { name: "asc" },
+  });
+
+  return suppliers
+    .map<AdminSupplier>((supplier) => {
+      const products = supplier.products;
+      const priced = products.map((product) => Number(product.priceHt)).filter(Number.isFinite);
+      const completeCount = products.filter((product) =>
+        Boolean(product.description || product.detailedDescription),
+      ).length;
+      const latestUpdate = products.reduce<Date | null>(
+        (latest, product) => (!latest || product.updatedAt > latest ? product.updatedAt : latest),
+        supplier.updatedAt,
+      );
+
+      return {
+        id: supplier.id,
+        name: supplier.name,
+        productCount: products.length,
+        publishedCount: products.filter((product) => product.publicationStatus === "PUBLISHED").length,
+        draftCount: products.filter((product) => product.publicationStatus === "DRAFT").length,
+        incompleteCount: Math.max(0, products.length - completeCount),
+        averagePrice: priced.length ? priced.reduce((sum, value) => sum + value, 0) / priced.length : null,
+        documentCount: products.reduce((sum, product) => sum + product._count.documents, 0),
+        imageCount: products.reduce((sum, product) => sum + product._count.media, 0),
+        status: supplier.isActive ? "Actif" : "À compléter",
+        contactName: supplier.contactName || "",
+        email: supplier.email || "",
+        phone: supplier.phone || "",
+        website: supplier.website || "",
+        averageLeadTime:
+          supplier.averageLeadTime
+          || products.find((product) => product.leadTime)?.leadTime
+          || "Non renseigné",
+        lastUpdate: latestUpdate
+          ? new Intl.DateTimeFormat("fr-FR").format(latestUpdate)
+          : "—",
+      };
+    })
+    .sort((a, b) => b.productCount - a.productCount || a.name.localeCompare(b.name, "fr"));
+}
+
+export function getSupplierStats(suppliers: AdminSupplier[]) {
+  return {
+    total: suppliers.length,
+    active: suppliers.filter((supplier) => supplier.status === "Actif").length,
+    products: suppliers.reduce((total, supplier) => total + supplier.productCount, 0),
+    incomplete: suppliers.reduce((total, supplier) => total + supplier.incompleteCount, 0),
+  };
 }

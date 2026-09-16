@@ -159,7 +159,7 @@ export const PFI_DEFINITION: BusinessFamilyDefinition = {
       id: "hoistTrolleyMovement",
       kind: "exclusive-choice",
       title: "Comment souhaitez-vous déplacer le palan ?",
-      showWhen: [{ answerId: "hoistType", equals: "electric" }],
+      showWhen: [{ answerId: "hoist", equals: "yes" }],
       help: "Le déplacement correspond au mouvement du palan le long de la poutre.",
       choices: [
         {
@@ -205,21 +205,11 @@ export const PFI_DEFINITION: BusinessFamilyDefinition = {
       ],
     },
     {
-      id: "hoistAutomaticComponents",
-      kind: "automatic",
-      title: "Préparation du palan",
-      clientVisible: false,
-      actions: [
-        { type: "add", ref: "MR2-L-S_1000" },
-        { type: "add", ref: "MR2-LARGSTAND_1000" },
-        { type: "add", ref: "MR2-LARGW30_1000" },
-        { type: "add", ref: "MR2-BUTEES_1000" },
-        { type: "add", ref: "FDC_1SEUIL" },
-        { type: "add", ref: "CABLAGE_ER2_EQ_ED" },
-        { type: "add", ref: "IMPORT_KITO_ER2" },
-        { type: "exclude", ref: "ER2_EQ_HARTING" },
-      ],
-      showWhen: [{ answerId: "hoist", equals: "yes" }],
+      id: "hoistOptions",
+      kind: "option-group",
+      title: "Souhaitez-vous ajouter une option au palan ?",
+      showWhen: [{ answerId: "hoistType", equals: "electric" }],
+      help: "Les options sélectionnées sont ajoutées automatiquement à la solution.",
     },
   ],
   notes: [

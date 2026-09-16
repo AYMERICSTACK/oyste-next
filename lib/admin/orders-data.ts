@@ -28,7 +28,7 @@ export type OrderRecord = {
     address: string;
     requestedDate: string;
   };
-  family: "PFI" | "PFT" | "PMI" | "PMT" | "PMA" | "PMAM";
+  family: "PFI" | "PFT" | "PMI" | "PMT" | "PMA" | "PMAM" | "CATALOGUE";
   familyLabel: string;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
@@ -49,6 +49,36 @@ export type OrderRecord = {
   note: string;
   notes: Array<{ date: string; author: string; text: string }>;
   timeline: Array<{ date: string; title: string; description: string }>;
+  items?: Array<{
+    id: string;
+    reference: string;
+    name: string;
+    quantity: number;
+    unitPriceHt: number;
+    totalHt: number;
+    supplier: string;
+    estimatedLeadTime: string;
+    estimatedLeadTimeNote: string;
+  }>;
+  supplierAck?: {
+    confirmedLeadTime: string;
+    supplierAckReference: string;
+    supplierName: string;
+    receivedAt: string;
+  } | null;
+  customerAckGeneratedAt?: string | null;
+  shipment: null | {
+    id: string;
+    carrierName: string;
+    shippingOptionName: string;
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+    status: string;
+    weightKg: number;
+    lengthCm: number;
+    widthCm: number;
+    heightCm: number;
+  };
 };
 
 export const orderStatusLabels: Record<OrderStatus, string> = {
@@ -97,6 +127,7 @@ export const orders: OrderRecord[] = [
     progress: 18,
     note: "Commande payée, dossier prêt pour validation technique.",
     notes: [{ date: "17 juil. · 10:18", author: "Aymeric D.", text: "Commande payée, dossier prêt pour validation technique." }],
+    shipment: null,
     timeline: [
       { date: "17 juil. · 10:18", title: "Paiement confirmé", description: "Paiement CB de 15 408 € TTC validé." },
       { date: "17 juil. · 08:42", title: "Commande créée", description: "Configuration PFI transformée en commande." },
@@ -129,6 +160,7 @@ export const orders: OrderRecord[] = [
     progress: 34,
     note: "Vérification du support mural en cours.",
     notes: [{ date: "17 juil. · 09:05", author: "Thomas R.", text: "Vérification du support mural en cours." }],
+    shipment: null,
     timeline: [
       { date: "17 juil. · 09:05", title: "Passage en étude", description: "Le bureau d’études contrôle le support mural." },
       { date: "16 juil. · 15:26", title: "Commande créée", description: "Commande PMI reçue et payée." },
@@ -161,6 +193,7 @@ export const orders: OrderRecord[] = [
     progress: 58,
     note: "Structure débitée, assemblage prévu cet après-midi.",
     notes: [{ date: "17 juil. · 08:38", author: "Atelier 2", text: "Structure débitée, assemblage prévu cet après-midi." }],
+    shipment: null,
     timeline: [
       { date: "17 juil. · 08:38", title: "Fabrication démarrée", description: "Débit et préparation des éléments terminés." },
       { date: "16 juil. · 16:38", title: "Étude validée", description: "Dossier libéré pour l’atelier." },
@@ -193,6 +226,7 @@ export const orders: OrderRecord[] = [
     progress: 84,
     note: "Contrôle électrique et vérification peinture en cours.",
     notes: [{ date: "17 juil. · 07:52", author: "Qualité", text: "Contrôle électrique et vérification peinture en cours." }],
+    shipment: null,
     timeline: [
       { date: "17 juil. · 07:52", title: "Contrôle qualité", description: "Contrôles finaux lancés avant emballage." },
       { date: "16 juil. · 14:20", title: "Fabrication terminée", description: "Assemblage et câblage achevés." },
@@ -225,6 +259,7 @@ export const orders: OrderRecord[] = [
     progress: 94,
     note: "Commande emballée, enlèvement transporteur prévu à 14 h.",
     notes: [{ date: "17 juil. · 06:58", author: "Logistique", text: "Commande emballée, enlèvement transporteur prévu à 14 h." }],
+    shipment: null,
     timeline: [
       { date: "17 juil. · 06:58", title: "Prête à expédier", description: "Emballage terminé et documents de transport édités." },
       { date: "16 juil. · 11:20", title: "Contrôle validé", description: "Aucune non-conformité détectée." },
@@ -257,6 +292,7 @@ export const orders: OrderRecord[] = [
     progress: 100,
     note: "Expédition effectuée, suivi transport envoyé au client.",
     notes: [{ date: "16 juil. · 17:30", author: "Logistique", text: "Expédition effectuée, suivi transport envoyé au client." }],
+    shipment: null,
     timeline: [
       { date: "16 juil. · 17:30", title: "Commande expédiée", description: "Numéro de suivi transmis au client." },
       { date: "16 juil. · 09:00", title: "Prête à expédier", description: "Commande emballée et contrôlée." },
@@ -269,5 +305,5 @@ export function getOrderById(id: string) {
 }
 
 export function formatAdminPrice(value: number) {
-  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(value);
+  return new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value);
 }

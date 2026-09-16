@@ -12,7 +12,15 @@ const contactSchema = z.object({
   company: z.string().trim().min(2).max(120),
   email: z.email().max(160),
   phone: z.string().trim().max(40).optional().default(""),
-  subject: z.enum(["DEVIS", "CONSEIL", "CONFIGURATION", "COMMANDE", "SAV", "COMMERCIAL", "AUTRE"]),
+  subject: z.enum([
+    "DEVIS",
+    "CONSEIL",
+    "CONFIGURATION",
+    "COMMANDE",
+    "SAV",
+    "COMMERCIAL",
+    "AUTRE",
+  ]),
   message: z.string().trim().min(20).max(3000),
   consent: z.literal(true),
 });
@@ -60,20 +68,24 @@ export async function POST(request: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { message: "Merci de vérifier les champs obligatoires du formulaire." },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     const data = parsed.data;
-    const from = process.env.CONTACT_FROM_EMAIL || "OYSTE <onboarding@resend.dev>";
+    const from =
+      process.env.CONTACT_FROM_EMAIL || "OYSTE <onboarding@resend.dev>";
     const adminEmail = process.env.CONTACT_TO_EMAIL;
     const subjectLabel = contactSubjectLabels[data.subject];
 
     if (!adminEmail) {
       console.error("CONTACT_TO_EMAIL is missing.");
       return NextResponse.json(
-        { message: "Le service de contact n’est pas encore configuré. Merci de nous contacter par téléphone." },
-        { status: 503 }
+        {
+          message:
+            "Le service de contact n’est pas encore configuré. Merci de nous contacter par téléphone.",
+        },
+        { status: 503 },
       );
     }
 
@@ -98,13 +110,16 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      message: "Un e-mail de confirmation vient de vous être envoyé. Notre équipe vous répondra sous un jour ouvré.",
+      message:
+        "Un e-mail de confirmation vient de vous être envoyé. Notre équipe vous répondra sous un jour ouvré.",
     });
   } catch (error) {
     console.error("Contact route error:", error);
     return NextResponse.json(
-      { message: "L’envoi a échoué. Merci de réessayer dans quelques instants." },
-      { status: 500 }
+      {
+        message: "L’envoi a échoué. Merci de réessayer dans quelques instants.",
+      },
+      { status: 500 },
     );
   }
 }

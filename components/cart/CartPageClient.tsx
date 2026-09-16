@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
+import { formatCmuText, formatTechnicalValue } from "@/lib/catalogue/format-cmu-display";
 import { ArrowRight, CheckCircle2, Minus, PackageCheck, Phone, Plus, RotateCcw, ShieldCheck, Trash2, Truck, Wrench } from "lucide-react";
 import Container from "@/components/ui/Container";
 import { formatCartPrice, useCart } from "@/lib/cart/cart-store";
-import { calculateCartShipping } from "@/lib/shipping";
+import { useShippingQuote } from "@/lib/cart/use-shipping-quote";
+import { useKitoAdjustment } from "@/lib/cart/use-kito-adjustment";
 
 type CartSuggestion = {
   title: string;
@@ -67,24 +69,16 @@ export default function CartPageClient() {
   const [postcode, setPostcode] = useState("");
   const hasItems = items.length > 0;
   const suggestedProducts = getCartSuggestions(items);
-  const shipping = useMemo(
-    () => calculateCartShipping(items.map((item) => ({
-      kind: item.kind,
-      code: item.code,
-      supplier: item.supplier,
-      family: item.family,
-      weightKg: item.weightKg,
-      shippingMode: item.shippingMode,
-      quantity: item.quantity,
-    })), postcode),
-    [items, postcode],
-  );
+  const { shipping, loading: shippingLoading } = useShippingQuote(items, postcode);
+  const kitoAdjustment = useKitoAdjustment(items);
+  const kitoDiscountHT = kitoAdjustment?.discountHT || 0;
   const shippingHT = shipping.amountHT;
   const confirmedShippingHT = shipping.confirmedAmountHT;
-  const vat = (totals.subtotalHT + confirmedShippingHT) * 0.2;
-  const totalTTC = totals.subtotalHT + confirmedShippingHT + vat;
+  const netSubtotalHT = Math.max(0, totals.subtotalHT - kitoDiscountHT);
+  const vat = (netSubtotalHT + confirmedShippingHT) * 0.2;
+  const totalTTC = netSubtotalHT + confirmedShippingHT + vat;
   const requiresPostcode = shipping.lines.some((line) => line.reason === "Code postal requis");
-  const missingWeight = shipping.lines.some((line) => line.reason.toLowerCase().includes("poids"));
+  const missingWeight = shipping.lines.some((line) => line.amountHT === null && /poids|validation transport/i.test(line.reason));
   const hasMixedShipping = Object.values(shipping.modeCounts).filter((count) => count > 0).length > 1;
 
   return (
@@ -163,7 +157,7 @@ export default function CartPageClient() {
                         ) : null}
                       </div>
 
-                      <h2 className="mt-3 text-2xl font-black leading-tight text-slate-950">{item.name}</h2>
+                      <h2 className="mt-3 text-2xl font-black leading-tight text-slate-950">{formatCmuText(item.name)}</h2>
                       {item.code ? <p className="mt-1 text-sm font-bold text-slate-500">Référence : {item.code}</p> : null}
                       {item.delay ? <p className="mt-3 text-sm font-black text-[#007f8f]">{item.delay}</p> : null}
                       {shipping.lines[itemIndex] ? (
@@ -181,7 +175,7 @@ export default function CartPageClient() {
                         <div className="mt-4 flex flex-wrap gap-2">
                           {item.technicalLines.slice(0, 8).map((line) => (
                             <span key={`${item.id}-${line.label}`} className="rounded-full bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">
-                              <span className="font-black text-slate-950">{line.label}</span> : {line.value}
+                              <span className="font-black text-slate-950">{line.label}</span> : {formatTechnicalValue(line.label, line.value)}
                             </span>
                           ))}
                         </div>
@@ -243,7 +237,7 @@ export default function CartPageClient() {
               <div className="mt-5 rounded-2xl bg-slate-50 p-4">
                 <label htmlFor="shipping-postcode" className="text-xs font-black uppercase tracking-[0.16em] text-slate-600">Code postal de livraison</label>
                 <input id="shipping-postcode" value={postcode} onChange={(event) => setPostcode(event.target.value.replace(/\D/g, "").slice(0, 5))} inputMode="numeric" placeholder="Ex. 69400" className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-lg font-black outline-none transition focus:border-[#007f8f]" />
-                <p className="mt-2 text-xs font-bold text-slate-500">Le code postal permet de déterminer les solutions de livraison disponibles et leur tarif lorsque celui-ci peut être calculé immédiatement.</p>
+                <p className="mt-2 text-xs font-bold text-slate-500">Le code postal permet de déterminer les solutions de livraison disponibles et leur tarif lorsque celui-ci peut être calculé immédiatement.</p>{shippingLoading ? <p className="mt-2 text-xs font-black text-[#007f8f]">Recherche du meilleur tarif petit colis via Sendcloud…</p> : null}
                 {postcode.length > 0 && !shipping.postcodeValid ? <p className="mt-2 text-xs font-black text-red-600">Saisissez un code postal français à 5 chiffres.</p> : null}
               </div>
 
@@ -254,17 +248,29 @@ export default function CartPageClient() {
 
               <div className="mt-5 space-y-3 text-sm font-bold text-slate-600">
                 <div className="flex justify-between gap-4"><span>Sous-total HT</span><span className="font-black text-slate-950">{formatCartPrice(totals.subtotalHT)}</span></div>
+                {kitoDiscountHT > 0 ? <div className="flex justify-between gap-4 text-emerald-700"><span>{kitoAdjustment?.discountReason === "TRANSPORT" ? "Remise transport KITO" : "Remise regroupement KITO"} (-{kitoAdjustment?.discountPercent.toLocaleString("fr-FR", { maximumFractionDigits: 1 })} %)</span><span className="font-black">-{formatCartPrice(kitoDiscountHT)}</span></div> : null}
                 <div className="flex justify-between gap-4"><span>Transport HT</span><span className="text-right font-black text-slate-950">{shippingHT === null ? (confirmedShippingHT > 0 ? `${formatCartPrice(confirmedShippingHT)} + devis` : "Sur devis") : shippingHT === 0 ? "Inclus" : formatCartPrice(shippingHT)}</span></div>
                 <div className="flex justify-between gap-4"><span>TVA estimée</span><span className="font-black text-slate-950">{formatCartPrice(vat)}</span></div>
               </div>
               <div className="mt-5 border-t border-slate-200 pt-5">
                 <div className="flex items-end justify-between gap-4">
-                  <span className="text-sm font-black uppercase text-slate-500">Total TTC</span>
-                  <span className="text-right text-3xl font-black text-slate-950">{shippingHT === null ? <><span className="block">{formatCartPrice(totalTTC)}</span><span className="mt-1 block text-xs text-orange-600">+ transport sur devis</span></> : formatCartPrice(totalTTC)}</span>
+                  <span className="text-sm font-black uppercase text-slate-500">Total HT</span>
+                  <span className="text-right text-3xl font-black text-slate-950">{shippingHT === null ? <><span className="block">{formatCartPrice(netSubtotalHT + confirmedShippingHT)}</span><span className="mt-1 block text-xs text-orange-600">+ transport sur devis</span></> : formatCartPrice(netSubtotalHT + shippingHT)}</span>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-4 text-xs font-bold text-slate-500">
+                  <span>Total TTC</span>
+                  <span>{shippingHT === null ? `${formatCartPrice(totalTTC)} + transport sur devis` : formatCartPrice(totalTTC)}</span>
                 </div>
               </div>
 
-              <a href="/commande" className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-xl bg-orange-600 px-6 py-4 text-sm font-black uppercase text-white shadow-xl shadow-orange-600/20 transition hover:bg-orange-700">
+              <a
+                href="/commande"
+                onClick={() => {
+                  if (/^\d{5}$/.test(postcode)) sessionStorage.setItem("oyste-checkout-postcode", postcode);
+                  else sessionStorage.removeItem("oyste-checkout-postcode");
+                }}
+                className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-xl bg-orange-600 px-6 py-4 text-sm font-black uppercase text-white shadow-xl shadow-orange-600/20 transition hover:bg-orange-700"
+              >
                 Commander <ArrowRight size={18} />
               </a>
               <p className="mt-3 text-xs font-bold leading-5 text-slate-500">

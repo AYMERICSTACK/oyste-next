@@ -6,7 +6,7 @@ export const PMT_DEFINITION: BusinessFamilyDefinition = {
   label: "Potence murale triangulée",
   shortLabel: "Potence murale triangulée",
   description:
-    "Parcours de configuration pour une potence murale triangulée avec fixation sur mur béton ou poteau métallique.",
+    "Parcours de configuration pour une potence murale triangulée avec fixation sur mur béton, poteau métallique ou poteau béton.",
   searchStepIds: ["capacity", "reach"],
   defaultExclusions: [
     {
@@ -20,7 +20,10 @@ export const PMT_DEFINITION: BusinessFamilyDefinition = {
       reason: "Composant réservé aux préparations internes.",
     },
   ],
-  steps: buildWallPotenceSteps("NOTEPM"),
+  steps: buildWallPotenceSteps({
+    noteRef: "NOTEPM",
+    includeUnderBeamHeight: false,
+  }),
   notes: [
     "La capacité et la portée identifient le modèle de base.",
     "Le client décrit son support ; le moteur sélectionne la fixation murale adaptée.",

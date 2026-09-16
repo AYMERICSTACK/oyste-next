@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/adei-lead-times",
+      "schedule": "0 16,17 * * 2"
+    }
+  ]
+}

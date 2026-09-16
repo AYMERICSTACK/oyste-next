@@ -34,6 +34,10 @@ export type ErpOuvrage = {
   spanMm?: number;
   heightMm?: number;
   widthMm?: number;
+  weightKg?: number;
+  packageLengthCm?: number;
+  packageWidthCm?: number;
+  packageHeightCm?: number;
   components: ErpComponent[];
 };
 
@@ -51,6 +55,10 @@ export type ErpProduct = {
   spanMm?: number;
   heightMm?: number;
   widthMm?: number;
+  weightKg?: number;
+  packageLengthCm?: number;
+  packageWidthCm?: number;
+  packageHeightCm?: number;
 };
 
 export type ErpSnapshot = {

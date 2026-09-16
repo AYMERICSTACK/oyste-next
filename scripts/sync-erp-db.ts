@@ -42,6 +42,10 @@ function productAttributes(product: ErpProduct) {
     spanMm: product.spanMm,
     heightMm: product.heightMm,
     widthMm: product.widthMm,
+    weightKg: product.weightKg,
+    packageLengthCm: product.packageLengthCm,
+    packageWidthCm: product.packageWidthCm,
+    packageHeightCm: product.packageHeightCm,
   };
 }
 

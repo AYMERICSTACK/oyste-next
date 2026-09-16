@@ -12,6 +12,7 @@ export default function ProductCard({
   href,
   cta,
   imageRef,
+  imageUrl,
   badge,
   documentCount,
 }: {
@@ -23,10 +24,11 @@ export default function ProductCard({
   href: string;
   cta: string;
   imageRef?: string;
+  imageUrl?: string;
   badge?: string;
   documentCount?: number;
 }) {
-  const imageUrl = getProductImageUrl(imageRef, code);
+  const resolvedImageUrl = imageUrl || getProductImageUrl(imageRef, code);
   const availableDocumentCount = documentCount ?? getImportedProductDocuments(imageRef, code).length;
 
   return (
@@ -35,7 +37,7 @@ export default function ProductCard({
       className="group overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-orange-500 hover:shadow-xl"
     >
       <ProductMediaFrame
-        src={imageUrl}
+        src={resolvedImageUrl}
         alt={name}
         label={badge ?? code}
         documentCount={availableDocumentCount}

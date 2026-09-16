@@ -28,16 +28,16 @@ export async function getCustomerDashboard(customerId: string) {
     prisma.order.count({ where: { customerId, status: { in: ["PAID", "ENGINEERING", "PRODUCTION", "QUALITY_CONTROL", "READY_TO_SHIP", "SHIPPED"] } } }),
     prisma.order.count({ where: { customerId, paymentStatus: "PENDING" } }),
     prisma.order.count({ where: { customerId, status: "COMPLETED" } }),
-    prisma.order.aggregate({ where: { customerId, status: { not: "CANCELLED" } }, _sum: { totalTtc: true } }),
+    prisma.order.aggregate({ where: { customerId, status: { not: "CANCELLED" } }, _sum: { totalTtc: true, taxAmount: true } }),
     prisma.order.findMany({
       where: { customerId },
       orderBy: { createdAt: "desc" },
       take: 4,
-      select: { id: true, reference: true, status: true, paymentStatus: true, totalTtc: true, currency: true, createdAt: true, deliveryMode: true, _count: { select: { items: true } } },
+      select: { id: true, reference: true, status: true, paymentStatus: true, taxAmount: true, totalTtc: true, currency: true, createdAt: true, deliveryMode: true, _count: { select: { items: true } } },
     }),
   ]);
 
-  return { totalOrders, activeOrders, pendingPayment, completedOrders, totalTtc: totals._sum.totalTtc ?? 0, latestOrders };
+  return { totalOrders, activeOrders, pendingPayment, completedOrders, totalHt: Number(totals._sum.totalTtc ?? 0) - Number(totals._sum.taxAmount ?? 0), totalTtc: totals._sum.totalTtc ?? 0, latestOrders };
 }
 
 export async function getCustomerOrders(customerId: string) {

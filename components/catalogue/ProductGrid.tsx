@@ -2,6 +2,7 @@ import {
   formatCategoryLabel,
   formatPriceRange,
   getProductAvailableDocumentCount,
+  getProductMediaImages,
   type CatalogueProduct,
 } from "@/lib/catalogue/repository";
 import ProductCard from "./ProductCard";
@@ -39,6 +40,7 @@ export default function ProductGrid({ products }: { products: CatalogueProduct[]
             href={product.href}
             cta="Voir la fiche"
             imageRef={product.imageRef || product.code}
+            imageUrl={getProductMediaImages(product)[0]}
             badge={
               product.variantCount && product.variantCount > 1
                 ? `${product.variantCount} variantes`

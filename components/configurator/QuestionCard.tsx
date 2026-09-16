@@ -132,16 +132,51 @@ export default function QuestionCard({
         </div>
       )}
 
-      <div className="mt-3 grid grid-cols-1 gap-2">
-        {step.choices.map((choice) => (
-          <ChoiceCard
-            key={choice.id}
-            choice={choice}
-            selected={isChoiceSelected(selectedChoice, choice.id)}
-            onSelect={() => onSelect(choice.id)}
-          />
-        ))}
-      </div>
+      {step.id === "underBeamHeight" ? (
+        <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <label
+            htmlFor="under-beam-height"
+            className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500"
+          >
+            Hauteur sous fer disponible
+          </label>
+          <select
+            id="under-beam-height"
+            value={typeof selectedChoice === "string" ? selectedChoice : ""}
+            onChange={(event) => onSelect(event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-black text-slate-950 outline-none transition focus:border-[#007f8f] focus:ring-2 focus:ring-[#007f8f]/15"
+          >
+            <option value="" disabled>
+              Choisissez une hauteur
+            </option>
+            {step.choices.map((choice) => (
+              <option key={choice.id} value={choice.id}>
+                {choice.label}
+              </option>
+            ))}
+          </select>
+          {typeof selectedChoice === "string" ? (
+            <p className="mt-2 text-[12px] font-semibold leading-5 text-slate-600">
+              {
+                step.choices.find(
+                  (choice) => choice.id === selectedChoice,
+                )?.description
+              }
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <div className="mt-3 grid grid-cols-1 gap-2">
+          {step.choices.map((choice) => (
+            <ChoiceCard
+              key={choice.id}
+              choice={choice}
+              selected={isChoiceSelected(selectedChoice, choice.id)}
+              onSelect={() => onSelect(choice.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {isCompleting && (
         <div className="mt-4 rounded-2xl border border-orange-200 bg-orange-50 p-4">

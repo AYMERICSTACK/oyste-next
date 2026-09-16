@@ -11,7 +11,6 @@ import {
 import { buildConfiguration } from "@/lib/configurator/engine";
 import { formatPrice } from "@/lib/configurator/pricing";
 import type { Answers } from "@/lib/configurator/types";
-import CompatibilityCard from "./CompatibilityCard";
 import Configurator3DViewer from "./Configurator3DViewer";
 import QuestionCard from "./QuestionCard";
 import ConfiguratorTopProgress from "./ConfiguratorTopProgress";
@@ -147,16 +146,6 @@ export default function ConfiguratorExperience() {
     setIsCompleting(false);
   }
 
-  function toggleAccessory(accessoryId: string) {
-    const required = configuration.requiredAccessories.some((accessory) => accessory.id === accessoryId);
-    if (required) return;
-    setSelectedAccessoryIds((current) =>
-      current.includes(accessoryId)
-        ? current.filter((id) => id !== accessoryId)
-        : [...current, accessoryId],
-    );
-  }
-
   const compactSummary = configuration.summaryLines.slice(0, 4);
 
   return (
@@ -231,22 +220,6 @@ export default function ConfiguratorExperience() {
                 </div>
               ))}
 
-              {configuration.compatibleAccessories.length > 0 && isLastStep ? (
-                <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-orange-600">Compléments compatibles</p>
-                  <div className="mt-3 space-y-3">
-                    {configuration.compatibleAccessories.map((accessory) => (
-                      <CompatibilityCard
-                        key={accessory.id}
-                        line={accessory}
-                        selected={configuration.selectedAccessories.some((item) => item.id === accessory.id)}
-                        locked={configuration.requiredAccessories.some((item) => item.id === accessory.id)}
-                        onToggle={() => toggleAccessory(accessory.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              ) : null}
             </div>
           </aside>
         </div>

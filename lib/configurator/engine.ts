@@ -25,6 +25,8 @@ import {
   roundPrice,
 } from "@/lib/erp";
 import { getCompatibleAccessories } from "./compatibility";
+import { getPfiTechnicalRow } from "@/lib/shipping/pfi-technical-data";
+import { getPftTechnicalRow } from "@/lib/shipping/pft-technical-data";
 import { calculateSellingPrice } from "./pricing";
 import { getHoistBusinessActions, getHoistDetail, getSelectedHoistInfo } from "./hoist";
 import { productVariants } from "./products";
@@ -148,7 +150,7 @@ const REACH_CHOICES: ConfiguratorChoice[] = [
   },
 ];
 
-const UNDER_BEAM_HEIGHT_CHOICES: ConfiguratorChoice[] = [
+const GENERIC_UNDER_BEAM_HEIGHT_CHOICES: ConfiguratorChoice[] = [
   {
     id: "3m",
     label: "3 m",
@@ -171,34 +173,92 @@ const UNDER_BEAM_HEIGHT_CHOICES: ConfiguratorChoice[] = [
   },
 ];
 
-const LIFTING_HEIGHT_CHOICES: ConfiguratorChoice[] = [
-  {
-    id: "3m",
-    label: "3 m",
-    description: "Course de levage adaptée aux postes standards.",
+function parseMetersChoice(value: BusinessAnswerValue): number | undefined {
+  if (typeof value !== "string") return undefined;
+
+  const parsed = Number.parseFloat(
+    value.replace(",", ".").replace(/[^0-9.]/g, ""),
+  );
+
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function getSelectedTechnicalRow(answers: Answers) {
+  const capacityKg = Number.parseInt(asString(answers.capacity) ?? "", 10);
+  const spanM = parseMetersChoice(answers.reach);
+  const family = getSelectedPotenceFamilyId(answers);
+
+  if (!Number.isFinite(capacityKg) || !spanM) return undefined;
+  if (family === "PFI") return getPfiTechnicalRow(capacityKg, spanM);
+  if (family === "PFT") return getPftTechnicalRow(capacityKg, spanM);
+  return undefined;
+}
+
+function buildDynamicUnderBeamHeightChoices(
+  answers: Answers,
+): ConfiguratorChoice[] {
+  const family = getSelectedPotenceFamilyId(answers);
+  const row = getSelectedTechnicalRow(answers);
+
+  if (!row) {
+    const standardHsfM = family === "PFT" ? 2.5 : 3;
+    return [
+      {
+        id: `${standardHsfM.toFixed(1)}m`,
+        label: `${standardHsfM.toFixed(1).replace(".", ",")} m`,
+        description: `Hauteur sous fer standard de la gamme ${family ?? "sélectionnée"}.`,
+      },
+    ];
+  }
+
+  const stepCount = Math.round(
+    (row.maxHsfM - row.standardHsfM) * 10,
+  );
+
+  return Array.from({ length: stepCount + 1 }, (_, index) => {
+    const heightM = Number(
+      (row.standardHsfM + index / 10).toFixed(1),
+    );
+    const isStandard = index === 0;
+
+    return {
+      id: `${heightM.toFixed(1)}m`,
+      label: `${heightM.toFixed(1).replace(".", ",")} m`,
+      description: isStandard
+        ? "Hauteur sous fer standard, sans supplément."
+        : `${index} supplément${index > 1 ? "s" : ""} de 10 cm appliqué${index > 1 ? "s" : ""} automatiquement.`,
+      recommended: isStandard,
+    };
+  });
+}
+
+const LIFTING_HEIGHT_CHOICES: ConfiguratorChoice[] = Array.from(
+  { length: 13 },
+  (_, index) => {
+    const meters = index + 3;
+    return {
+      id: `${meters}m`,
+      label: `${meters} m`,
+      description:
+        meters <= 6
+          ? "Le palan est préparé avec le bac à chaîne standard correspondant."
+          : "Un bac à chaîne grande capacité est sélectionné automatiquement.",
+    };
   },
-  {
-    id: "4m",
-    label: "4 m",
-    description: "Le palan est préparé avec la longueur de levage correspondante.",
-  },
-  {
-    id: "5m",
-    label: "5 m",
-    description:
-      "La longueur de levage et les accessoires associés sont adaptés automatiquement.",
-  },
-  {
-    id: "6m",
-    label: "6 m",
-    description:
-      "Pour les postes nécessitant une course de levage plus importante.",
-  },
-  {
-    id: "8m",
-    label: "8 m",
-    description: "Pour les installations avec une hauteur de levage importante.",
-  },
+);
+
+const MANUAL_TROLLEY_CHOICES: ConfiguratorChoice[] = [
+  { id: "push", label: "Par poussée", description: "Chariot manuel HTP en largeur standard, déplacé directement par l’opérateur." },
+  { id: "chain", label: "Par chaîne", description: "Chariot manuel HTG en largeur standard, commandé par chaîne de manœuvre." },
+];
+
+const ELECTRIC_TROLLEY_CHOICES: ConfiguratorChoice[] = [
+  { id: "push", label: "Par poussée", description: "Chariot manuel standard. Le raccordement à la ligne d’alimentation reste à la charge du client." },
+  { id: "motorized", label: "Motorisé", description: "Chariot motorisé standard avec butées et fins de course obligatoires." },
+];
+
+const ELECTRIC_HOIST_OPTIONS: ConfiguratorChoice[] = [
+  { id: "stainless-hook", label: "Crochet bas inox", description: "Crochet bas inox ajouté au palan électrique." },
 ];
 
 const STEP_EYEBROWS: Record<string, string> = {
@@ -220,6 +280,7 @@ const STEP_EYEBROWS: Record<string, string> = {
   liftingHeight: "Levage",
   hoistTrolleyMovement: "Chariot",
   hoistCommand: "Commande",
+  hoistOptions: "Options du palan",
 };
 
 const STEP_ICONS: Record<string, ConfiguratorQuestion["icon"]> = {
@@ -241,6 +302,7 @@ const STEP_ICONS: Record<string, ConfiguratorQuestion["icon"]> = {
   liftingHeight: Ruler,
   hoistTrolleyMovement: Settings2,
   hoistCommand: PlugZap,
+  hoistOptions: Settings2,
 };
 
 function asString(value: BusinessAnswerValue): string | undefined {
@@ -294,24 +356,26 @@ function buildPfiFixingChoices(answers: Answers): ConfiguratorChoice[] {
   const gabarit = findComponentByPrefix(answers, ["GAB"]);
   const semelle = findComponentByPrefix(answers, ["SC"]);
 
-  return [
+  const choices: ConfiguratorChoice[] = [
     {
       id: "gabarit-ancrage",
       label: "Gabarit et tiges d'ancrage",
       description:
         gabarit?.label ??
-        "La dimension sera adaptée automatiquement dès que la charge et la portée seront connues.",
-      recommended: Boolean(gabarit),
-    },
-    {
-      id: "semelle-cheviller",
-      label: "Semelle à cheviller sur dalle béton",
-      description:
-        semelle?.label ??
-        "La dimension sera adaptée automatiquement dès que la charge et la portée seront connues.",
-      recommended: Boolean(semelle),
+        "Semelle standard obligatoire pour cette configuration.",
+      recommended: true,
     },
   ];
+
+  if (semelle) {
+    choices.push({
+      id: "semelle-cheviller",
+      label: "Semelle à cheviller sur dalle béton",
+      description: semelle.label,
+    });
+  }
+
+  return choices;
 }
 
 function getBusinessChoices(
@@ -321,8 +385,16 @@ function getBusinessChoices(
   if (step.id === "capacity") return CAPACITY_CHOICES;
   if (step.id === "reach") return REACH_CHOICES;
   if (step.id === "fixing") return buildPfiFixingChoices(answers);
-  if (step.id === "underBeamHeight") return UNDER_BEAM_HEIGHT_CHOICES;
+  if (step.id === "underBeamHeight") {
+    return ["PFI", "PFT"].includes(getSelectedPotenceFamilyId(answers) ?? "")
+      ? buildDynamicUnderBeamHeightChoices(answers)
+      : GENERIC_UNDER_BEAM_HEIGHT_CHOICES;
+  }
   if (step.id === "liftingHeight") return LIFTING_HEIGHT_CHOICES;
+  if (step.id === "hoistTrolleyMovement") {
+    return answers.hoistType === "manual" ? MANUAL_TROLLEY_CHOICES : ELECTRIC_TROLLEY_CHOICES;
+  }
+  if (step.id === "hoistOptions") return ELECTRIC_HOIST_OPTIONS;
 
   return (step.choices ?? []).map((choice: BusinessChoice) => ({
     id: choice.id,
@@ -640,6 +712,28 @@ function getDynamicBusinessActions(answers: Answers): ComponentAction[] {
     }
   }
 
+  if (["PFI", "PFT"].includes(getSelectedPotenceFamilyId(answers) ?? "")) {
+    const selectedHsfM = parseMetersChoice(answers.underBeamHeight);
+    const row = getSelectedTechnicalRow(answers);
+    const hsfSupplement = findComponentByPrefix(answers, ["HSF"]);
+
+    if (row && selectedHsfM && hsfSupplement) {
+      const increments = Math.max(
+        0,
+        Math.round((selectedHsfM - row.standardHsfM) * 10),
+      );
+
+      if (increments > 0) {
+        actions.push({
+          type: "add",
+          ref: hsfSupplement.code,
+          quantity: increments,
+          reason: `${increments} supplément${increments > 1 ? "s" : ""} de 10 cm de hauteur sous fer.`,
+        });
+      }
+    }
+  }
+
   const wallFixing = findWallFixingComponent(answers);
   if (wallFixing) {
     actions.push({
@@ -710,8 +804,10 @@ export function buildConfiguration({
     erpInstallation.includedTotal || erpInstallation.total || baseCostPrice;
   const solutionTotal = calculateSellingPrice(solutionCostTotal);
   const hoistTotal = hoistDetail?.totalHt ?? 0;
-  const complementsTotal = accessoriesTotal + optionsTotal + hoistTotal;
-  const total = solutionTotal + complementsTotal;
+  // Le palan dispose de sa propre ligne dans le récapitulatif.
+  // Les compléments ne doivent donc contenir que les options et accessoires.
+  const complementsTotal = accessoriesTotal + optionsTotal;
+  const total = solutionTotal + hoistTotal + complementsTotal;
   const priceBreakdown = {
     solutionTotal: roundPrice(solutionTotal),
     hoistTotal: roundPrice(hoistTotal),

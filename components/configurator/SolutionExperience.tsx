@@ -1,4 +1,5 @@
 "use client";
+import { getWallFixingWeightKg } from "@/lib/shipping/wall-potence-option-weights";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -47,6 +48,13 @@ function getAnswerLabel(configuration: EngineResult, questionId: string) {
   }
 
   return question?.choices.find((choice) => choice.id === answer)?.label;
+}
+
+
+function parseMetersAnswer(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const match = value.replace(",", ".").match(/(\d+(?:\.\d+)?)/);
+  return match ? Number(match[1]) : undefined;
 }
 
 function formatMeters(value?: number) {
@@ -207,6 +215,32 @@ export default function SolutionExperience() {
   const fixing = getAnswerLabel(configuration, "fixing");
   const underBeamHeight = getAnswerLabel(configuration, "underBeamHeight");
   const environment = getAnswerLabel(configuration, "environment");
+  const capacityKg = Number(configuration.answers.capacity);
+  const spanM = parseMetersAnswer(configuration.answers.reach);
+  const hsfM = parseMetersAnswer(configuration.answers.underBeamHeight);
+  const fixingAnswer = configuration.answers.fixing;
+  const selectedFamily =
+    typeof configuration.answers.potenceType === "string"
+      ? configuration.answers.potenceType.toUpperCase()
+      : configuration.selectedVariant?.familyCode;
+  const hasUnderBeamHeight = ["PFI", "PFT"].includes(selectedFamily ?? "");
+  const pfiShipping = ["PFI", "PFT"].includes(selectedFamily ?? "") && capacityKg && spanM && hsfM && typeof fixingAnswer === "string"
+    ? { family: selectedFamily as "PFI" | "PFT", capacityKg, spanM, hsfM, fixing: fixingAnswer === "semelle-cheviller" ? "CHEMICAL" as const : "STANDARD" as const }
+    : undefined;
+  const wallFixingWeightKg = getWallFixingWeightKg([
+    ...configuration.erpInstallation.includedComponents,
+    ...configuration.erpInstallation.optionalComponents,
+  ]);
+  const hoistWeightKg = configuration.hoistDetail?.weightKg ?? 0;
+  const wallPotenceShipping = ["PMI", "PMT"].includes(selectedFamily ?? "") && capacityKg && spanM
+    ? {
+        family: selectedFamily as "PMI" | "PMT",
+        capacityKg,
+        spanM,
+        additionalWeightKg: wallFixingWeightKg + hoistWeightKg,
+        weightComplete: configuration.hoistDetail ? configuration.hoistDetail.weightComplete !== false : true,
+      }
+    : undefined;
 
   return (
     <section className="bg-slate-50 py-6 lg:min-h-[calc(100dvh-90px)]">
@@ -244,7 +278,9 @@ export default function SolutionExperience() {
                     {solution?.label ?? configuration.selectedVariant?.label ?? "Installation configurée"}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Structure adaptée au type de potence, à la charge, à la portée, à la hauteur et au mode de fixation que vous avez renseignés.
+                    {hasUnderBeamHeight
+                      ? "Structure adaptée au type de potence, à la charge, à la portée, à la hauteur et au mode de fixation que vous avez renseignés."
+                      : "Structure adaptée au type de potence, à la charge, à la portée et au mode de fixation que vous avez renseignés."}
                   </p>
                 </div>
 
@@ -252,7 +288,7 @@ export default function SolutionExperience() {
                   <SolutionSpec label="Type" value={potenceType} />
                   <SolutionSpec label="Charge" value={capacity} />
                   <SolutionSpec label="Portée" value={reach} />
-                  <SolutionSpec label="Hauteur" value={underBeamHeight} />
+                  {hasUnderBeamHeight ? <SolutionSpec label="Hauteur" value={underBeamHeight} /> : null}
                   <SolutionSpec label="Fixation" value={fixing} />
                   <SolutionSpec label="Environnement" value={environment} />
                   <SolutionSpec label="Statut" value="Prête à commander" />
@@ -280,11 +316,15 @@ export default function SolutionExperience() {
                 code={configuration.selectedVariant?.reference ?? solution?.code}
                 priceHT={configuration.priceBreakdown.totalHt}
                 editHref="/configurateur"
+                pfiShipping={pfiShipping}
+                wallPotenceShipping={wallPotenceShipping}
                 technicalLines={[
                   { label: "Type", value: potenceType ?? "Non renseigné" },
                   { label: "Charge", value: capacity ?? "Non renseigné" },
                   { label: "Portée", value: reach ?? "Non renseigné" },
-                  { label: "Hauteur", value: underBeamHeight ?? "Non renseigné" },
+                  ...(hasUnderBeamHeight
+                    ? [{ label: "Hauteur", value: underBeamHeight ?? "Non renseigné" }]
+                    : []),
                   { label: "Fixation", value: fixing ?? "Non renseigné" },
                   { label: "Environnement", value: environment ?? "Non renseigné" },
                 ]}

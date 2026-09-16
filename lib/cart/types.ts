@@ -5,6 +5,10 @@ export type CartTechnicalLine = {
   value: string;
 };
 
+export type PotenceShippingConfiguration = { family?: "PFI" | "PFT"; capacityKg: number; spanM: number; hsfM: number; fixing: "STANDARD" | "CHEMICAL" };
+export type PfiShippingConfiguration = PotenceShippingConfiguration;
+export type WallPotenceShippingConfiguration = { family: "PMI" | "PMT"; capacityKg: number; spanM: number; additionalWeightKg?: number; weightComplete?: boolean };
+
 export type CartItem = {
   id: string;
   kind: CartItemKind;
@@ -13,7 +17,12 @@ export type CartItem = {
   family?: string;
   supplier?: string;
   weightKg?: number;
+  packageLengthCm?: number;
+  packageWidthCm?: number;
+  packageHeightCm?: number;
   shippingMode?: "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
+  pfiShipping?: PfiShippingConfiguration;
+  wallPotenceShipping?: WallPotenceShippingConfiguration;
   imageUrl?: string;
   unitPriceHT: number;
   quantity: number;
