@@ -5,8 +5,7 @@ import { chromium, type Browser, type BrowserContext } from "playwright";
 const DEFAULT_AUTH_FILE = "stockman-auth.json";
 
 export function getStockmanAuthFile() {
-  const configured = process.env.STOCKMAN_AUTH_FILE?.trim() || DEFAULT_AUTH_FILE;
-  return path.isAbsolute(configured) ? configured : path.join(process.cwd(), configured);
+  return path.join(process.cwd(), DEFAULT_AUTH_FILE);
 }
 
 export async function stockmanAuthFileExists() {
@@ -18,10 +17,15 @@ export async function stockmanAuthFileExists() {
   }
 }
 
-export async function openStockmanBrowser(): Promise<{ browser: Browser; context: BrowserContext }> {
+export async function openStockmanBrowser(): Promise<{
+  browser: Browser;
+  context: BrowserContext;
+}> {
   const authFile = getStockmanAuthFile();
   if (!(await stockmanAuthFileExists())) {
-    throw new Error(`Session Stockman introuvable. Lancez "npm run stockman:auth" pour créer ${path.basename(authFile)} avec une vraie session revendeur.`);
+    throw new Error(
+      `Session Stockman introuvable. Lancez "npm run stockman:auth" pour créer ${path.basename(authFile)} avec une vraie session revendeur.`,
+    );
   }
 
   const browser = await chromium.launch({
