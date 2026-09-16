@@ -43,8 +43,18 @@ export type StripeConnectionStatus = {
 
 function getModeFromKey(value: string | undefined): StripeMode {
   if (!value) return "unknown";
-  if (value.startsWith("sk_test_") || value.startsWith("pk_test_") || value.startsWith("rk_test_")) return "test";
-  if (value.startsWith("sk_live_") || value.startsWith("pk_live_") || value.startsWith("rk_live_")) return "live";
+  if (
+    value.startsWith("sk_test_") ||
+    value.startsWith("pk_test_") ||
+    value.startsWith("rk_test_")
+  )
+    return "test";
+  if (
+    value.startsWith("sk_live_") ||
+    value.startsWith("pk_live_") ||
+    value.startsWith("rk_live_")
+  )
+    return "live";
   return "unknown";
 }
 
@@ -110,7 +120,9 @@ export async function testStripeConnection(): Promise<StripeConnectionStatus> {
     if (!response.ok) {
       let detail = "";
       try {
-        const body = (await response.json()) as { error?: { message?: string } };
+        const body = (await response.json()) as {
+          error?: { message?: string };
+        };
         detail = body.error?.message?.trim() || "";
       } catch {
         // Stripe peut renvoyer une réponse non JSON lors d'un incident externe.
@@ -132,9 +144,15 @@ export async function testStripeConnection(): Promise<StripeConnectionStatus> {
       null;
 
     let message = "Connexion Stripe opérationnelle.";
-    if (!keysModeMatch) message = "Connexion réussie, mais les clés publique et secrète ne sont pas dans le même mode.";
-    else if (!publishableKeyConfigured) message = "Connexion réussie. Ajoutez aussi la clé publique Stripe avant le checkout.";
-    else if (!account.details_submitted) message = "Connexion réussie. La configuration du compte Stripe reste à finaliser.";
+    if (!keysModeMatch)
+      message =
+        "Connexion réussie, mais les clés publique et secrète ne sont pas dans le même mode.";
+    else if (!publishableKeyConfigured)
+      message =
+        "Connexion réussie. Ajoutez aussi la clé publique Stripe avant le checkout.";
+    else if (!account.details_submitted)
+      message =
+        "Connexion réussie. La configuration du compte Stripe reste à finaliser.";
 
     return {
       configured: true,
@@ -198,7 +216,10 @@ function requireSecretKey() {
   return key;
 }
 
-async function stripeRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function stripeRequest<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
@@ -215,10 +236,14 @@ async function stripeRequest<T>(path: string, init: RequestInit = {}): Promise<T
     if (!response.ok) {
       let detail = "";
       try {
-        const body = (await response.json()) as { error?: { message?: string } };
+        const body = (await response.json()) as {
+          error?: { message?: string };
+        };
         detail = body.error?.message?.trim() || "";
       } catch {}
-      throw new Error(detail || `Stripe a répondu avec le statut ${response.status}.`);
+      throw new Error(
+        detail || `Stripe a répondu avec le statut ${response.status}.`,
+      );
     }
     return (await response.json()) as T;
   } finally {
@@ -237,7 +262,7 @@ export async function createStripeCheckoutSession(input: {
   cancelUrl: string;
 }) {
   const body = new URLSearchParams();
-  body.set("mode", "payment");
+  body.set("payment_method_types[0]", "card");
   body.set("client_reference_id", input.orderId);
   body.set("customer_email", input.customerEmail);
   body.set("success_url", input.successUrl);
@@ -245,7 +270,10 @@ export async function createStripeCheckoutSession(input: {
   body.set("line_items[0][quantity]", "1");
   body.set("line_items[0][price_data][currency]", input.currency.toLowerCase());
   body.set("line_items[0][price_data][unit_amount]", String(input.amountCents));
-  body.set("line_items[0][price_data][product_data][name]", `Commande OYSTE ${input.reference}`);
+  body.set(
+    "line_items[0][price_data][product_data][name]",
+    `Commande OYSTE ${input.reference}`,
+  );
   body.set("metadata[orderId]", input.orderId);
   body.set("metadata[customerId]", input.customerId);
   body.set("metadata[reference]", input.reference);
@@ -260,5 +288,7 @@ export async function createStripeCheckoutSession(input: {
 }
 
 export async function retrieveStripeCheckoutSession(sessionId: string) {
-  return stripeRequest<StripeCheckoutSession>(`/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=payment_intent`);
+  return stripeRequest<StripeCheckoutSession>(
+    `/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=payment_intent`,
+  );
 }
