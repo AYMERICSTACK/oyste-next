@@ -2,8 +2,13 @@ import "server-only";
 
 import { prisma } from "@/lib/db/prisma";
 
-const LEAD_TIME_URL = "https://configurateur.comege.fr/delais";
+const COMEGE_LOGIN_URL = "https://www.comege.fr/";
+const LEAD_TIME_URL = "https://www.comege.fr/fr/delais-produits-standard";
+const COMEGE_USERNAME_FIELD = "m592femams_input_username";
+const COMEGE_PASSWORD_FIELD = "m592femams_input_password";
 const OYSTE_LEAD_TIME_BUFFER_WEEKS = 1;
+
+type CookieJar = Map<string, string>;
 
 type SourceLeadTime = {
   sourceLabel: string;
@@ -20,6 +25,43 @@ export type AdeiLeadTimeSyncResult = {
   families: Array<{ label: string; weeks: number }>;
 };
 
+export type AdeiLeadTimePreviewResult = {
+  fetchedAt: string;
+  sourceRows: number;
+  families: Array<{
+    label: string;
+    supplierWeeks: number;
+    customerWeeks: number;
+  }>;
+};
+
+function extractSetCookieHeaders(headers: Headers) {
+  const nodeHeaders = headers as Headers & { getSetCookie?: () => string[] };
+  if (typeof nodeHeaders.getSetCookie === "function") return nodeHeaders.getSetCookie();
+
+  const combined = headers.get("set-cookie");
+  if (!combined) return [];
+  return combined.split(/,(?=\s*[^;,=\s]+=[^;,]*)/g);
+}
+
+function mergeCookies(jar: CookieJar, headers: Headers) {
+  for (const setCookie of extractSetCookieHeaders(headers)) {
+    const pair = setCookie.split(";", 1)[0]?.trim();
+    if (!pair) continue;
+    const separator = pair.indexOf("=");
+    if (separator <= 0) continue;
+    const name = pair.slice(0, separator).trim();
+    const value = pair.slice(separator + 1).trim();
+    if (!name) continue;
+    if (value) jar.set(name, value);
+    else jar.delete(name);
+  }
+}
+
+function cookieHeader(jar: CookieJar) {
+  return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join("; ");
+}
+
 function decodeHtml(value: string) {
   return value
     .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, " ")
@@ -31,8 +73,124 @@ function decodeHtml(value: string) {
     .replace(/&#39;|&apos;/gi, "'")
     .replace(/&lt;/gi, "<")
     .replace(/&gt;/gi, ">")
+    .replace(/&eacute;|&#233;/gi, "é")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function parseHtmlAttributes(tag: string) {
+  const attributes = new Map<string, string>();
+  const pattern = /([^\s=<>/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+  for (const match of tag.matchAll(pattern)) {
+    const name = match[1]?.toLowerCase();
+    if (!name || name === "input" || name === "button") continue;
+    attributes.set(name, decodeHtml(match[2] ?? match[3] ?? match[4] ?? ""));
+  }
+  return attributes;
+}
+
+function extractLoginFormFields(html: string) {
+  const fields = new URLSearchParams();
+
+  for (const match of html.matchAll(/<input\b[^>]*>/gi)) {
+    const attributes = parseHtmlAttributes(match[0]);
+    const name = attributes.get("name")?.trim();
+    if (!name) continue;
+
+    const type = attributes.get("type")?.toLowerCase();
+    if (type === "checkbox" || type === "radio") {
+      if (!/\bchecked\b/i.test(match[0])) continue;
+    }
+    fields.set(name, attributes.get("value") ?? "");
+  }
+
+  for (const match of html.matchAll(/<button\b[^>]*>[\s\S]*?<\/button>/gi)) {
+    const openingTag = match[0].match(/^<button\b[^>]*>/i)?.[0];
+    if (!openingTag) continue;
+    const attributes = parseHtmlAttributes(openingTag);
+    const name = attributes.get("name")?.trim();
+    if (!name) continue;
+    fields.set(name, attributes.get("value") ?? decodeHtml(match[0]));
+  }
+
+  return fields;
+}
+
+function requireComegeCredentials() {
+  const username = process.env.COMEGE_LOGIN?.trim();
+  const password = process.env.COMEGE_PASSWORD?.trim();
+  if (!username || !password) {
+    throw new Error("COMEGE_LOGIN et COMEGE_PASSWORD doivent être configurés.");
+  }
+  return { username, password };
+}
+
+async function fetchComegeLeadTimeHtml() {
+  const { username, password } = requireComegeCredentials();
+  const jar: CookieJar = new Map();
+  const commonHeaders = {
+    Accept: "text/html,application/xhtml+xml",
+    "User-Agent": "OYSTE lead-time sync",
+  };
+
+  const loginPage = await fetch(COMEGE_LOGIN_URL, {
+    cache: "no-store",
+    headers: commonHeaders,
+    redirect: "manual",
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!loginPage.ok) {
+    throw new Error(`Page de connexion COMEGE indisponible (${loginPage.status}).`);
+  }
+  mergeCookies(jar, loginPage.headers);
+
+  const loginHtml = await loginPage.text();
+  const fields = extractLoginFormFields(loginHtml);
+  if (!fields.has("xt_csrf_name") || !fields.has("xt_csrf_token")) {
+    throw new Error("Jeton CSRF COMEGE introuvable sur la page de connexion.");
+  }
+
+  fields.set(COMEGE_USERNAME_FIELD, username);
+  fields.set(COMEGE_PASSWORD_FIELD, password);
+
+  const loginResponse = await fetch(COMEGE_LOGIN_URL, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      ...commonHeaders,
+      "Content-Type": "application/x-www-form-urlencoded",
+      Origin: "https://www.comege.fr",
+      Referer: COMEGE_LOGIN_URL,
+      ...(jar.size ? { Cookie: cookieHeader(jar) } : {}),
+    },
+    body: fields,
+    redirect: "manual",
+    signal: AbortSignal.timeout(15000),
+  });
+  if (loginResponse.status >= 400) {
+    throw new Error(`Connexion COMEGE refusée (${loginResponse.status}).`);
+  }
+  mergeCookies(jar, loginResponse.headers);
+
+  const response = await fetch(LEAD_TIME_URL, {
+    cache: "no-store",
+    headers: {
+      ...commonHeaders,
+      Referer: COMEGE_LOGIN_URL,
+      ...(jar.size ? { Cookie: cookieHeader(jar) } : {}),
+    },
+    redirect: "manual",
+    signal: AbortSignal.timeout(15000),
+  });
+  if (!response.ok) {
+    throw new Error(`Source délais COMEGE indisponible (${response.status}).`);
+  }
+
+  const html = await response.text();
+  if (/m592femams_input_password/i.test(html) && !/Produits\s*\/\s*d[ée]lais/i.test(html)) {
+    throw new Error("Connexion COMEGE non établie : la page des délais demande encore une authentification.");
+  }
+  return html;
 }
 
 function normalizeFamily(value: string | null | undefined) {
@@ -56,9 +214,27 @@ function aliasesFromSourceLabel(label: string) {
     .filter(Boolean);
 }
 
+function findLeadTimeTable(html: string) {
+  const tables = [...html.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/gi)];
+
+  const bySummary = tables.find((match) => {
+    const attributes = parseHtmlAttributes(`<table ${match[1]}>`);
+    const summary = normalizeFamily(attributes.get("summary"));
+    return summary === "PRODUITS DELAIS";
+  });
+  if (bySummary) return bySummary[2];
+
+  const legacy = html.match(/<table\b[^>]*id=["']tbl_delais["'][^>]*>([\s\S]*?)<\/table>/i)?.[1];
+  if (legacy) return legacy;
+
+  return null;
+}
+
 export function parseLeadTimeTable(html: string): SourceLeadTime[] {
-  const table = html.match(/<table\b[^>]*id=["']tbl_delais["'][^>]*>([\s\S]*?)<\/table>/i)?.[1];
-  if (!table) throw new Error("Tableau des délais introuvable.");
+  const table = findLeadTimeTable(html);
+  if (!table) {
+    throw new Error('Tableau COMEGE "Produits / délais" introuvable.');
+  }
 
   const rows: SourceLeadTime[] = [];
   for (const rowMatch of table.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)) {
@@ -80,11 +256,29 @@ export function parseLeadTimeTable(html: string): SourceLeadTime[] {
     });
   }
 
-  if (rows.length < 8 || !rows.some((row) => row.aliases.includes("PORT"))) {
-    throw new Error("Le tableau des délais reçu est incomplet ou inattendu.");
+  const requiredAliases = ["PMT", "PRT", "PORT", "PALANS", "PADC"];
+  const allAliases = new Set(rows.flatMap((row) => row.aliases));
+  if (
+    rows.length < 8 ||
+    requiredAliases.some((alias) => !allAliases.has(alias))
+  ) {
+    throw new Error("Le tableau des délais COMEGE reçu est incomplet ou inattendu.");
   }
 
   return rows;
+}
+
+export async function previewAdeiLeadTimes(): Promise<AdeiLeadTimePreviewResult> {
+  const rows = parseLeadTimeTable(await fetchComegeLeadTimeHtml());
+  return {
+    fetchedAt: new Date().toISOString(),
+    sourceRows: rows.length,
+    families: rows.map((row) => ({
+      label: row.sourceLabel,
+      supplierWeeks: row.weeks,
+      customerWeeks: row.weeks + OYSTE_LEAD_TIME_BUFFER_WEEKS,
+    })),
+  };
 }
 
 function resolveLeadTime(
@@ -112,19 +306,10 @@ function resolveLeadTime(
 }
 
 export async function syncAdeiLeadTimes(): Promise<AdeiLeadTimeSyncResult> {
-  const response = await fetch(LEAD_TIME_URL, {
-    cache: "no-store",
-    headers: { "User-Agent": "OYSTE lead-time sync" },
-    signal: AbortSignal.timeout(15000),
-  });
-  if (!response.ok) {
-    throw new Error(`Source délais indisponible (${response.status}).`);
-  }
-
-  // IMPORTANT : aucune écriture n'est faite avant que la source ait été
-  // entièrement récupérée et validée. En cas de panne, le dernier délai connu
-  // reste donc intact dans OYSTE.
-  const rows = parseLeadTimeTable(await response.text());
+  // IMPORTANT : aucune écriture n'est faite avant que la connexion COMEGE,
+  // la récupération de la page et la validation du tableau aient toutes réussi.
+  // En cas de panne ou d'authentification refusée, le dernier délai connu reste intact.
+  const rows = parseLeadTimeTable(await fetchComegeLeadTimeHtml());
 
   const supplier = await prisma.supplier.findFirst({
     where: { name: { equals: "ADEI", mode: "insensitive" } },
