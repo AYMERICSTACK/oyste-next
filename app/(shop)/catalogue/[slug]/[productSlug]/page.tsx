@@ -47,6 +47,7 @@ import {
   getDatabaseProductsByCategory,
   getDatabaseStockmanFamilyVariants,
 } from "@/lib/catalogue/database-repository";
+import { getImportedProductImagesExact } from "@/lib/catalogue/media";
 
 export async function generateMetadata({
   params,
@@ -154,6 +155,23 @@ export default async function CatalogProductPage({
   const documents = getProductDocuments(resolvedProduct);
   const availableDocumentCount = getProductAvailableDocumentCount(resolvedProduct);
   const mediaImages = getProductMediaImages(resolvedProduct);
+  const variantGalleryImages = Object.fromEntries(
+    variants.map((variant) => {
+      const exactImages = getImportedProductImagesExact(variant.imageRef, variant.code);
+      const isPalfix = variant.code.trim().toUpperCase().startsWith("PALFIX");
+
+      // PALFIX possède deux sources média pour une même référence :
+      // le rendu ADEI (maquette correcte) et un visuel COMEGE pouvant porter
+      // un marquage de capacité qui ne correspond pas à la variante affichée.
+      // Pour cette famille, la galerie publique doit donc conserver uniquement
+      // le rendu ADEI attaché à la référence exacte.
+      const publicImages = isPalfix
+        ? exactImages.filter((url) => url.includes("/media/photos/ADEI/"))
+        : exactImages;
+
+      return [variant.code, publicImages];
+    }),
+  );
   const trustBadges = getProductTrustBadges(resolvedProduct);
   const familyLabel = formatCategoryLabel(product.categoryPath);
   const marketingBadges = getProductMarketingBadges(resolvedProduct);
@@ -297,6 +315,7 @@ export default async function CatalogProductPage({
           isConfiguratorProduct={isConfigurable}
           configuratorHref={configuratorHref}
           galleryImages={mediaImages}
+          variantGalleryImages={variantGalleryImages}
           productHref={`/catalogue/${slug}/${productSlug}`}
           familyLabel={familyLabel}
           documentCount={availableDocumentCount}
