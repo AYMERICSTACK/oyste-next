@@ -227,21 +227,18 @@ async function fetchComegeLeadTimeHtml() {
   mergeCookies(jar, loginResponse.headers);
 
   const redirectLocation = loginResponse.headers.get("location") || "";
+
+  // COMEGE peut rediriger une connexion valide soit vers la page d'accueil,
+  // soit directement vers la page des délais. La destination du POST n'est
+  // donc pas utilisée comme preuve d'authentification : seul l'accès réel à
+  // la page protégée ci-dessous valide la session.
   if (loginResponse.status >= 300 && loginResponse.status < 400) {
-    if (!redirectLocation.includes("delais-produits-standard")) {
-      throw new Error(
-        `Connexion COMEGE redirigée vers une destination inattendue (${redirectLocation || "sans Location"}).`,
-      );
-    }
+    // Redirection attendue après soumission du formulaire : les cookies ont
+    // déjà été fusionnés dans le jar juste au-dessus.
   } else if (loginResponse.ok) {
-    const body = await loginResponse.text();
-    const stillShowsLogin = body.includes(COMEGE_PASSWORD_FIELD);
-    const looksAuthenticated = /d[ée]connexion/i.test(body);
-    if (stillShowsLogin || !looksAuthenticated) {
-      throw new Error(
-        `Connexion COMEGE non établie (POST ${loginResponse.status}, aucune redirection de connexion).`,
-      );
-    }
+    // Certains parcours COMEGE peuvent répondre 200 au POST. On conserve les
+    // cookies éventuels et on vérifie la session sur LEAD_TIME_URL.
+    await loginResponse.text();
   } else {
     throw new Error(`Connexion COMEGE refusée (${loginResponse.status}).`);
   }
