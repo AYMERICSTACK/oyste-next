@@ -6,12 +6,11 @@ import type { Browser, BrowserContext } from "playwright";
 const DEFAULT_AUTH_FILE = "stockman-auth.json";
 
 export function getStockmanAuthFile() {
-  const configured =
-    process.env.STOCKMAN_AUTH_FILE?.trim() || DEFAULT_AUTH_FILE;
-
-  return path.isAbsolute(configured)
-    ? configured
-    : path.join(process.cwd(), configured);
+  // Un chemin relatif est volontairement conservé tel quel.
+  // Node le résoudra par rapport au cwd au runtime.
+  // Cela évite à Turbopack de générer un pattern dynamique
+  // basé sur process.cwd() pendant le build Vercel.
+  return process.env.STOCKMAN_AUTH_FILE?.trim() || DEFAULT_AUTH_FILE;
 }
 
 export async function stockmanAuthFileExists() {
@@ -37,10 +36,9 @@ export async function openStockmanBrowser(): Promise<{
     );
   }
 
-  // IMPORTANT :
-  // Playwright n'est chargé que lorsqu'on ouvre réellement Stockman.
-  // Cela évite que Vercel charge playwright-core au simple affichage
-  // de /admin/fournisseurs.
+  // Chargement uniquement lorsque Stockman est réellement utilisé.
+  // /admin/fournisseurs ne charge donc pas Playwright simplement
+  // pour afficher le statut fournisseur.
   const { chromium } = await import("playwright");
 
   const browser = await chromium.launch({
