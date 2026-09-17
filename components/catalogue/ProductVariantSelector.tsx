@@ -121,6 +121,7 @@ export default function ProductVariantSelector({
   productHref,
   familyLabel,
   galleryImages = [],
+  variantGalleryImages = {},
   documentCount = 0,
 }: {
   productName: string;
@@ -137,6 +138,7 @@ export default function ProductVariantSelector({
   productHref?: string;
   familyLabel?: string;
   galleryImages?: string[];
+  variantGalleryImages?: Record<string, string[]>;
   documentCount?: number;
 }) {
   const effectiveOptionSchema = useMemo(
@@ -234,19 +236,28 @@ export default function ProductVariantSelector({
 
   const isGenericFallback =
     resolvedImageUrl === "/images/hero-potence.png";
+  const selectedVariantImages = selectedVariant?.code
+    ? variantGalleryImages[selectedVariant.code] || []
+    : [];
 
-  // Une vraie image fournisseur doit toujours gagner sur le visuel générique
-  // OYSTE. Le fallback n'est conservé que lorsqu'aucun média produit n'existe.
-  const preferredImage =
-    galleryImages[0] || (!isGenericFallback ? resolvedImageUrl : null) || resolvedImageUrl;
-
+  // Pour une fiche à variantes, la galerie suit strictement la référence
+  // sélectionnée. Cela évite de mélanger des visuels appartenant à d'autres
+  // capacités ou dimensions de la même famille (ex. marquage 1000 kg sur une
+  // variante 8 t). La galerie produit générale ne sert que de repli lorsqu'il
+  // n'existe aucun média exact pour la variante.
   const images = useMemo(() => {
+    if (selectedVariantImages.length) {
+      return Array.from(new Set(selectedVariantImages.filter(Boolean))).slice(0, 8);
+    }
+
     const ordered = galleryImages.length
       ? [...galleryImages, ...(isGenericFallback ? [] : [resolvedImageUrl])]
       : [resolvedImageUrl];
 
     return Array.from(new Set(ordered.filter(Boolean))).slice(0, 8);
-  }, [galleryImages, isGenericFallback, resolvedImageUrl]);
+  }, [galleryImages, isGenericFallback, resolvedImageUrl, selectedVariantImages]);
+
+  const preferredImage = images[0] || resolvedImageUrl;
 
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
 

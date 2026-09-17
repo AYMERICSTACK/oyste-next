@@ -34862,9 +34862,9 @@
     ],
     "description": "",
     "detailedDescription": "Ce palonnier acier fixe monopoutre de fabrication française est utilisé pour un service intérieur ou extérieur, il s’agit d’un accessoire de levage composé d'une anse supérieure et de deux crochets inferieurs CMU (Capacité de levage) : 10000kg Longueur entre crochets : 1m 2 crochets tournants articulés avec linguets de sécurité forgés Groupe FEM 5 Hauteur perdue réduite Aucune soudure portante Vitesse de levage maximum : 16m / Min Revêtement : grenaillage SA 2.5 + peinture poudre 60 microns C2 - RAL 1028 Norme : 2006/42/CE – Directive machine et Fabrication selon norme NF EN 13155 Veuillez trouver plus d’informations sur les fiches techniques",
-    "priceHT": 322,
-    "minPriceHT": 322,
-    "maxPriceHT": 1940,
+    "priceHT": 322.0,
+    "minPriceHT": 322.0,
+    "maxPriceHT": 2082.25,
     "delay": "Délai sur demande",
     "stock": 2,
     "imageRef": "PALFIX100001000",
@@ -34878,7 +34878,7 @@
         "value": "1 m"
       }
     ],
-    "variantCount": 48,
+    "variantCount": 96,
     "optionSchema": [
       {
         "label": "CMU",
@@ -34903,6 +34903,13 @@
           "5 m",
           "6 m"
         ]
+      },
+      {
+        "label": "Crochets",
+        "values": [
+          "Avec",
+          "Sans"
+        ]
       }
     ],
     "variants": [
@@ -34911,7 +34918,7 @@
         "code": "PALFIX100001000",
         "supplierCode": "PALECOF10T/1/AC",
         "name": "Palonnier acier fixe monopoutre 10000kg 1m",
-        "label": "CMU 10000kg · Longueur entre crochets 1 m",
+        "label": "CMU 10000kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 724,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -34924,11 +34931,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX100001000-SC",
+        "code": "PALFIX100001000SC",
+        "supplierCode": "PALECOF10T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 10000kg 1m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 703.29,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX100001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -34936,7 +34978,7 @@
         "code": "PALFIX100002000",
         "supplierCode": "PALECOF10T/2/AC",
         "name": "Palonnier acier fixe monopoutre 10000kg 2m",
-        "label": "CMU 10000kg · Longueur entre crochets 2 m",
+        "label": "CMU 10000kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 858,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -34949,11 +34991,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX100002000-SC",
+        "code": "PALFIX100002000SC",
+        "supplierCode": "PALECOF10T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 10000kg 2m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 854.74,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX100002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -34961,7 +35038,7 @@
         "code": "PALFIX100003000",
         "supplierCode": "PALECOF10T/3/AC",
         "name": "Palonnier acier fixe monopoutre 10000kg 3m",
-        "label": "CMU 10000kg · Longueur entre crochets 3 m",
+        "label": "CMU 10000kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 1106,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -34974,11 +35051,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX100003000-SC",
+        "code": "PALFIX100003000SC",
+        "supplierCode": "PALECOF10T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 10000kg 3m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 1137.94,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX100003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -34986,7 +35098,7 @@
         "code": "PALFIX100004000",
         "supplierCode": "PALECOF10T/4/AC",
         "name": "Palonnier acier fixe monopoutre 10000kg 4m",
-        "label": "CMU 10000kg · Longueur entre crochets 4 m",
+        "label": "CMU 10000kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 1348,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -34999,11 +35111,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX100004000-SC",
+        "code": "PALFIX100004000SC",
+        "supplierCode": "PALECOF10T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 10000kg 4m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 1411.42,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX100004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35011,7 +35158,7 @@
         "code": "PALFIX100005000",
         "supplierCode": "PALECOF10T/5/AC",
         "name": "Palonnier acier fixe monopoutre 10000kg 5m",
-        "label": "CMU 10000kg · Longueur entre crochets 5 m",
+        "label": "CMU 10000kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 1642,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35024,11 +35171,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX100005000-SC",
+        "code": "PALFIX100005000SC",
+        "supplierCode": "PALECOF10T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 10000kg 5m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 1745.95,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX100005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35036,7 +35218,7 @@
         "code": "PALFIX100006000",
         "supplierCode": "PALECOF10T/6/AC",
         "name": "Palonnier acier fixe monopoutre 10000kg 6m",
-        "label": "CMU 10000kg · Longueur entre crochets 6 m",
+        "label": "CMU 10000kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 1940,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35049,11 +35231,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX100006000-SC",
+        "code": "PALFIX100006000SC",
+        "supplierCode": "PALECOF10T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 10000kg 6m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 2082.25,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX100006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35061,7 +35278,7 @@
         "code": "PALFIX10001000",
         "supplierCode": "PALECOF1T/1/AC",
         "name": "Palonnier acier fixe monopoutre 1000kg 1m",
-        "label": "CMU 1000kg · Longueur entre crochets 1 m",
+        "label": "CMU 1000kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 322,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35074,11 +35291,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX10001000-SC",
+        "code": "PALFIX10001000SC",
+        "supplierCode": "PALECOF1T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 1000kg 1m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 336.31,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX10001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35086,7 +35338,7 @@
         "code": "PALFIX10002000",
         "supplierCode": "PALECOF1T/2/AC",
         "name": "Palonnier acier fixe monopoutre 1000kg 2m",
-        "label": "CMU 1000kg · Longueur entre crochets 2 m",
+        "label": "CMU 1000kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 354,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35099,11 +35351,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX10002000-SC",
+        "code": "PALFIX10002000SC",
+        "supplierCode": "PALECOF1T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 1000kg 2m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 371.7,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX10002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35111,7 +35398,7 @@
         "code": "PALFIX10003000",
         "supplierCode": "PALECOF1T/3/AC",
         "name": "Palonnier acier fixe monopoutre 1000kg 3m",
-        "label": "CMU 1000kg · Longueur entre crochets 3 m",
+        "label": "CMU 1000kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 426,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35124,11 +35411,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX10003000-SC",
+        "code": "PALFIX10003000SC",
+        "supplierCode": "PALECOF1T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 1000kg 3m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 453.44,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX10003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35136,7 +35458,7 @@
         "code": "PALFIX10004000",
         "supplierCode": "PALECOF1T/4/AC",
         "name": "Palonnier acier fixe monopoutre 1000kg 4m",
-        "label": "CMU 1000kg · Longueur entre crochets 4 m",
+        "label": "CMU 1000kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 537,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35149,11 +35471,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX10004000-SC",
+        "code": "PALFIX10004000SC",
+        "supplierCode": "PALECOF1T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 1000kg 4m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 579.25,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX10004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35161,7 +35518,7 @@
         "code": "PALFIX10005000",
         "supplierCode": "PALECOF1T/5/AC",
         "name": "Palonnier acier fixe monopoutre 1000kg 5m",
-        "label": "CMU 1000kg · Longueur entre crochets 5 m",
+        "label": "CMU 1000kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 653,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35174,11 +35531,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX10005000-SC",
+        "code": "PALFIX10005000SC",
+        "supplierCode": "PALECOF1T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 1000kg 5m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 711.12,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX10005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35186,7 +35578,7 @@
         "code": "PALFIX10006000",
         "supplierCode": "PALECOF1T/6/AC",
         "name": "Palonnier acier fixe monopoutre 1000kg 6m",
-        "label": "CMU 2000kg · Longueur entre crochets 6 m",
+        "label": "CMU 1000kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 700,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35194,16 +35586,51 @@
         "features": [
           {
             "label": "CMU",
-            "value": "2000kg"
+            "value": "1000kg"
           },
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
-          "CMU": "2000kg",
-          "Longueur entre crochets": "6 m"
+          "CMU": "1000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX10006000-SC",
+        "code": "PALFIX10006000SC",
+        "supplierCode": "PALECOF1T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 1000kg 6m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 765.16,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX10006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35211,7 +35638,7 @@
         "code": "PALFIX20001000",
         "supplierCode": "PALECOF2T/1/AC",
         "name": "Palonnier acier fixe monopoutre 2000kg 1m",
-        "label": "CMU 2000kg · Longueur entre crochets 1 m",
+        "label": "CMU 2000kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 348,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35224,11 +35651,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX20001000-SC",
+        "code": "PALFIX20001000SC",
+        "supplierCode": "PALECOF2T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 2000kg 1m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 361.97,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX20001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35236,7 +35698,7 @@
         "code": "PALFIX20002000",
         "supplierCode": "PALECOF2T/2/AC",
         "name": "Palonnier acier fixe monopoutre 2000kg 2m",
-        "label": "CMU 2000kg · Longueur entre crochets 2 m",
+        "label": "CMU 2000kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 377,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35249,11 +35711,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX20002000-SC",
+        "code": "PALFIX20002000SC",
+        "supplierCode": "PALECOF2T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 2000kg 2m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 397.39,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX20002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35261,7 +35758,7 @@
         "code": "PALFIX20003000",
         "supplierCode": "PALECOF2T/3/AC",
         "name": "Palonnier acier fixe monopoutre 2000kg 3m",
-        "label": "CMU 2000kg · Longueur entre crochets 3 m",
+        "label": "CMU 2000kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 502,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35274,11 +35771,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX20003000-SC",
+        "code": "PALFIX20003000SC",
+        "supplierCode": "PALECOF2T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 2000kg 3m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 539.92,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX20003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35286,7 +35818,7 @@
         "code": "PALFIX20004000",
         "supplierCode": "PALECOF2T/4/AC",
         "name": "Palonnier acier fixe monopoutre 2000kg 4m",
-        "label": "CMU 2000kg · Longueur entre crochets 4 m",
+        "label": "CMU 2000kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 630,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35299,11 +35831,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX20004000-SC",
+        "code": "PALFIX20004000SC",
+        "supplierCode": "PALECOF2T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 2000kg 4m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 684.49,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX20004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35311,7 +35878,7 @@
         "code": "PALFIX20005000",
         "supplierCode": "PALECOF2T/5/AC",
         "name": "Palonnier acier fixe monopoutre 2000kg 5m",
-        "label": "CMU 2000kg · Longueur entre crochets 5 m",
+        "label": "CMU 2000kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 856,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35324,11 +35891,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX20005000-SC",
+        "code": "PALFIX20005000SC",
+        "supplierCode": "PALECOF2T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 2000kg 5m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 941.22,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX20005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35336,7 +35938,7 @@
         "code": "PALFIX20006000",
         "supplierCode": "PALECOF2T/6/AC",
         "name": "Palonnier acier fixe monopoutre 2000kg 6m",
-        "label": "CMU 2000kg · Longueur entre crochets 6 m",
+        "label": "CMU 2000kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 921,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35349,11 +35951,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX20006000-SC",
+        "code": "PALFIX20006000SC",
+        "supplierCode": "PALECOF2T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 2000kg 6m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 1014.97,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX20006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35361,7 +35998,7 @@
         "code": "PALFIX32001000",
         "supplierCode": "PALECOF3.2T/1/AC",
         "name": "Palonnier acier fixe monopoutre 3200kg 1m",
-        "label": "CMU 3200kg · Longueur entre crochets 1 m",
+        "label": "CMU 3200kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 408,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35374,11 +36011,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX32001000-SC",
+        "code": "PALFIX32001000SC",
+        "supplierCode": "PALECOF3.2T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 3200kg 1m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 429.82,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX32001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35386,7 +36058,7 @@
         "code": "PALFIX32002000",
         "supplierCode": "PALECOF3.2T/2/AC",
         "name": "Palonnier acier fixe monopoutre 3200kg 2m",
-        "label": "CMU 3200kg · Longueur entre crochets 2 m",
+        "label": "CMU 3200kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 477,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35399,11 +36071,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX32002000-SC",
+        "code": "PALFIX32002000SC",
+        "supplierCode": "PALECOF3.2T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 3200kg 2m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 507.49,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX32002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35411,7 +36118,7 @@
         "code": "PALFIX32003000",
         "supplierCode": "PALECOF3.2T/3/AC",
         "name": "Palonnier acier fixe monopoutre 3200kg 3m",
-        "label": "CMU 3200kg · Longueur entre crochets 3 m",
+        "label": "CMU 3200kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 582,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35424,11 +36131,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX32003000-SC",
+        "code": "PALFIX32003000SC",
+        "supplierCode": "PALECOF3.2T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 3200kg 3m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 628.43,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX32003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35436,7 +36178,7 @@
         "code": "PALFIX32004000",
         "supplierCode": "PALECOF3.2T/4/AC",
         "name": "Palonnier acier fixe monopoutre 3200kg 4m",
-        "label": "CMU 3200kg · Longueur entre crochets 4 m",
+        "label": "CMU 3200kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 729,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35449,11 +36191,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX32004000-SC",
+        "code": "PALFIX32004000SC",
+        "supplierCode": "PALECOF3.2T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 3200kg 4m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 797.71,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX32004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35461,7 +36238,7 @@
         "code": "PALFIX32005000",
         "supplierCode": "PALECOF3.2T/5/AC",
         "name": "Palonnier acier fixe monopoutre 3200kg 5m",
-        "label": "CMU 3200kg · Longueur entre crochets 5 m",
+        "label": "CMU 3200kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 877,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35474,11 +36251,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX32005000-SC",
+        "code": "PALFIX32005000SC",
+        "supplierCode": "PALECOF3.2T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 3200kg 5m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 962.96,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX32005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35486,7 +36298,7 @@
         "code": "PALFIX32006000",
         "supplierCode": "PALECOF3.2T/6/AC",
         "name": "Palonnier acier fixe monopoutre 3200kg 6m",
-        "label": "CMU 3200kg · Longueur entre crochets 6 m",
+        "label": "CMU 3200kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 1024,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35499,11 +36311,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX32006000-SC",
+        "code": "PALFIX32006000SC",
+        "supplierCode": "PALECOF3.2T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 3200kg 6m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 1130.09,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX32006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35511,7 +36358,7 @@
         "code": "PALFIX40001000",
         "supplierCode": "PALECOF4T/1/AC",
         "name": "Palonnier acier fixe monopoutre 4000kg 1m",
-        "label": "CMU 4000kg · Longueur entre crochets 1 m",
+        "label": "CMU 4000kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 432,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35524,11 +36371,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX40001000-SC",
+        "code": "PALFIX40001000SC",
+        "supplierCode": "PALECOF4T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 4000kg 1m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 457.38,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX40001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35536,7 +36418,7 @@
         "code": "PALFIX40002000",
         "supplierCode": "PALECOF4T/2/AC",
         "name": "Palonnier acier fixe monopoutre 4000kg 2m",
-        "label": "CMU 4000kg · Longueur entre crochets 2 m",
+        "label": "CMU 4000kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 539,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35549,11 +36431,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX40002000-SC",
+        "code": "PALFIX40002000SC",
+        "supplierCode": "PALECOF4T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 4000kg 2m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 579.25,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX40002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35561,7 +36478,7 @@
         "code": "PALFIX40003000",
         "supplierCode": "PALECOF4T/3/AC",
         "name": "Palonnier acier fixe monopoutre 4000kg 3m",
-        "label": "CMU 4000kg · Longueur entre crochets 3 m",
+        "label": "CMU 4000kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 687,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35574,11 +36491,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX40003000-SC",
+        "code": "PALFIX40003000SC",
+        "supplierCode": "PALECOF4T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 4000kg 3m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 747.45,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX40003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35586,7 +36538,7 @@
         "code": "PALFIX40004000",
         "supplierCode": "PALECOF4T/4/AC",
         "name": "Palonnier acier fixe monopoutre 4000kg 4m",
-        "label": "CMU 4000kg · Longueur entre crochets 4 m",
+        "label": "CMU 4000kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 889,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35599,11 +36551,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX40004000-SC",
+        "code": "PALFIX40004000SC",
+        "supplierCode": "PALECOF4T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 4000kg 4m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 976.75,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX40004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35611,7 +36598,7 @@
         "code": "PALFIX40005000",
         "supplierCode": "PALECOF4T/5/AC",
         "name": "Palonnier acier fixe monopoutre 4000kg 5m",
-        "label": "CMU 4000kg · Longueur entre crochets 5 m",
+        "label": "CMU 4000kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 1049,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35624,11 +36611,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX40005000-SC",
+        "code": "PALFIX40005000SC",
+        "supplierCode": "PALECOF4T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 4000kg 5m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 1157.66,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX40005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35636,7 +36658,7 @@
         "code": "PALFIX40006000",
         "supplierCode": "PALECOF4T/6/AC",
         "name": "Palonnier acier fixe monopoutre 4000kg 6m",
-        "label": "CMU 4000kg · Longueur entre crochets 6 m",
+        "label": "CMU 4000kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 1220,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35649,11 +36671,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX40006000-SC",
+        "code": "PALFIX40006000SC",
+        "supplierCode": "PALECOF4T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 4000kg 6m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 1351.42,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX40006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35661,7 +36718,7 @@
         "code": "PALFIX50001000",
         "supplierCode": "PALECOF5T/1/AC",
         "name": "Palonnier acier fixe monopoutre 5000kg 1m",
-        "label": "CMU 5000kg · Longueur entre crochets 1 m",
+        "label": "CMU 5000kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 479,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35674,11 +36731,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX50001000-SC",
+        "code": "PALFIX50001000SC",
+        "supplierCode": "PALECOF5T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 5000kg 1m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 480.88,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX50001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35686,7 +36778,7 @@
         "code": "PALFIX50002000",
         "supplierCode": "PALECOF5T/2/AC",
         "name": "Palonnier acier fixe monopoutre 5000kg 2m",
-        "label": "CMU 5000kg · Longueur entre crochets 2 m",
+        "label": "CMU 5000kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 608,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35699,11 +36791,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX50002000-SC",
+        "code": "PALFIX50002000SC",
+        "supplierCode": "PALECOF5T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 5000kg 2m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 628.43,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX50002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35711,7 +36838,7 @@
         "code": "PALFIX50003000",
         "supplierCode": "PALECOF5T/3/AC",
         "name": "Palonnier acier fixe monopoutre 5000kg 3m",
-        "label": "CMU 5000kg · Longueur entre crochets 3 m",
+        "label": "CMU 5000kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 756,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35724,11 +36851,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX50003000-SC",
+        "code": "PALFIX50003000SC",
+        "supplierCode": "PALECOF5T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 5000kg 3m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 795.7,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX50003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35736,7 +36898,7 @@
         "code": "PALFIX50004000",
         "supplierCode": "PALECOF5T/4/AC",
         "name": "Palonnier acier fixe monopoutre 5000kg 4m",
-        "label": "CMU 5000kg · Longueur entre crochets 4 m",
+        "label": "CMU 5000kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 957,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35749,11 +36911,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX50004000-SC",
+        "code": "PALFIX50004000SC",
+        "supplierCode": "PALECOF5T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 5000kg 4m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 1021.87,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX50004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35761,7 +36958,7 @@
         "code": "PALFIX50005000",
         "supplierCode": "PALECOF5T/5/AC",
         "name": "Palonnier acier fixe monopoutre 5000kg 5m",
-        "label": "CMU 5000kg · Longueur entre crochets 5 m",
+        "label": "CMU 5000kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 1197,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35774,11 +36971,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX50005000-SC",
+        "code": "PALFIX50005000SC",
+        "supplierCode": "PALECOF5T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 5000kg 5m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 1295.35,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX50005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35786,7 +37018,7 @@
         "code": "PALFIX50006000",
         "supplierCode": "PALECOF5T/6/AC",
         "name": "Palonnier acier fixe monopoutre 5000kg 6m",
-        "label": "CMU 5000kg · Longueur entre crochets 6 m",
+        "label": "CMU 5000kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 1365,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35799,11 +37031,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX50006000-SC",
+        "code": "PALFIX50006000SC",
+        "supplierCode": "PALECOF5T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 5000kg 6m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 1486.26,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX50006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35811,7 +37078,7 @@
         "code": "PALFIX63001000",
         "supplierCode": "PALECOF6.3T/1/AC",
         "name": "Palonnier acier fixe monopoutre 6300kg 1m",
-        "label": "CMU 6300kg · Longueur entre crochets 1 m",
+        "label": "CMU 6300kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 527,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35824,11 +37091,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX63001000-SC",
+        "code": "PALFIX63001000SC",
+        "supplierCode": "PALECOF6.3T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 6300kg 1m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 535.05,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX63001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35836,7 +37138,7 @@
         "code": "PALFIX63002000",
         "supplierCode": "PALECOF6.3T/2/AC",
         "name": "Palonnier acier fixe monopoutre 6300kg 2m",
-        "label": "CMU 6300kg · Longueur entre crochets 2 m",
+        "label": "CMU 6300kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 656,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35849,11 +37151,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX63002000-SC",
+        "code": "PALFIX63002000SC",
+        "supplierCode": "PALECOF6.3T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 6300kg 2m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 681.66,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX63002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35861,7 +37198,7 @@
         "code": "PALFIX63003000",
         "supplierCode": "PALECOF6.3T/3/AC",
         "name": "Palonnier acier fixe monopoutre 6300kg 3m",
-        "label": "CMU 6300kg · Longueur entre crochets 3 m",
+        "label": "CMU 6300kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 844,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35874,11 +37211,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX63003000-SC",
+        "code": "PALFIX63003000SC",
+        "supplierCode": "PALECOF6.3T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 6300kg 3m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 897.03,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX63003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35886,7 +37258,7 @@
         "code": "PALFIX63004000",
         "supplierCode": "PALECOF6.3T/4/AC",
         "name": "Palonnier acier fixe monopoutre 6300kg 4m",
-        "label": "CMU 6300kg · Longueur entre crochets 4 m",
+        "label": "CMU 6300kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 1069,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35899,11 +37271,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX63004000-SC",
+        "code": "PALFIX63004000SC",
+        "supplierCode": "PALECOF6.3T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 6300kg 4m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 1149.83,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX63004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35911,7 +37318,7 @@
         "code": "PALFIX63005000",
         "supplierCode": "PALECOF6.3T/5/AC",
         "name": "Palonnier acier fixe monopoutre 6300kg 5m",
-        "label": "CMU 6300kg · Longueur entre crochets 5 m",
+        "label": "CMU 6300kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 1309,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35924,11 +37331,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX63005000-SC",
+        "code": "PALFIX63005000SC",
+        "supplierCode": "PALECOF6.3T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 6300kg 5m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 1420.32,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX63005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35936,7 +37378,7 @@
         "code": "PALFIX63006000",
         "supplierCode": "PALECOF6.3T/6/AC",
         "name": "Palonnier acier fixe monopoutre 6300kg 6m",
-        "label": "CMU 6300kg · Longueur entre crochets 6 m",
+        "label": "CMU 6300kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 1492,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35949,11 +37391,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX63006000-SC",
+        "code": "PALFIX63006000SC",
+        "supplierCode": "PALECOF6.3T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 6300kg 6m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 1628.81,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX63006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35961,7 +37438,7 @@
         "code": "PALFIX80001000",
         "supplierCode": "PALECOF8T/1/AC",
         "name": "Palonnier acier fixe monopoutre 8000kg 1m",
-        "label": "CMU 8000kg · Longueur entre crochets 1 m",
+        "label": "CMU 8000kg · Longueur entre crochets 1 m · Crochets Avec",
         "priceHT": 640,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35974,11 +37451,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "1 m"
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX80001000-SC",
+        "code": "PALFIX80001000SC",
+        "supplierCode": "PALECOF8T/1/SC",
+        "name": "Palonnier acier fixe monopoutre 8000kg 1m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 1 m · Crochets Sans",
+        "priceHT": 608.83,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX80001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "1 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -35986,7 +37498,7 @@
         "code": "PALFIX80002000",
         "supplierCode": "PALECOF8T/2/AC",
         "name": "Palonnier acier fixe monopoutre 8000kg 2m",
-        "label": "CMU 8000kg · Longueur entre crochets 2 m",
+        "label": "CMU 8000kg · Longueur entre crochets 2 m · Crochets Avec",
         "priceHT": 800,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -35999,11 +37511,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "2 m"
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX80002000-SC",
+        "code": "PALFIX80002000SC",
+        "supplierCode": "PALECOF8T/2/SC",
+        "name": "Palonnier acier fixe monopoutre 8000kg 2m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 2 m · Crochets Sans",
+        "priceHT": 787.86,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX80002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "2 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36011,7 +37558,7 @@
         "code": "PALFIX80003000",
         "supplierCode": "PALECOF8T/3/AC",
         "name": "Palonnier acier fixe monopoutre 8000kg 3m",
-        "label": "CMU 8000kg · Longueur entre crochets 3 m",
+        "label": "CMU 8000kg · Longueur entre crochets 3 m · Crochets Avec",
         "priceHT": 1008,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36024,11 +37571,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "3 m"
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX80003000-SC",
+        "code": "PALFIX80003000SC",
+        "supplierCode": "PALECOF8T/3/SC",
+        "name": "Palonnier acier fixe monopoutre 8000kg 3m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 3 m · Crochets Sans",
+        "priceHT": 1024.86,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX80003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "3 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36036,7 +37618,7 @@
         "code": "PALFIX80004000",
         "supplierCode": "PALECOF8T/4/AC",
         "name": "Palonnier acier fixe monopoutre 8000kg 4m",
-        "label": "CMU 8000kg · Longueur entre crochets 4 m",
+        "label": "CMU 8000kg · Longueur entre crochets 4 m · Crochets Avec",
         "priceHT": 1235,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36049,11 +37631,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "4 m"
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX80004000-SC",
+        "code": "PALFIX80004000SC",
+        "supplierCode": "PALECOF8T/4/SC",
+        "name": "Palonnier acier fixe monopoutre 8000kg 4m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 4 m · Crochets Sans",
+        "priceHT": 1283.58,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX80004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "4 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36061,7 +37678,7 @@
         "code": "PALFIX80005000",
         "supplierCode": "PALECOF8T/5/AC",
         "name": "Palonnier acier fixe monopoutre 8000kg 5m",
-        "label": "CMU 8000kg · Longueur entre crochets 5 m",
+        "label": "CMU 8000kg · Longueur entre crochets 5 m · Crochets Avec",
         "priceHT": 1490,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36074,11 +37691,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "5 m"
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX80005000-SC",
+        "code": "PALFIX80005000SC",
+        "supplierCode": "PALECOF8T/5/SC",
+        "name": "Palonnier acier fixe monopoutre 8000kg 5m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 5 m · Crochets Sans",
+        "priceHT": 1571.79,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX80005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "5 m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36086,7 +37738,7 @@
         "code": "PALFIX80006000",
         "supplierCode": "PALECOF8T/6/AC",
         "name": "Palonnier acier fixe monopoutre 8000kg 6m",
-        "label": "CMU 8000kg · Longueur entre crochets 6 m",
+        "label": "CMU 8000kg · Longueur entre crochets 6 m · Crochets Avec",
         "priceHT": 1720,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36099,11 +37751,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "6 m"
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALFIX80006000-SC",
+        "code": "PALFIX80006000SC",
+        "supplierCode": "PALECOF8T/6/SC",
+        "name": "Palonnier acier fixe monopoutre 8000kg 6m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 6 m · Crochets Sans",
+        "priceHT": 1833.38,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALFIX80006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6 m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "6 m",
+          "Crochets": "Sans"
         }
       }
     ],
@@ -36125,9 +37812,9 @@
     ],
     "description": "",
     "detailedDescription": "Ce palonnier acier monopoutre réglable de fabrication française est utilisé pour un service intérieur ou extérieur, il s’agit d’un accessoire de levage composé d'une anse supérieure et de deux crochets inferieurs CMU (Capacité de levage) : 10000kg Longueur entre crochets : 1000 à 500 mm 2 crochets tournants articulés avec linguets de sécurité forgés Groupe FEM 5 Réglage au pas : 50mm Hauteur perdue réduite Aucune soudure portante Vitesse de levage maximum : 16m / Min Revêtement : grenaillage SA 2.5 + peinture poudre 60 microns C2 - RAL 1028 Norme : 2006/42/CE – Directive machine et Fabrication selon norme NF EN 13155 Veuillez trouver plus d’informations sur les fiches techniques",
-    "priceHT": 460,
-    "minPriceHT": 460,
-    "maxPriceHT": 2114,
+    "priceHT": 460.0,
+    "minPriceHT": 460.0,
+    "maxPriceHT": 2207.22,
     "delay": "Délai sur demande",
     "stock": 2,
     "imageRef": "PALREG100001000",
@@ -36141,7 +37828,7 @@
         "value": "1m à 0,5m"
       }
     ],
-    "variantCount": 48,
+    "variantCount": 96,
     "optionSchema": [
       {
         "label": "CMU",
@@ -36166,6 +37853,13 @@
           "5m à 3m",
           "6m à 4m"
         ]
+      },
+      {
+        "label": "Crochets",
+        "values": [
+          "Avec",
+          "Sans"
+        ]
       }
     ],
     "variants": [
@@ -36174,7 +37868,7 @@
         "code": "PALREG100001000",
         "supplierCode": "PALECOR10T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 10000kg 1m à 0,5m",
-        "label": "CMU 10000kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 10000kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 926,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36187,11 +37881,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG100001000-SC",
+        "code": "PALREG100001000SC",
+        "supplierCode": "PALECOR10T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 10000kg 1m à 0,5m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 857.71,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG100001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36199,7 +37928,7 @@
         "code": "PALREG100002000",
         "supplierCode": "PALECOR10T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 10000kg 2m à 1m",
-        "label": "CMU 10000kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 10000kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 1037,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36212,11 +37941,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG100002000-SC",
+        "code": "PALREG100002000SC",
+        "supplierCode": "PALECOR10T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 10000kg 2m à 1m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 984.58,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG100002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36224,7 +37988,7 @@
         "code": "PALREG100003000",
         "supplierCode": "PALECOR10T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 10000kg 3m à 1m",
-        "label": "CMU 10000kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 10000kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 1280,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36237,11 +38001,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG100003000-SC",
+        "code": "PALREG100003000SC",
+        "supplierCode": "PALECOR10T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 10000kg 3m à 1m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 1262.92,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG100003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36249,7 +38048,7 @@
         "code": "PALREG100004000",
         "supplierCode": "PALECOR10T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 10000kg 4m à 2m",
-        "label": "CMU 10000kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 10000kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 1522,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36262,11 +38061,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG100004000-SC",
+        "code": "PALREG100004000SC",
+        "supplierCode": "PALECOR10T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 10000kg 4m à 2m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 1534.35,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG100004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36274,7 +38108,7 @@
         "code": "PALREG100005000",
         "supplierCode": "PALECOR10T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 10000kg 5m à 3m",
-        "label": "CMU 10000kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 10000kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 1817,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36287,11 +38121,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG100005000-SC",
+        "code": "PALREG100005000SC",
+        "supplierCode": "PALECOR10T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 10000kg 5m à 3m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1869.84,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG100005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36299,7 +38168,7 @@
         "code": "PALREG100006000",
         "supplierCode": "PALECOR10T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 10000kg 6m à 4m",
-        "label": "CMU 10000kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 10000kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 2114,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36312,11 +38181,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "10000kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG100006000-SC",
+        "code": "PALREG100006000SC",
+        "supplierCode": "PALECOR10T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 10000kg 6m à 4m sans crochets",
+        "label": "CMU 10000kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 2207.22,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG100006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "10000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "10000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36324,7 +38228,7 @@
         "code": "PALREG10001000",
         "supplierCode": "PALECOR1T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 1000kg 1m à 0,5m",
-        "label": "CMU 1000kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 1000kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 460,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36337,11 +38241,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG10001000-SC",
+        "code": "PALREG10001000SC",
+        "supplierCode": "PALECOR1T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 1000kg 1m à 0,5m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 491.82,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG10001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36349,7 +38288,7 @@
         "code": "PALREG10002000",
         "supplierCode": "PALECOR1T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 1000kg 2m à 1m",
-        "label": "CMU 1000kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 1000kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 509,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36362,11 +38301,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG10002000-SC",
+        "code": "PALREG10002000SC",
+        "supplierCode": "PALECOR1T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 1000kg 2m à 1m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 546.82,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG10002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36374,7 +38348,7 @@
         "code": "PALREG10003000",
         "supplierCode": "PALECOR1T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 1000kg 3m à 1m",
-        "label": "CMU 1000kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 1000kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 619,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36387,11 +38361,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG10003000-SC",
+        "code": "PALREG10003000SC",
+        "supplierCode": "PALECOR1T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 1000kg 3m à 1m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 670.71,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG10003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36399,7 +38408,7 @@
         "code": "PALREG10004000",
         "supplierCode": "PALECOR1T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 1000kg 4m à 2m",
-        "label": "CMU 1000kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 1000kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 845,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36411,12 +38420,47 @@
           },
           {
             "label": "Longueur entre crochets",
-            "value": "4m à 2m"
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG10004000-SC",
+        "code": "PALREG10004000SC",
+        "supplierCode": "PALECOR1T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 1000kg 4m à 2m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 931.48,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG10004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36424,7 +38468,7 @@
         "code": "PALREG10005000",
         "supplierCode": "PALECOR1T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 1000kg 5m à 3m",
-        "label": "CMU 1000kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 1000kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 648,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36436,12 +38480,47 @@
           },
           {
             "label": "Longueur entre crochets",
-            "value": "5m à 3m"
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "1000kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG10005000-SC",
+        "code": "PALREG10005000SC",
+        "supplierCode": "PALECOR1T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 1000kg 5m à 3m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 705.17,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG10005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36449,7 +38528,7 @@
         "code": "PALREG10006000",
         "supplierCode": "PALECOR1T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 1000kg 6m à 4m",
-        "label": "CMU 2000kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 1000kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 893,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36457,16 +38536,51 @@
         "features": [
           {
             "label": "CMU",
-            "value": "2000kg"
+            "value": "1000kg"
           },
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
-          "CMU": "2000kg",
-          "Longueur entre crochets": "6m à 4m"
+          "CMU": "1000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG10006000-SC",
+        "code": "PALREG10006000SC",
+        "supplierCode": "PALECOR1T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 1000kg 6m à 4m sans crochets",
+        "label": "CMU 1000kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 982.56,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG10006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "1000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "1000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36474,7 +38588,7 @@
         "code": "PALREG20001000",
         "supplierCode": "PALECOR2T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 2000kg 1m à 0,5m",
-        "label": "CMU 2000kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 2000kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 486,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36487,11 +38601,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG20001000-SC",
+        "code": "PALREG20001000SC",
+        "supplierCode": "PALECOR2T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 2000kg 1m à 0,5m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 520.34,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG20001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36499,7 +38648,7 @@
         "code": "PALREG20002000",
         "supplierCode": "PALECOR2T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 2000kg 2m à 1m",
-        "label": "CMU 2000kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 2000kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 535,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36512,11 +38661,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG20002000-SC",
+        "code": "PALREG20002000SC",
+        "supplierCode": "PALECOR2T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 2000kg 2m à 1m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 574.38,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG20002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36524,7 +38708,7 @@
         "code": "PALREG20003000",
         "supplierCode": "PALECOR2T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 2000kg 3m à 1m",
-        "label": "CMU 2000kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 2000kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 696,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36537,11 +38721,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG20003000-SC",
+        "code": "PALREG20003000SC",
+        "supplierCode": "PALECOR2T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 2000kg 3m à 1m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 758.26,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG20003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36549,7 +38768,7 @@
         "code": "PALREG20004000",
         "supplierCode": "PALECOR2T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 2000kg 4m à 2m",
-        "label": "CMU 2000kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 2000kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 743,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36562,11 +38781,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG20004000-SC",
+        "code": "PALREG20004000SC",
+        "supplierCode": "PALECOR2T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 2000kg 4m à 2m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 809.48,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG20004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36574,7 +38828,7 @@
         "code": "PALREG20005000",
         "supplierCode": "PALECOR2T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 2000kg 5m à 3m",
-        "label": "CMU 2000kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 2000kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 969,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36587,11 +38841,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG20005000-SC",
+        "code": "PALREG20005000SC",
+        "supplierCode": "PALECOR2T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 2000kg 5m à 3m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1067.14,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG20005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36599,7 +38888,7 @@
         "code": "PALREG20006000",
         "supplierCode": "PALECOR2T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 2000kg 6m à 4m",
-        "label": "CMU 2000kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 2000kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 1032,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36612,11 +38901,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "2000kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG20006000-SC",
+        "code": "PALREG20006000SC",
+        "supplierCode": "PALECOR2T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 2000kg 6m à 4m sans crochets",
+        "label": "CMU 2000kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 1139.03,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG20006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "2000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "2000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36624,7 +38948,7 @@
         "code": "PALREG32001000",
         "supplierCode": "PALECOR3.2T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 3200kg 1m à 0,5m",
-        "label": "CMU 3200kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 3200kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 504,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36637,11 +38961,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG32001000-SC",
+        "code": "PALREG32001000SC",
+        "supplierCode": "PALECOR3.2T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 3200kg 1m à 0,5m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 541.0,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG32001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36649,7 +39008,7 @@
         "code": "PALREG32002000",
         "supplierCode": "PALECOR3.2T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 3200kg 2m à 1m",
-        "label": "CMU 3200kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 3200kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 590,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36662,11 +39021,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG32002000-SC",
+        "code": "PALREG32002000SC",
+        "supplierCode": "PALECOR3.2T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 3200kg 2m à 1m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 636.4,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG32002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36674,7 +39068,7 @@
         "code": "PALREG32003000",
         "supplierCode": "PALECOR3.2T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 3200kg 3m à 1m",
-        "label": "CMU 3200kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 3200kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 774,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36687,11 +39081,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG32003000-SC",
+        "code": "PALREG32003000SC",
+        "supplierCode": "PALECOR3.2T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 3200kg 3m à 1m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 846.9,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG32003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36699,7 +39128,7 @@
         "code": "PALREG32004000",
         "supplierCode": "PALECOR3.2T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 3200kg 4m à 2m",
-        "label": "CMU 3200kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 3200kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 921,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36712,11 +39141,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG32004000-SC",
+        "code": "PALREG32004000SC",
+        "supplierCode": "PALECOR3.2T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 3200kg 4m à 2m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 1014.04,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG32004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36724,7 +39188,7 @@
         "code": "PALREG32005000",
         "supplierCode": "PALECOR3.2T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 3200kg 5m à 3m",
-        "label": "CMU 3200kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 3200kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 1069,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36737,11 +39201,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG32005000-SC",
+        "code": "PALREG32005000SC",
+        "supplierCode": "PALECOR3.2T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 3200kg 5m à 3m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1181.31,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG32005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36749,7 +39248,7 @@
         "code": "PALREG32006000",
         "supplierCode": "PALECOR3.2T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 3200kg 6m à 4m",
-        "label": "CMU 3200kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 3200kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 1133,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36762,11 +39261,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "3200kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG32006000-SC",
+        "code": "PALREG32006000SC",
+        "supplierCode": "PALECOR3.2T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 3200kg 6m à 4m sans crochets",
+        "label": "CMU 3200kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 1253.05,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG32006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "3200kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "3200kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36774,7 +39308,7 @@
         "code": "PALREG40001000",
         "supplierCode": "PALECOR4T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 4000kg 1m à 0,5m",
-        "label": "CMU 4000kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 4000kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 556,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36787,11 +39321,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG40001000-SC",
+        "code": "PALREG40001000SC",
+        "supplierCode": "PALECOR4T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 4000kg 1m à 0,5m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 567.48,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG40001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36799,7 +39368,7 @@
         "code": "PALREG40002000",
         "supplierCode": "PALECOR4T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 4000kg 2m à 1m",
-        "label": "CMU 4000kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 4000kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 640,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36812,11 +39381,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG40002000-SC",
+        "code": "PALREG40002000SC",
+        "supplierCode": "PALECOR4T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 4000kg 2m à 1m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 662.88,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG40002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36824,7 +39428,7 @@
         "code": "PALREG40003000",
         "supplierCode": "PALECOR4T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 4000kg 3m à 1m",
-        "label": "CMU 4000kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 4000kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 825,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36837,11 +39441,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG40003000-SC",
+        "code": "PALREG40003000SC",
+        "supplierCode": "PALECOR4T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 4000kg 3m à 1m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 873.38,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG40003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36849,7 +39488,7 @@
         "code": "PALREG40004000",
         "supplierCode": "PALECOR4T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 4000kg 4m à 2m",
-        "label": "CMU 4000kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 4000kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 1025,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36862,11 +39501,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG40004000-SC",
+        "code": "PALREG40004000SC",
+        "supplierCode": "PALECOR4T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 4000kg 4m à 2m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 1102.53,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG40004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36874,7 +39548,7 @@
         "code": "PALREG40005000",
         "supplierCode": "PALECOR4T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 4000kg 5m à 3m",
-        "label": "CMU 4000kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 4000kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 1186,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36887,11 +39561,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG40005000-SC",
+        "code": "PALREG40005000SC",
+        "supplierCode": "PALECOR4T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 4000kg 5m à 3m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1282.65,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG40005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36899,7 +39608,7 @@
         "code": "PALREG40006000",
         "supplierCode": "PALECOR4T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 4000kg 6m à 4m",
-        "label": "CMU 4000kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 4000kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 1356,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36912,11 +39621,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "4000kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG40006000-SC",
+        "code": "PALREG40006000SC",
+        "supplierCode": "PALECOR4T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 4000kg 6m à 4m sans crochets",
+        "label": "CMU 4000kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 1476.4,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG40006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "4000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "4000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36924,7 +39668,7 @@
         "code": "PALREG50001000",
         "supplierCode": "PALECOR5T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 5000kg 1m à 0,5m",
-        "label": "CMU 5000kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 5000kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 616,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36937,11 +39681,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG50001000-SC",
+        "code": "PALREG50001000SC",
+        "supplierCode": "PALECOR5T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 5000kg 1m à 0,5m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 636.4,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG50001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36949,7 +39728,7 @@
         "code": "PALREG50002000",
         "supplierCode": "PALECOR5T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 5000kg 2m à 1m",
-        "label": "CMU 5000kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 5000kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 723,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36962,11 +39741,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG50002000-SC",
+        "code": "PALREG50002000SC",
+        "supplierCode": "PALECOR5T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 5000kg 2m à 1m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 758.26,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG50002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36974,7 +39788,7 @@
         "code": "PALREG50003000",
         "supplierCode": "PALECOR5T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 5000kg 3m à 1m",
-        "label": "CMU 5000kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 5000kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 866,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -36987,11 +39801,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG50003000-SC",
+        "code": "PALREG50003000SC",
+        "supplierCode": "PALECOR5T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 5000kg 3m à 1m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 917.7,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG50003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -36999,7 +39848,7 @@
         "code": "PALREG50004000",
         "supplierCode": "PALECOR5T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 5000kg 4m à 2m",
-        "label": "CMU 5000kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 5000kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 1067,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37012,11 +39861,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG50004000-SC",
+        "code": "PALREG50004000SC",
+        "supplierCode": "PALECOR5T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 5000kg 4m à 2m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 1147.81,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG50004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37024,7 +39908,7 @@
         "code": "PALREG50005000",
         "supplierCode": "PALECOR5T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 5000kg 5m à 3m",
-        "label": "CMU 5000kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 5000kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 1304,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37037,11 +39921,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG50005000-SC",
+        "code": "PALREG50005000SC",
+        "supplierCode": "PALECOR5T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 5000kg 5m à 3m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1417.35,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG50005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37049,7 +39968,7 @@
         "code": "PALREG50006000",
         "supplierCode": "PALECOR5T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 5000kg 6m à 4m",
-        "label": "CMU 5000kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 5000kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 1473,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37062,11 +39981,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "5000kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG50006000-SC",
+        "code": "PALREG50006000SC",
+        "supplierCode": "PALECOR5T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 5000kg 6m à 4m sans crochets",
+        "label": "CMU 5000kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 1609.22,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG50006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "5000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "5000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37074,7 +40028,7 @@
         "code": "PALREG63001000",
         "supplierCode": "PALECOR6.3T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 6300kg 1m à 0,5m",
-        "label": "CMU 6300kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 6300kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 704,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37087,11 +40041,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG63001000-SC",
+        "code": "PALREG63001000SC",
+        "supplierCode": "PALECOR6.3T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 6300kg 1m à 0,5m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 690.44,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG63001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37099,7 +40088,7 @@
         "code": "PALREG63002000",
         "supplierCode": "PALECOR6.3T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 6300kg 2m à 1m",
-        "label": "CMU 6300kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 6300kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 808,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37112,11 +40101,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG63002000-SC",
+        "code": "PALREG63002000SC",
+        "supplierCode": "PALECOR6.3T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 6300kg 2m à 1m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 810.43,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG63002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37124,7 +40148,7 @@
         "code": "PALREG63003000",
         "supplierCode": "PALECOR6.3T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 6300kg 3m à 1m",
-        "label": "CMU 6300kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 6300kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 993,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37137,11 +40161,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG63003000-SC",
+        "code": "PALREG63003000SC",
+        "supplierCode": "PALECOR6.3T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 6300kg 3m à 1m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 1019.04,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG63003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37149,7 +40208,7 @@
         "code": "PALREG63004000",
         "supplierCode": "PALECOR6.3T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 6300kg 4m à 2m",
-        "label": "CMU 6300kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 6300kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 1216,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37162,11 +40221,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG63004000-SC",
+        "code": "PALREG63004000SC",
+        "supplierCode": "PALECOR6.3T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 6300kg 4m à 2m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 1274.68,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG63004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37174,7 +40268,7 @@
         "code": "PALREG63005000",
         "supplierCode": "PALECOR6.3T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 6300kg 5m à 3m",
-        "label": "CMU 6300kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 6300kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 1455,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37187,11 +40281,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG63005000-SC",
+        "code": "PALREG63005000SC",
+        "supplierCode": "PALECOR6.3T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 6300kg 5m à 3m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1545.17,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG63005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37199,7 +40328,7 @@
         "code": "PALREG63006000",
         "supplierCode": "PALECOR6.3T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 6300kg 6m à 4m",
-        "label": "CMU 6300kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 6300kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 1639,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37212,11 +40341,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "6300kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG63006000-SC",
+        "code": "PALREG63006000SC",
+        "supplierCode": "PALECOR6.3T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 6300kg 6m à 4m sans crochets",
+        "label": "CMU 6300kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 1753.78,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG63006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "6300kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "6300kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37224,7 +40388,7 @@
         "code": "PALREG80001000",
         "supplierCode": "PALECOR8T/1/0.5/AC",
         "name": "Palonnier acier réglable monopoutre 8000kg 1m à 0,5m",
-        "label": "CMU 8000kg · Longueur entre crochets 1m à 0,5m",
+        "label": "CMU 8000kg · Longueur entre crochets 1m à 0,5m · Crochets Avec",
         "priceHT": 778,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37237,11 +40401,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "1m à 0,5m"
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG80001000-SC",
+        "code": "PALREG80001000SC",
+        "supplierCode": "PALECOR8T/1/0.5/SC",
+        "name": "Palonnier acier réglable monopoutre 8000kg 1m à 0,5m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 1m à 0,5m · Crochets Sans",
+        "priceHT": 766.23,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG80001000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "1m à 0,5m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "1m à 0,5m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37249,7 +40448,7 @@
         "code": "PALREG80002000",
         "supplierCode": "PALECOR8T/2/1/AC",
         "name": "Palonnier acier réglable monopoutre 8000kg 2m à 1m",
-        "label": "CMU 8000kg · Longueur entre crochets 2m à 1m",
+        "label": "CMU 8000kg · Longueur entre crochets 2m à 1m · Crochets Avec",
         "priceHT": 914,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37262,11 +40461,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "2m à 1m"
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG80002000-SC",
+        "code": "PALREG80002000SC",
+        "supplierCode": "PALECOR8T/2/1/SC",
+        "name": "Palonnier acier réglable monopoutre 8000kg 2m à 1m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 2m à 1m · Crochets Sans",
+        "priceHT": 917.7,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG80002000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "2m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "2m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37274,7 +40508,7 @@
         "code": "PALREG80003000",
         "supplierCode": "PALECOR8T/3/1/AC",
         "name": "Palonnier acier réglable monopoutre 8000kg 3m à 1m",
-        "label": "CMU 8000kg · Longueur entre crochets 3m à 1m",
+        "label": "CMU 8000kg · Longueur entre crochets 3m à 1m · Crochets Avec",
         "priceHT": 1119,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37287,11 +40521,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "3m à 1m"
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG80003000-SC",
+        "code": "PALREG80003000SC",
+        "supplierCode": "PALECOR8T/3/1/SC",
+        "name": "Palonnier acier réglable monopoutre 8000kg 3m à 1m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 3m à 1m · Crochets Sans",
+        "priceHT": 1149.83,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG80003000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "3m à 1m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "3m à 1m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37299,7 +40568,7 @@
         "code": "PALREG80004000",
         "supplierCode": "PALECOR8T/4/2/AC",
         "name": "Palonnier acier réglable monopoutre 8000kg 4m à 2m",
-        "label": "CMU 8000kg · Longueur entre crochets 4m à 2m",
+        "label": "CMU 8000kg · Longueur entre crochets 4m à 2m · Crochets Avec",
         "priceHT": 1344,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37312,11 +40581,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "4m à 2m"
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG80004000-SC",
+        "code": "PALREG80004000SC",
+        "supplierCode": "PALECOR8T/4/2/SC",
+        "name": "Palonnier acier réglable monopoutre 8000kg 4m à 2m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 4m à 2m · Crochets Sans",
+        "priceHT": 1409.51,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG80004000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "4m à 2m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "4m à 2m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37324,7 +40628,7 @@
         "code": "PALREG80005000",
         "supplierCode": "PALECOR8T/5/3/AC",
         "name": "Palonnier acier réglable monopoutre 8000kg 5m à 3m",
-        "label": "CMU 8000kg · Longueur entre crochets 5m à 3m",
+        "label": "CMU 8000kg · Longueur entre crochets 5m à 3m · Crochets Avec",
         "priceHT": 1597,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37337,11 +40641,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "5m à 3m"
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG80005000-SC",
+        "code": "PALREG80005000SC",
+        "supplierCode": "PALECOR8T/5/3/SC",
+        "name": "Palonnier acier réglable monopoutre 8000kg 5m à 3m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 5m à 3m · Crochets Sans",
+        "priceHT": 1695.69,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG80005000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "5m à 3m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "5m à 3m",
+          "Crochets": "Sans"
         }
       },
       {
@@ -37349,7 +40688,7 @@
         "code": "PALREG80006000",
         "supplierCode": "PALECOR8T/6/4/AC",
         "name": "Palonnier acier réglable monopoutre 8000kg 6m à 4m",
-        "label": "CMU 8000kg · Longueur entre crochets 6m à 4m",
+        "label": "CMU 8000kg · Longueur entre crochets 6m à 4m · Crochets Avec",
         "priceHT": 1830,
         "delay": "Délai sur demande",
         "stock": 2,
@@ -37362,11 +40701,46 @@
           {
             "label": "Longueur entre crochets",
             "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Avec"
           }
         ],
         "options": {
           "CMU": "8000kg",
-          "Longueur entre crochets": "6m à 4m"
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Avec"
+        }
+      },
+      {
+        "id": "ADEI-PALREG80006000-SC",
+        "code": "PALREG80006000SC",
+        "supplierCode": "PALECOR8T/6/4/SC",
+        "name": "Palonnier acier réglable monopoutre 8000kg 6m à 4m sans crochets",
+        "label": "CMU 8000kg · Longueur entre crochets 6m à 4m · Crochets Sans",
+        "priceHT": 1959.3,
+        "delay": "Délai sur demande",
+        "stock": 0,
+        "imageRef": "PALREG80006000",
+        "features": [
+          {
+            "label": "CMU",
+            "value": "8000kg"
+          },
+          {
+            "label": "Longueur entre crochets",
+            "value": "6m à 4m"
+          },
+          {
+            "label": "Crochets",
+            "value": "Sans"
+          }
+        ],
+        "options": {
+          "CMU": "8000kg",
+          "Longueur entre crochets": "6m à 4m",
+          "Crochets": "Sans"
         }
       }
     ],

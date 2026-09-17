@@ -14,6 +14,135 @@ const ALLOWED_MANUFACTURERS = ['ADEI', 'COMEPAL', 'CROMOX', 'HYDROBULL', 'KITO',
 const CONFIGURATOR_PREFIXES = ['PFI', 'PFT', 'PMI', 'PMT', 'PMA', 'PMAM'];
 const OUTPUT_DIR = path.join(ROOT, 'data', 'catalogue');
 
+const ERP_SNAPSHOT_PATH = path.join(ROOT, 'data', 'erp', 'erp-snapshot.json');
+const PALONNIER_MARGIN_RATE = 23;
+
+function normalizeErpReference(value) {
+  return String(value || '').trim().toUpperCase().replace(/\\/g, '_').replace(/\//g, '_');
+}
+
+function erpReferenceToSupplierCode(value) {
+  return String(value || '').replace(/_/g, '/');
+}
+
+function calculateSellingPriceHT(costPrice, marginRate = PALONNIER_MARGIN_RATE) {
+  const cost = Number(costPrice);
+  if (!Number.isFinite(cost) || cost <= 0) return null;
+  return Math.round((cost / (1 - marginRate / 100) + Number.EPSILON) * 100) / 100;
+}
+
+function loadErpProductsByRef() {
+  if (!fs.existsSync(ERP_SNAPSHOT_PATH)) return new Map();
+  const snapshot = JSON.parse(fs.readFileSync(ERP_SNAPSHOT_PATH, 'utf8'));
+  return new Map((snapshot.products || []).filter((product) => product?.ref).map((product) => [String(product.ref).trim().toUpperCase(), product]));
+}
+
+function formatErpMeasure(value, suffix = '') {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return String(value || '');
+  const formatted = Number.isInteger(number) ? String(number) : String(number).replace('.', ',');
+  return `${formatted}${suffix}`;
+}
+
+function palonnierOptionsFromErpRef(reference) {
+  const ref = normalizeErpReference(reference);
+  const fixed = ref.match(/^PALECOF(\d+(?:\.\d+)?)T_(\d+(?:\.\d+)?)_(AC|SC)$/);
+  if (fixed) {
+    return {
+      CMU: `${Math.round(Number(fixed[1]) * 1000)}kg`,
+      'Longueur entre crochets': formatErpMeasure(fixed[2], ' m'),
+      Crochets: fixed[3] === 'AC' ? 'Avec' : 'Sans',
+    };
+  }
+
+  const adjustable = ref.match(/^PALECOR(\d+(?:\.\d+)?)T_(\d+(?:\.\d+)?)_(\d+(?:\.\d+)?)_(AC|SC)$/);
+  if (adjustable) {
+    return {
+      CMU: `${Math.round(Number(adjustable[1]) * 1000)}kg`,
+      'Longueur entre crochets': `${formatErpMeasure(adjustable[2], 'm')} à ${formatErpMeasure(adjustable[3], 'm')}`,
+      Crochets: adjustable[4] === 'AC' ? 'Avec' : 'Sans',
+    };
+  }
+
+  return null;
+}
+
+function mergeVariantFeatures(features, options) {
+  const byLabel = new Map((features || []).filter((feature) => feature?.label).map((feature) => [feature.label, feature.value]));
+  Object.entries(options).forEach(([label, value]) => byLabel.set(label, value));
+  const preferred = ['CMU', 'Longueur entre crochets', 'Crochets'];
+  const labels = [...preferred, ...Array.from(byLabel.keys()).filter((label) => !preferred.includes(label))];
+  return labels.filter((label) => byLabel.has(label)).map((label) => ({ label, value: byLabel.get(label) }));
+}
+
+function enrichPalonnierHookOptions(products) {
+  const erpByRef = loadErpProductsByRef();
+  if (!erpByRef.size) {
+    console.warn('⚠ Snapshot ERP absent : variantes PALFIX/PALREG sans crochets non enrichies.');
+    return 0;
+  }
+
+  let added = 0;
+  for (const product of products) {
+    if (!['PALFIX', 'PALREG'].includes(String(product.code || '').toUpperCase())) continue;
+
+    const enriched = [];
+    for (const sourceVariant of product.variants || []) {
+      const acRef = normalizeErpReference(sourceVariant.supplierCode);
+      if (!acRef.endsWith('_AC')) {
+        enriched.push(sourceVariant);
+        continue;
+      }
+
+      const acOptions = palonnierOptionsFromErpRef(acRef);
+      const scRef = acRef.replace(/_AC$/, '_SC');
+      const scErp = erpByRef.get(scRef);
+      const scOptions = palonnierOptionsFromErpRef(scRef);
+      if (!acOptions || !scErp || !scOptions) {
+        console.warn(`⚠ ${scRef} absent ou non reconnu dans le snapshot ERP : variante sans crochets ignorée.`);
+        enriched.push(sourceVariant);
+        continue;
+      }
+
+      const acVariant = {
+        ...sourceVariant,
+        options: acOptions,
+        features: mergeVariantFeatures(sourceVariant.features, acOptions),
+      };
+      acVariant.label = variantLabel(acVariant);
+      enriched.push(acVariant);
+
+      const scPrice = calculateSellingPriceHT(scErp.costPrice);
+      const scVariant = {
+        ...sourceVariant,
+        id: `${sourceVariant.id}-SC`,
+        code: `${sourceVariant.code}SC`,
+        supplierCode: erpReferenceToSupplierCode(scRef),
+        name: `${String(sourceVariant.name || '').replace(/\s+(avec|sans)\s+crochets?\s*$/i, '').trim()} sans crochets`,
+        priceHT: scPrice ?? 0,
+        stock: 0,
+        features: mergeVariantFeatures(sourceVariant.features, scOptions),
+        options: scOptions,
+      };
+      scVariant.label = variantLabel(scVariant);
+      enriched.push(scVariant);
+      added += 1;
+    }
+
+    product.variants = enriched;
+    product.variantCount = enriched.length;
+    product.optionSchema = getOptionSchema(enriched);
+    const prices = enriched.map((variant) => variant.priceHT).filter((price) => typeof price === 'number' && price > 0);
+    if (prices.length) {
+      product.priceHT = Math.min(...prices);
+      product.minPriceHT = Math.min(...prices);
+      product.maxPriceHT = Math.max(...prices);
+    }
+  }
+
+  return added;
+}
+
 function findSource() {
   const source = SOURCE_CANDIDATES.find((candidate) => fs.existsSync(candidate));
   if (!source) {
@@ -327,6 +456,9 @@ function buildCatalogue() {
     return product;
   });
 
+  const generatedHookVariants = enrichPalonnierHookOptions(products);
+  stats.importedVariants += generatedHookVariants;
+
   products.sort((a, b) => a.categorySlug.localeCompare(b.categorySlug, 'fr') || a.manufacturer.localeCompare(b.manufacturer, 'fr') || a.name.localeCompare(b.name, 'fr'));
 
   stats.importedProducts = rawProducts.length;
@@ -351,6 +483,7 @@ function buildCatalogue() {
   console.log(`   Source: ${stats.source}`);
   console.log(`   Fabricants: ${ALLOWED_MANUFACTURERS.join(', ')}`);
   console.log(`   Variantes importées: ${stats.importedVariants}`);
+  console.log(`   Variantes sans crochets générées: ${generatedHookVariants}`);
   console.log(`   Produits parents générés: ${stats.importedParentProducts}`);
   console.log(`   Produits regroupés: ${stats.groupedProducts}`);
   console.log(`   Lignes ignorées: ${stats.ignoredRows}`);
