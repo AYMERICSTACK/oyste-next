@@ -351,6 +351,63 @@ function resolveLeadTime(
   return null;
 }
 
+type ManualLeadTimeRule = {
+  productLeadTime: string;
+  variantLeadTime?: (variantCode: string) => string | null;
+};
+
+function formatWeeks(weeks: number) {
+  return `Délai indicatif : ${weeks} semaine${weeks > 1 ? "s" : ""}`;
+}
+
+function manualAdeiLeadTimeRule(product: {
+  code: string;
+  parentCode: string | null;
+  supplierCode: string | null;
+}): ManualLeadTimeRule | null {
+  const code = compact(product.code);
+  const parentCode = compact(product.parentCode);
+  const supplierCode = compact(product.supplierCode);
+  const candidates = [code, parentCode];
+
+  // Délais confirmés manuellement par ADEI. Contrairement au tableau COMEGE,
+  // ces valeurs sont déjà les délais OYSTE : aucun buffer de +1 semaine.
+  if (candidates.includes("CROCHETAUTO")) {
+    return {
+      productLeadTime: "Délai indicatif : 1 à 4 semaines",
+      variantLeadTime: (variantCode) => {
+        const match = compact(variantCode).match(/^IS(\d+(?:\.\d+)?)$/);
+        if (!match) return null;
+
+        const capacityTons = Number(match[1]);
+        if (!Number.isFinite(capacityTons)) return null;
+        if (capacityTons === 1 || capacityTons === 2) return formatWeeks(1);
+        if (capacityTons === 5) return formatWeeks(2);
+        if (capacityTons > 5) return formatWeeks(4);
+        return null;
+      },
+    };
+  }
+
+  if (candidates.includes("LIGNEALIM") || supplierCode.startsWith("LSR")) {
+    return { productLeadTime: "Délai indicatif : 1 à 2 semaines" };
+  }
+
+  if (candidates.includes("PALFIX") || supplierCode.startsWith("PALECOF")) {
+    return { productLeadTime: formatWeeks(2) };
+  }
+
+  if (candidates.includes("PALREG") || supplierCode.startsWith("PALECOR")) {
+    return { productLeadTime: formatWeeks(2) };
+  }
+
+  if (candidates.includes("TRA") || supplierCode.startsWith("TRI")) {
+    return { productLeadTime: formatWeeks(7) };
+  }
+
+  return null;
+}
+
 export async function previewAdeiLeadTimes(): Promise<AdeiLeadTimePreview> {
   const rows = parseLeadTimeTable(await fetchComegeLeadTimeHtml());
   return {
@@ -382,18 +439,58 @@ export async function syncAdeiLeadTimes(): Promise<AdeiLeadTimeSyncResult> {
     select: {
       id: true,
       code: true,
+      supplierCode: true,
       parentCode: true,
       configuratorFamily: true,
-      variants: { select: { id: true } },
+      variants: { select: { id: true, code: true } },
     },
   });
 
   let updatedProducts = 0;
   let updatedVariants = 0;
   let skippedProducts = 0;
-  const operations: Array<ReturnType<typeof prisma.product.update>> = [];
+  const operations: Array<
+    ReturnType<typeof prisma.product.update> | ReturnType<typeof prisma.productVariant.update>
+  > = [];
 
   for (const product of products) {
+    const manualRule = manualAdeiLeadTimeRule(product);
+    if (manualRule) {
+      operations.push(
+        prisma.product.update({
+          where: { id: product.id },
+          data: { leadTime: manualRule.productLeadTime },
+        }),
+      );
+
+      if (manualRule.variantLeadTime) {
+        for (const variant of product.variants) {
+          const variantLeadTime = manualRule.variantLeadTime(variant.code);
+          if (!variantLeadTime) continue;
+          operations.push(
+            prisma.productVariant.update({
+              where: { id: variant.id },
+              data: { leadTime: variantLeadTime },
+            }),
+          );
+          updatedVariants += 1;
+        }
+      } else {
+        for (const variant of product.variants) {
+          operations.push(
+            prisma.productVariant.update({
+              where: { id: variant.id },
+              data: { leadTime: manualRule.productLeadTime },
+            }),
+          );
+          updatedVariants += 1;
+        }
+      }
+
+      updatedProducts += 1;
+      continue;
+    }
+
     const matched = resolveLeadTime(product, rows);
     if (!matched) {
       skippedProducts += 1;
@@ -401,7 +498,7 @@ export async function syncAdeiLeadTimes(): Promise<AdeiLeadTimeSyncResult> {
     }
 
     const customerWeeks = matched.weeks + OYSTE_LEAD_TIME_BUFFER_WEEKS;
-    const leadTime = `Délai indicatif : ${customerWeeks} semaine${customerWeeks > 1 ? "s" : ""}`;
+    const leadTime = formatWeeks(customerWeeks);
     operations.push(
       prisma.product.update({
         where: { id: product.id },
