@@ -641,7 +641,7 @@ export default function ProductVariantSelector({
                 shippingMode={selectedVariant?.shippingMode ?? productShippingMode}
                 imageUrl={preferredImage}
                 priceHT={displayedPriceHT}
-                delay={selectedVariant?.delay}
+                delay={leadTimeInfo.label}
                 href={productHref}
                 technicalLines={cartTechnicalLines}
                 cartItemId={kitoCartItemId}
@@ -680,7 +680,7 @@ export default function ProductVariantSelector({
               shippingMode={selectedVariant?.shippingMode ?? productShippingMode}
               imageUrl={preferredImage}
               priceHT={displayedPriceHT}
-              delay={selectedVariant?.delay}
+              delay={leadTimeInfo.label}
               href={productHref}
               technicalLines={cartTechnicalLines}
               cartItemId={kitoCartItemId}

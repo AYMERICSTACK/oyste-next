@@ -5,6 +5,7 @@ import { formatCmuText, formatTechnicalValue } from "@/lib/catalogue/format-cmu-
 import { ArrowRight, CheckCircle2, Minus, PackageCheck, Phone, Plus, RotateCcw, ShieldCheck, Trash2, Truck, Wrench } from "lucide-react";
 import Container from "@/components/ui/Container";
 import { formatCartPrice, useCart } from "@/lib/cart/cart-store";
+import { getSupplierLeadTimeInfo } from "@/lib/catalogue/supplier-lead-time";
 import { useShippingQuote } from "@/lib/cart/use-shipping-quote";
 import { useKitoAdjustment } from "@/lib/cart/use-kito-adjustment";
 
@@ -159,7 +160,13 @@ export default function CartPageClient() {
 
                       <h2 className="mt-3 text-2xl font-black leading-tight text-slate-950">{formatCmuText(item.name)}</h2>
                       {item.code ? <p className="mt-1 text-sm font-bold text-slate-500">Référence : {item.code}</p> : null}
-                      {item.delay ? <p className="mt-3 text-sm font-black text-[#007f8f]">{item.delay}</p> : null}
+                      {(() => {
+                        const leadTime = getSupplierLeadTimeInfo({
+                          supplier: item.supplier,
+                          configuredDelay: item.delay,
+                        });
+                        return <p className="mt-3 text-sm font-black text-[#007f8f]">{leadTime.label}</p>;
+                      })()}
                       {shipping.lines[itemIndex] ? (
                         <div className={`mt-4 rounded-2xl border p-4 ${shipping.lines[itemIndex].mode === "included" ? "border-emerald-200 bg-emerald-50" : shipping.lines[itemIndex].mode === "messagerie" ? "border-sky-200 bg-sky-50" : shipping.lines[itemIndex].mode === "affretement" ? "border-orange-200 bg-orange-50" : "border-slate-200 bg-slate-50"}`}>
                           <p className="flex items-center gap-2 text-sm font-black text-slate-950">

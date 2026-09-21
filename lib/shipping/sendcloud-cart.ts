@@ -64,7 +64,7 @@ async function resolveSendcloudLine(product: ShippingProductInput, postcode: str
     if (!option || option.price == null) return null;
 
     const leadTime = option.leadTimeHours != null
-      ? ` · Livraison estimée sous ${Math.max(1, Math.ceil(option.leadTimeHours / 24))} jour${Math.max(1, Math.ceil(option.leadTimeHours / 24)) > 1 ? "s" : ""} ouvré${Math.max(1, Math.ceil(option.leadTimeHours / 24)) > 1 ? "s" : ""}`
+      ? ` · Transport estimé sous ${Math.max(1, Math.ceil(option.leadTimeHours / 24))} jour${Math.max(1, Math.ceil(option.leadTimeHours / 24)) > 1 ? "s" : ""} ouvré${Math.max(1, Math.ceil(option.leadTimeHours / 24)) > 1 ? "s" : ""} après expédition`
       : "";
 
     return {
@@ -142,7 +142,7 @@ export async function calculateCartShippingWithSendcloud(
       if (option?.price != null) {
         const days = option.leadTimeHours != null ? Math.max(1, Math.ceil(option.leadTimeHours / 24)) : null;
         const leadTime = days != null
-          ? ` · Livraison estimée sous ${days} jour${days > 1 ? "s" : ""} ouvré${days > 1 ? "s" : ""}`
+          ? ` · Transport estimé sous ${days} jour${days > 1 ? "s" : ""} ouvré${days > 1 ? "s" : ""} après expédition`
           : "";
         const firstIndex = groupedKitoIndexes[0];
 
