@@ -6,6 +6,7 @@ import { calculateCartShippingWithSendcloud } from "@/lib/shipping/sendcloud-car
 import { resolveSecureCheckoutItems } from "@/lib/orders/secure-checkout-items";
 import { calculateKitoOrderAdjustment } from "@/lib/pricing/kito-order-adjustment";
 import { createOrderReference } from "@/lib/orders/bank-transfer";
+import { CGV_VERSION } from "@/lib/legal/cgv-meta";
 import { buildBankTransferOrderEmail, buildInternalNewOrderEmail } from "@/lib/orders/order-email";
 
 const itemSchema = z.object({
@@ -58,6 +59,8 @@ const schema = z.object({
   }),
   customerNote: z.string().max(2000).optional().default(""),
   requestedDate: z.string().max(120).optional().default(""),
+  cgvAccepted: z.literal(true),
+  cgvVersion: z.literal(CGV_VERSION),
 });
 async function sendEmail(to: string, subject: string, html: string) {
   const apiKey = process.env.RESEND_API_KEY;
@@ -150,6 +153,8 @@ export async function POST(request: Request) {
           totalTtc,
           customerNote: data.customerNote || null,
           requestedDate: data.requestedDate || null,
+          cgvVersion: CGV_VERSION,
+          cgvAcceptedAt: new Date(),
           deliveryMode: shipping.hasQuote
             ? "Transport à confirmer"
             : "Livraison confirmée",
@@ -205,6 +210,8 @@ export async function POST(request: Request) {
               metadata: {
                 paymentMethod: "BANK_TRANSFER",
                 shippingRequiresConfirmation: shipping.hasQuote,
+                cgvVersion: CGV_VERSION,
+                cgvAccepted: true,
               },
             },
           },

@@ -6,6 +6,7 @@ import { calculateCartShippingWithSendcloud } from "@/lib/shipping/sendcloud-car
 import { resolveSecureCheckoutItems } from "@/lib/orders/secure-checkout-items";
 import { calculateKitoOrderAdjustment } from "@/lib/pricing/kito-order-adjustment";
 import { createOrderReference } from "@/lib/orders/bank-transfer";
+import { CGV_VERSION } from "@/lib/legal/cgv-meta";
 import { createStripeCheckoutSession } from "@/lib/integrations/stripe";
 
 const itemSchema = z.object({
@@ -15,6 +16,8 @@ const schema = z.object({
   items: z.array(itemSchema).min(1).max(100),
   address: z.object({ company: z.string().min(2).max(160), firstName: z.string().min(1).max(80), lastName: z.string().min(1).max(80), address1: z.string().min(3).max(180), address2: z.string().max(180).optional().default(""), postalCode: z.string().regex(/^\d{5}$/), city: z.string().min(2).max(120), country: z.string().length(2).default("FR") }),
   customerNote: z.string().max(2000).optional().default(""), requestedDate: z.string().max(120).optional().default(""),
+  cgvAccepted: z.literal(true),
+  cgvVersion: z.literal(CGV_VERSION),
 });
 
 export async function POST(request: Request) {
@@ -40,7 +43,7 @@ export async function POST(request: Request) {
 
     const order = await prisma.$transaction(async (tx) => {
       const address = await tx.customerAddress.create({ data: { type: "SHIPPING", label: `Commande ${reference}`, company: data.address.company, firstName: data.address.firstName, lastName: data.address.lastName, address1: data.address.address1, address2: data.address.address2 || null, postalCode: data.address.postalCode, city: data.address.city, country: data.address.country.toUpperCase(), customerId: customer.id } });
-      return tx.order.create({ data: { reference, paymentMethod: "CARD", status: "PENDING_PAYMENT", paymentStatus: "PENDING", subtotalHt, taxAmount, totalTtc, customerNote: data.customerNote || null, requestedDate: data.requestedDate || null, deliveryMode: "Livraison confirmée", customerId: customer.id, shippingAddressId: address.id, items: { create: [...secureItems.map((item, index) => ({ name: item.name, reference: item.code || null, quantity: item.quantity, unitPriceHt: item.unitPriceHT, totalHt: item.unitPriceHT * item.quantity, configuration: item.technicalLines ? { technicalLines: item.technicalLines, kind: item.kind, pfiShipping: item.pfiShipping, wallPotenceShipping: item.wallPotenceShipping, shipping: shipping.lines[index] } : { kind: item.kind, pfiShipping: item.pfiShipping, wallPotenceShipping: item.wallPotenceShipping, shipping: shipping.lines[index] } })), ...(kitoDiscountHT > 0 ? [{ name: `${kitoAdjustment?.discountReason === "TRANSPORT" ? "Remise transport KITO" : "Remise regroupement KITO"} (-${(kitoAdjustment?.discountPercent || 0).toFixed(1)} %)`, reference: "KITO-DISCOUNT", quantity: 1, unitPriceHt: -kitoDiscountHT, totalHt: -kitoDiscountHT, configuration: { kind: "commercial_adjustment", supplier: "KITO" } }] : [])] }, events: { create: { type: "ORDER_CREATED", title: "Commande enregistrée", description: "Commande reçue. Paiement Stripe en attente.", metadata: { paymentMethod: "CARD" } } } } });
+      return tx.order.create({ data: { reference, paymentMethod: "CARD", status: "PENDING_PAYMENT", paymentStatus: "PENDING", subtotalHt, taxAmount, totalTtc, customerNote: data.customerNote || null, requestedDate: data.requestedDate || null, cgvVersion: CGV_VERSION, cgvAcceptedAt: new Date(), deliveryMode: "Livraison confirmée", customerId: customer.id, shippingAddressId: address.id, items: { create: [...secureItems.map((item, index) => ({ name: item.name, reference: item.code || null, quantity: item.quantity, unitPriceHt: item.unitPriceHT, totalHt: item.unitPriceHT * item.quantity, configuration: item.technicalLines ? { technicalLines: item.technicalLines, kind: item.kind, pfiShipping: item.pfiShipping, wallPotenceShipping: item.wallPotenceShipping, shipping: shipping.lines[index] } : { kind: item.kind, pfiShipping: item.pfiShipping, wallPotenceShipping: item.wallPotenceShipping, shipping: shipping.lines[index] } })), ...(kitoDiscountHT > 0 ? [{ name: `${kitoAdjustment?.discountReason === "TRANSPORT" ? "Remise transport KITO" : "Remise regroupement KITO"} (-${(kitoAdjustment?.discountPercent || 0).toFixed(1)} %)`, reference: "KITO-DISCOUNT", quantity: 1, unitPriceHt: -kitoDiscountHT, totalHt: -kitoDiscountHT, configuration: { kind: "commercial_adjustment", supplier: "KITO" } }] : [])] }, events: { create: { type: "ORDER_CREATED", title: "Commande enregistrée", description: "Commande reçue. Paiement Stripe en attente.", metadata: { paymentMethod: "CARD", cgvVersion: CGV_VERSION, cgvAccepted: true } } } } });
     });
 
     const origin = new URL(request.url).origin;

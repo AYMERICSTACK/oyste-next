@@ -215,6 +215,9 @@ export default async function Footer() {
         <div className="flex flex-col gap-4 border-t border-white/10 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
           <p>© {currentYear} OYSTE. Tous droits réservés.</p>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
+            <Link href="/conditions-generales-de-vente" className="transition hover:text-white">
+              Conditions générales de vente
+            </Link>
             <span>Vente exclusivement professionnelle</span>
             <span>Prix affichés hors taxes</span>
           </div>

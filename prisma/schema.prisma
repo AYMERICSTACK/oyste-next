@@ -387,6 +387,8 @@ model Order {
   totalTtc           Decimal       @db.Decimal(12, 2)
   customerNote       String?       @db.Text
   internalNote       String?       @db.Text
+  cgvVersion         String?
+  cgvAcceptedAt      DateTime?
   deliveryMode       String?
   requestedDate      String?
   customerId         String
