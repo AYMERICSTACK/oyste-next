@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db/prisma";
+import { runStripeInvoiceAutomation } from "@/lib/invoices/stripe-invoice-automation";
 import { sendOysteEmail } from "@/lib/email/resend";
 import { buildInternalNewOrderEmail, buildPaymentConfirmationEmail } from "@/lib/orders/order-email";
 import type { StripeCheckoutSession } from "@/lib/integrations/stripe";
@@ -82,5 +83,16 @@ export async function confirmPaidStripeOrder(session: StripeCheckoutSession) {
     }
   }
 
-  return { confirmed: true, newlyPaid: true, orderId: order.id };
+  // Only the process that actually moved the order to PAID launches the invoice chain.
+  // Webhook/success-page races therefore cannot consume two invoice numbers or send
+  // duplicate invoice emails. Any later invoice failure is logged and remains
+  // recoverable step-by-step from the invoices back-office.
+  const invoiceAutomation = await runStripeInvoiceAutomation(order.id);
+
+  return {
+    confirmed: true,
+    newlyPaid: true,
+    orderId: order.id,
+    invoiceAutomation,
+  };
 }

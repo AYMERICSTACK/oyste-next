@@ -73,6 +73,26 @@ enum PaymentMethod {
   INVOICE
 }
 
+
+enum InvoiceType {
+  INVOICE
+  CREDIT_NOTE
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  CANCELLED
+}
+
+enum InvoiceElectronicStatus {
+  NOT_APPLICABLE
+  PENDING
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
 enum AddressType {
   BILLING
   SHIPPING
@@ -410,23 +430,101 @@ model OrderItem {
 
 model Invoice {
   id           String   @id @default(cuid())
-  number       String?
-  filename     String
-  mimeType     String   @default("application/pdf")
-  size         Int
-  pdfData      Bytes
+  sourceKey    String?  @unique
+  number       String?  @unique
+  type         InvoiceType @default(INVOICE)
+  status       InvoiceStatus @default(DRAFT)
+  issuedAt     DateTime?
+
+  // Immutable legal seller snapshot. OYSTE is the commercial brand; ADEI is the issuer.
+  sellerName       String?
+  sellerBrand      String?
+  sellerSiren      String?
+  sellerSiret      String?
+  sellerVatNumber  String?
+  sellerAddress1   String?
+  sellerAddress2   String?
+  sellerPostalCode String?
+  sellerCity       String?
+  sellerCountry    String?
+
+  // Immutable customer snapshot captured when the invoice draft is created.
+  buyerEmail       String?
+  buyerFirstName   String?
+  buyerLastName    String?
+  buyerCompany     String?
+  buyerSiren       String?
+  buyerSiret       String?
+  buyerVatNumber   String?
+  buyerAddress1    String?
+  buyerAddress2    String?
+  buyerPostalCode  String?
+  buyerCity        String?
+  buyerCountry     String?
+  buyerElectronicAddress String?
+
+  currency       String   @default("EUR")
+  subtotalHt     Decimal? @db.Decimal(12, 2)
+  taxAmount      Decimal? @db.Decimal(12, 2)
+  totalTtc       Decimal? @db.Decimal(12, 2)
+  paymentMethod  PaymentMethod?
+  paymentStatus  PaymentStatus?
+  paymentReference String?
+  paidAt         DateTime?
+
+  electronicStatus InvoiceElectronicStatus @default(NOT_APPLICABLE)
+  electronicProvider String?
+  electronicRoutingAddress String?
+  electronicExternalId String?
+  electronicSentAt DateTime?
+  electronicUpdatedAt DateTime?
+  electronicError String? @db.Text
+
+  filename     String?
+  mimeType     String?  @default("application/pdf")
+  size         Int?
+  pdfData      Bytes?
   orderId      String
   customerId   String
   uploadedById String?
   notifiedAt   DateTime?
-  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  publishedAt  DateTime?
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  customer     Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  lines        InvoiceLine[]
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@index([orderId])
   @@index([customerId, createdAt])
+  @@index([status, createdAt])
   @@index([createdAt])
+}
+
+model InvoiceSequence {
+  year       Int      @id
+  lastNumber Int      @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+model InvoiceLine {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  sortOrder   Int      @default(0)
+  name        String
+  reference   String?
+  quantity    Int      @default(1)
+  unitPriceHt Decimal  @db.Decimal(12, 2)
+  totalHt     Decimal  @db.Decimal(12, 2)
+  vatRate     Decimal  @db.Decimal(5, 2)
+  taxAmount   Decimal  @db.Decimal(12, 2)
+  totalTtc    Decimal  @db.Decimal(12, 2)
+  configuration Json?
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  createdAt   DateTime @default(now())
+
+  @@index([invoiceId, sortOrder])
 }
 
 model OrderEvent {
