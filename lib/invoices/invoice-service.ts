@@ -189,8 +189,41 @@ export async function issueInvoiceDraft(invoiceId: string) {
       throw new Error("Impossible d'émettre une facture sans ligne.");
     }
 
-    if (!invoice.sellerName || !invoice.sellerSiren || !invoice.sellerSiret || !invoice.sellerVatNumber) {
-      throw new Error("Identité juridique ADEI incomplète sur le brouillon de facture.");
+    // Recovery path for legacy drafts created before the seller environment
+    // variables were configured in production. A DRAFT has not been issued yet,
+    // so it is still safe to refresh its seller snapshot before consuming a number.
+    const sellerIdentityIncomplete =
+      !invoice.sellerName ||
+      !invoice.sellerSiren ||
+      !invoice.sellerSiret ||
+      !invoice.sellerVatNumber ||
+      !invoice.sellerAddress1 ||
+      !invoice.sellerPostalCode ||
+      !invoice.sellerCity ||
+      !invoice.sellerCountry;
+
+    let invoiceToIssue = invoice;
+    if (sellerIdentityIncomplete) {
+      invoiceToIssue = await tx.invoice.update({
+        where: { id: invoice.id },
+        data: sellerSnapshot(),
+        include: { lines: { orderBy: { sortOrder: "asc" } } },
+      });
+    }
+
+    const missingSellerFields = [
+      ["INVOICE_SELLER_NAME", invoiceToIssue.sellerName],
+      ["INVOICE_SELLER_SIREN", invoiceToIssue.sellerSiren],
+      ["INVOICE_SELLER_SIRET", invoiceToIssue.sellerSiret],
+      ["INVOICE_SELLER_VAT_NUMBER", invoiceToIssue.sellerVatNumber],
+      ["INVOICE_SELLER_ADDRESS1", invoiceToIssue.sellerAddress1],
+      ["INVOICE_SELLER_POSTAL_CODE", invoiceToIssue.sellerPostalCode],
+      ["INVOICE_SELLER_CITY", invoiceToIssue.sellerCity],
+      ["INVOICE_SELLER_COUNTRY", invoiceToIssue.sellerCountry],
+    ].filter(([, value]) => !value).map(([name]) => name);
+
+    if (missingSellerFields.length) {
+      throw new Error(`Identité juridique ADEI incomplète. Variables manquantes : ${missingSellerFields.join(", ")}.`);
     }
 
     const issuedAt = new Date();
@@ -205,7 +238,7 @@ export async function issueInvoiceDraft(invoiceId: string) {
     const number = formatInvoiceNumber(year, sequence.lastNumber);
 
     const issued = await tx.invoice.update({
-      where: { id: invoice.id },
+      where: { id: invoiceToIssue.id },
       data: {
         number,
         status: "ISSUED",

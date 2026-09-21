@@ -122,8 +122,17 @@ export default function InvoiceWorkspace() {
       if (input.orderId) form.set("orderId", input.orderId);
       if (input.invoiceId) form.set("invoiceId", input.invoiceId);
       const response = await fetch("/api/admin/invoices", { method: "POST", body: form });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Opération impossible.");
+      const raw = await response.text();
+      let data: Record<string, any> = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) as Record<string, any>;
+        } catch {
+          if (!response.ok) throw new Error(raw.slice(0, 300) || `Erreur serveur (${response.status}).`);
+          throw new Error("Réponse serveur invalide.");
+        }
+      }
+      if (!response.ok) throw new Error(String(data.error || `Opération impossible (${response.status}).`));
       if (action === "auto-create") setMessage("Brouillon de facture OYSTE créé. Aucun numéro n'a encore été consommé.");
       if (action === "auto-issue") setMessage(`Facture émise : ${data.number}.`);
       if (action === "auto-generate-pdf") setMessage(`PDF ${data.filename} généré et stocké. Il reste privé au back-office pour le moment.`);

@@ -185,15 +185,23 @@ export async function POST(request: Request) {
   if (action === "auto-issue") {
     const invoiceId = String(form.get("invoiceId") || "");
     if (!invoiceId) return NextResponse.json({ error: "Facture manquante." }, { status: 400 });
-    const result = await issueInvoiceDraft(invoiceId);
-    return NextResponse.json({
-      ok: true,
-      issued: result.issued,
-      invoiceId: result.invoice.id,
-      status: result.invoice.status,
-      number: result.invoice.number,
-      issuedAt: result.invoice.issuedAt,
-    });
+    try {
+      const result = await issueInvoiceDraft(invoiceId);
+      return NextResponse.json({
+        ok: true,
+        issued: result.issued,
+        invoiceId: result.invoice.id,
+        status: result.invoice.status,
+        number: result.invoice.number,
+        issuedAt: result.invoice.issuedAt,
+      });
+    } catch (error) {
+      console.error("Invoice issue failed", { invoiceId, error });
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : "Émission de la facture impossible." },
+        { status: 409 },
+      );
+    }
   }
 
   async function notifyInvoice(invoiceId: string, origin: string) {
