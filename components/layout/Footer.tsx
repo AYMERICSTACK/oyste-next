@@ -1,12 +1,10 @@
 import Link from "next/link";
 import {
-  ArrowRight,
   Clock3,
   Headphones,
   Mail,
   MapPin,
   ShieldCheck,
-  Sparkles,
   Truck,
 } from "lucide-react";
 import Container from "@/components/ui/Container";
@@ -25,7 +23,7 @@ const supportLinks = [
   { label: "Pourquoi OYSTE ?", href: "/services" },
   { label: "Qui sommes-nous ?", href: "/a-propos" },
   { label: "Livraison", href: "/livraison" },
-  { label: "Nous contacter", href: "/contact" },
+  { label: "Contactez-nous", href: "/contact#formulaire" },
 ];
 
 const assurances = [
@@ -92,33 +90,7 @@ export default async function Footer() {
       </div>
 
       <Container className="relative">
-        <section className="grid gap-8 border-b border-white/10 py-12 lg:grid-cols-[1fr_auto] lg:items-center lg:py-16">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#67c7d1]/25 bg-[#67c7d1]/8 px-4 py-2 text-[11px] font-black uppercase tracking-[0.24em] text-[#84d2db]">
-              <Sparkles size={14} />
-              {footer.ctaEyebrow}
-            </div>
-            <h2 className="mt-5 text-3xl font-black leading-tight tracking-[-0.03em] sm:text-4xl lg:text-[2.75rem]">
-              {footer.ctaTitle}
-            </h2>
-            <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-              {footer.ctaText}
-            </p>
-          </div>
-
-          <Link
-            href={footer.ctaHref}
-            className="group inline-flex w-fit items-center gap-3 rounded-2xl bg-orange-600 px-7 py-4 text-sm font-black uppercase tracking-wide text-white shadow-[0_18px_50px_rgba(234,88,12,0.22)] transition duration-300 hover:-translate-y-1 hover:bg-orange-500"
-          >
-            {footer.ctaLabel}
-            <ArrowRight
-              size={18}
-              className="transition-transform group-hover:translate-x-1"
-            />
-          </Link>
-        </section>
-
-        <div className="grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1fr] lg:gap-12 lg:py-16">
+        <div className="grid gap-10 py-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_0.8fr_0.8fr_1fr] lg:gap-10">
           <div className="sm:col-span-2 lg:col-span-1">
             <Link
               href="/"
@@ -142,11 +114,11 @@ export default async function Footer() {
             </div>
           </div>
 
-          <nav aria-label="Univers OYSTE">
+          <nav aria-label="Catégories OYSTE">
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white">
-              Nos univers
+              Nos catégories
             </p>
-            <ul className="mt-6 grid gap-3.5">
+            <ul className="mt-4 grid gap-2.5">
               {universeLinks.map((item) => (
                 <li key={item.href}>
                   <FooterLink {...item} />
@@ -159,7 +131,7 @@ export default async function Footer() {
             <p className="text-xs font-black uppercase tracking-[0.22em] text-white">
               OYSTE
             </p>
-            <ul className="mt-6 grid gap-3.5">
+            <ul className="mt-4 grid gap-2.5">
               {supportLinks.map((item) => (
                 <li key={item.href}>
                   <FooterLink {...item} />
