@@ -1,11 +1,27 @@
-import { ArrowRight, PackageSearch, Settings2, SlidersHorizontal } from "lucide-react";
-import { getSubFamilyProductCount, slugifyCatalogueLabel, type CatalogueSubFamily } from "@/lib/catalogue/repository";
+import { ArrowRight } from "lucide-react";
+import Link from "next/link";
+import { getProductImageUrl } from "@/lib/product-images";
+import { getProductMediaImages, getProductsByCategoryAndFamily, slugifyCatalogueLabel, type CatalogueSubFamily } from "@/lib/catalogue/repository";
+
+const FAMILY_IMAGE_REFS: Record<string, string> = {
+  "elevateur-de-charge": "LP1",
+  palan: "CB010",
+  "potence-murale": "PMI2502000",
+  nacelle: "MA50SF",
+};
+
+const FAMILY_IMAGE_URLS: Record<string, string> = {
+  marchepied:
+    "https://media.normequip.com/2241006-large_default/marchepieds-en-acier-150-kg.jpg",
+  "plate-forme-individuelle-modulable":
+    "https://www.tubesca-comabi.com/sites/default/files/erp/VISUELS-FR/MODUL-ACCESS/MECA_MODUL/SOLUTIONS-MODULAIRES_MECA-MODUL_DETAIL_1.png",
+};
 
 export default function IndustrialFamilyNavigation({
   categorySlug,
-  title = "Familles disponibles",
+  title = "Catégories disponibles",
   families,
-  familyCounts,
+  familyCounts: _familyCounts,
 }: {
   categorySlug: string;
   title?: string;
@@ -13,46 +29,49 @@ export default function IndustrialFamilyNavigation({
   familyCounts?: Record<string, number>;
 }) {
   return (
-    <div className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-sm md:p-8">
-      <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+      <div className="mb-5 flex flex-col justify-between gap-3 md:flex-row md:items-end">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">
-            Navigation catalogue
-          </p>
-          <h2 className="mt-2 text-3xl font-black text-slate-950">{title}</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-            Choisissez d’abord une famille produit. Les références apparaissent uniquement dans la famille sélectionnée, pour éviter de mélanger tous les produits d’un même univers.
-          </p>
+          <h2 className="text-2xl font-black text-slate-950">{title}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">Choisissez une catégorie pour afficher les équipements correspondants.</p>
         </div>
-        <a href="/catalogue" className="text-sm font-black text-[#007f8f]">
+        <Link href="/catalogue" className="text-sm font-black text-[#007f8f]">
           ← Retour catalogue
-        </a>
+        </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {families.map((family) => {
           const isConfigurator = family.mode === "configurator";
           const familySlug = slugifyCatalogueLabel(family.title);
-          const count = familyCounts?.[familySlug] ?? getSubFamilyProductCount(categorySlug, familySlug);
-          const Icon = isConfigurator ? SlidersHorizontal : PackageSearch;
+          const representativeProduct = getProductsByCategoryAndFamily(categorySlug, familySlug)[0];
+          const curatedImageRef = FAMILY_IMAGE_REFS[familySlug];
+          const imageUrl = FAMILY_IMAGE_URLS[familySlug]
+            ?? (curatedImageRef
+              ? getProductImageUrl(curatedImageRef)
+              : representativeProduct
+                ? getProductMediaImages(representativeProduct)[0] || getProductImageUrl(representativeProduct.imageRef, representativeProduct.code)
+                : getProductImageUrl(family.title));
 
           return (
             <a
               key={family.title}
               href={family.href}
-              className="group relative overflow-hidden rounded-[1.5rem] border border-slate-200 bg-slate-50 p-5 transition hover:-translate-y-1 hover:border-orange-500 hover:bg-white hover:shadow-xl"
+              className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 transition hover:-translate-y-1 hover:border-orange-500 hover:bg-white hover:shadow-lg"
             >
               <div className="absolute right-4 top-4 h-2 w-12 rounded-full bg-[#007f8f] opacity-20 transition group-hover:bg-orange-500 group-hover:opacity-100" />
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-[#005466] shadow-sm transition group-hover:bg-[#007f8f] group-hover:text-white">
-                <Icon size={22} />
+              <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-white shadow-sm">
+                <img
+                  src={imageUrl}
+                  alt={family.title}
+                  className="h-full w-full object-contain p-3 transition duration-300 group-hover:scale-105"
+                />
               </div>
 
-              <h3 className="mt-5 text-lg font-black text-slate-950">{family.title}</h3>
-              <p className="mt-2 text-sm font-bold text-slate-600">
-                {isConfigurator ? "Produit sur mesure" : count > 0 ? `${count} produits parents` : "Produits à intégrer"}
-              </p>
+              <h3 className="mt-3 text-base font-black text-slate-950">{family.title}</h3>
+              {familySlug === "palan" ? <p className="mt-1 text-xs leading-5 text-slate-600">Électriques · manuels · chariots porte-palan</p> : null}
 
-              <p className="mt-5 flex items-center gap-2 text-sm font-black text-orange-600">
+              <p className="mt-3 flex items-center gap-2 text-xs font-black text-orange-600">
                 {isConfigurator ? "Configurer" : "Voir les produits"}
                 <ArrowRight size={16} className="transition group-hover:translate-x-1" />
               </p>
@@ -61,19 +80,6 @@ export default function IndustrialFamilyNavigation({
         })}
       </div>
 
-      <div className="mt-8 rounded-3xl border border-orange-100 bg-orange-50 p-5">
-        <div className="flex gap-4">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-orange-600">
-            <Settings2 size={21} />
-          </div>
-          <div>
-            <h3 className="font-black text-slate-950">Logique catalogue</h3>
-            <p className="mt-2 text-sm leading-6 text-slate-700">
-              Les produits standards restent consultables en catalogue. Les potences, elles, renvoient vers le configurateur pour guider le choix de la charge, de la portée, de la fixation et des options compatibles.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

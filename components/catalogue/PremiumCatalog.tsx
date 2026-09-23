@@ -59,7 +59,7 @@ type AvailabilityMode = "all" | "available" | "order";
 const PAGE_SIZE = 18;
 
 const SORT_LABELS: Record<SortMode, string> = {
-  recommended: "Recommandés",
+  recommended: "Pertinence",
   availability: "Disponibilité",
   "price-asc": "Prix croissant",
   "price-desc": "Prix décroissant",
@@ -397,7 +397,7 @@ export default function PremiumCatalog({
       value: (product: PremiumCatalogItem) => product.manufacturer,
     },
     {
-      label: "Famille",
+      label: "Catégorie",
       value: (product: PremiumCatalogItem) => product.family,
     },
     {
@@ -507,7 +507,7 @@ export default function PremiumCatalog({
       </div>
 
       {filterOptions.families.length > 1 ? (
-        <FilterSection title="Famille">
+        <FilterSection title="Catégorie">
           {filterOptions.families.map((option) => (
             <FilterCheckbox
               key={option.value}
@@ -702,7 +702,7 @@ export default function PremiumCatalog({
             <button
               type="button"
               onClick={() => setShowFilters((value) => !value)}
-              className={`inline-flex h-12 items-center gap-2 rounded-2xl border px-4 text-sm font-black transition lg:hidden ${showFilters || activeFilterCount ? "border-[#007f8f] bg-[#007f8f]/10 text-[#005466]" : "border-slate-200 bg-white text-slate-700"}`}
+              className={`inline-flex h-12 items-center gap-2 rounded-2xl border px-4 text-sm font-black transition ${showFilters || activeFilterCount ? "border-[#007f8f] bg-[#007f8f]/10 text-[#005466]" : "border-slate-200 bg-white text-slate-700"}`}
             >
               <SlidersHorizontal size={18} /> Filtres{" "}
               {activeFilterCount ? (
@@ -720,7 +720,7 @@ export default function PremiumCatalog({
                 }}
                 className="h-12 appearance-none rounded-2xl border border-slate-200 bg-white pl-4 pr-10 text-sm font-black text-slate-700 outline-none focus:border-[#007f8f]"
               >
-                <option value="recommended">Recommandés</option>
+                <option value="recommended">Pertinence</option>
                 <option value="availability">Disponibilité</option>
                 <option value="price-asc">Prix croissant</option>
                 <option value="price-desc">Prix décroissant</option>
@@ -758,7 +758,7 @@ export default function PremiumCatalog({
       </div>
 
       {showFilters ? (
-        <div className="mt-4 lg:hidden">
+        <div className="mt-4">
           {filterPanel}
           <button
             type="button"
@@ -801,19 +801,18 @@ export default function PremiumCatalog({
         </div>
       </div>
 
-      <div className="mt-6 grid gap-7 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[285px_minmax(0,1fr)]">
-        <aside className="hidden lg:block">{filterPanel}</aside>
+      <div className="mt-6">
         <div>
           {visible.length ? (
             view === "grid" ? (
-              <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-3">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
                 {visible.map((product) => {
                   const favorite = favorites.includes(product.id);
                   const compared = compare.includes(product.id);
                   return (
                     <article
                       key={product.id}
-                      className="group relative flex h-full flex-col overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-400 hover:shadow-xl"
+                      className="group relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-400 hover:shadow-lg"
                     >
                       <div className="relative">
                         <Link href={product.href} className="block">
@@ -848,7 +847,7 @@ export default function PremiumCatalog({
                           </button>
                         </div>
                       </div>
-                      <div className="flex flex-1 flex-col p-6">
+                      <div className="flex flex-1 flex-col p-4">
                         <div className="flex flex-wrap items-start justify-between gap-3">
                           <div>
                             <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">
@@ -866,14 +865,11 @@ export default function PremiumCatalog({
                               : "Disponible"}
                           </span>
                         </div>
-                        <Link href={product.href} className="mt-4 block">
-                          <h3 className="line-clamp-2 text-xl font-black leading-tight text-slate-950 transition group-hover:text-[#007f8f]">
+                        <Link href={product.href} className="mt-2 block">
+                          <h3 className="line-clamp-2 text-base font-black leading-tight text-slate-950 transition group-hover:text-[#007f8f]">
                             {product.name}
                           </h3>
                         </Link>
-                        <p className="mt-3 line-clamp-3 min-h-[4.5rem] text-sm leading-6 text-slate-600">
-                          {product.description}
-                        </p>
                         {product.badges.length ? (
                           <div className="mt-4 flex flex-wrap gap-2">
                             {product.badges.slice(1, 3).map((badge) => (
@@ -895,25 +891,20 @@ export default function PremiumCatalog({
                           <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-black text-orange-700">
                             {product.productType}
                           </span>
-                          {product.variantCount > 1 ? (
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black text-slate-600">
-                              {product.variantCount} variantes
-                            </span>
-                          ) : null}
                         </div>
-                        <div className="mt-auto pt-5">
-                          <div className="flex flex-wrap items-end justify-between gap-3 border-t border-slate-100 pt-5">
+                        <div className="mt-auto pt-3">
+                          <div className="flex flex-wrap items-end justify-between gap-3 border-t border-slate-100 pt-3">
                             <div>
                               <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">
                                 Prix professionnel
                               </p>
-                              <p className="mt-1 text-xl font-black text-slate-950">
+                              <p className="mt-1 text-base font-black text-slate-950">
                                 {product.priceLabel}
                               </p>
                             </div>
                             <Link
                               href={product.href}
-                              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition hover:bg-[#007f8f]"
+                              className="inline-flex items-center gap-2 text-sm font-black text-[#007f8f] transition hover:text-orange-600"
                             >
                               Voir la fiche <ArrowRight size={17} />
                             </Link>
