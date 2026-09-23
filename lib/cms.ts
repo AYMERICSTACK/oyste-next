@@ -42,8 +42,8 @@ export const defaultCmsContent: CmsContent = {
       "Plus de 2 000 références et des solutions complètes pour équiper, sécuriser et optimiser vos ateliers.",
     primaryLabel: "Découvrir le catalogue",
     primaryHref: "/catalogue/levage",
-    secondaryLabel: "Trouver ma solution",
-    secondaryHref: "/assistant",
+    secondaryLabel: "Configurer ma potence",
+    secondaryHref: "/configurateur",
     heroImage: "/images/hero-potence.png",
   },
   topbar: {
@@ -72,8 +72,8 @@ export const defaultCmsContent: CmsContent = {
     ctaTitle: "Donnez une nouvelle dimension à votre projet industriel.",
     ctaText:
       "De la sélection du matériel à la définition d’une solution complète, notre équipe vous accompagne avec une approche technique, claire et adaptée à votre environnement.",
-    ctaLabel: "Demander une étude",
-    ctaHref: "/contact",
+    ctaLabel: "Contactez-nous",
+    ctaHref: "/contact#formulaire",
   },
   editorial: {
     deliveryTitle: "Une livraison adaptée à chaque équipement",
