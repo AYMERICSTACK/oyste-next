@@ -391,11 +391,8 @@ export default function ProductVariantSelector({
     <>
       <section id="galerie-produit" className="scroll-mt-28 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
         <div className="overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm lg:sticky lg:top-24">
-          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Galerie produit</p>
-              <p className="mt-1 text-sm font-bold text-slate-600">Cliquez sur l&apos;image pour l&apos;agrandir</p>
-            </div>
+          <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
+            <p className="text-sm font-bold text-slate-600">Cliquez sur l&apos;image pour l&apos;agrandir</p>
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#007f8f]/10 text-[#007f8f]">
               <ImageIcon size={20} />
             </span>
