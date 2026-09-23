@@ -93,10 +93,47 @@ export default function ConfiguratorExperience() {
     questionRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }, [stepIndex]);
 
-  function cleanFutureAnswers(nextAnswers: Answers, questionId: string) {
-    const order = configuration.questions.map((question) => question.id);
-    const index = order.indexOf(questionId);
-    order.slice(index + 1).forEach((id) => delete nextAnswers[id]);
+  function reconcileAnswers(candidateAnswers: Answers) {
+    let nextAnswers = { ...candidateAnswers };
+
+    // Keep every known response that remains visible and compatible. If a
+    // dependency changes, only answers from hidden or invalid branches are
+    // discarded.
+    for (let pass = 0; pass < 3; pass += 1) {
+      const nextConfiguration = buildConfiguration({
+        answers: nextAnswers,
+        stepIndex: 0,
+        selectedAccessoryIds: [],
+      });
+      const visibleQuestions = new Map(
+        nextConfiguration.questions.map((question) => [question.id, question]),
+      );
+      let changed = false;
+
+      Object.entries(nextAnswers).forEach(([questionId, answer]) => {
+        const question = visibleQuestions.get(questionId);
+        if (!question) {
+          delete nextAnswers[questionId];
+          changed = true;
+          return;
+        }
+
+        const validChoiceIds = new Set(question.choices.map((choice) => choice.id));
+        if (Array.isArray(answer)) {
+          const validAnswers = answer.filter((id) => validChoiceIds.has(id));
+          if (validAnswers.length !== answer.length) {
+            nextAnswers[questionId] = validAnswers;
+            changed = true;
+          }
+        } else if (answer && !validChoiceIds.has(answer)) {
+          delete nextAnswers[questionId];
+          changed = true;
+        }
+      });
+
+      if (!changed) break;
+    }
+
     return nextAnswers;
   }
 
@@ -109,9 +146,9 @@ export default function ConfiguratorExperience() {
       const nextValues = values.includes(choiceId)
         ? values.filter((id) => id !== choiceId)
         : [...values, choiceId];
-      nextAnswers = cleanFutureAnswers({ ...answers, [currentStep.id]: nextValues }, currentStep.id);
+      nextAnswers = reconcileAnswers({ ...answers, [currentStep.id]: nextValues });
     } else {
-      nextAnswers = cleanFutureAnswers({ ...answers, [currentStep.id]: choiceId }, currentStep.id);
+      nextAnswers = reconcileAnswers({ ...answers, [currentStep.id]: choiceId });
     }
 
     setAnswers(nextAnswers);
@@ -171,7 +208,7 @@ export default function ConfiguratorExperience() {
         />
 
         <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <section className="relative min-h-[440px] overflow-hidden bg-slate-950 xl:min-h-0">
+          <section className="relative min-h-[440px] overflow-hidden bg-white xl:min-h-0">
             {hasInteractive3D ? (
               <Configurator3DViewer configuration={configuration} immersive />
             ) : familyExperience ? (
@@ -183,8 +220,8 @@ export default function ConfiguratorExperience() {
               <div className="absolute inset-0 flex items-center justify-center bg-[radial-gradient(circle_at_50%_35%,#173042_0%,#08131f_52%,#020617_100%)] px-6">
                 <div className="max-w-lg rounded-[2rem] border border-white/15 bg-slate-950/78 p-7 text-center text-white shadow-2xl backdrop-blur-xl">
                   <p className="text-[10px] font-black uppercase tracking-[0.24em] text-orange-400">Première étape</p>
-                  <h2 className="mt-2 text-3xl font-black">Choisissez votre famille de potence</h2>
-                  <p className="mt-3 text-sm leading-6 text-white/65">La PFI bénéficie déjà de la visualisation 3D temps réel. Les autres familles restent entièrement configurables pendant l’intégration progressive de leurs modèles 3D.</p>
+                  <h2 className="mt-2 text-3xl font-black">Choisissez votre type de potence</h2>
+                  <p className="mt-3 text-sm leading-6 text-white/65">Chaque type reste entièrement configurable selon votre besoin et ses contraintes techniques.</p>
                 </div>
               </div>
             )}

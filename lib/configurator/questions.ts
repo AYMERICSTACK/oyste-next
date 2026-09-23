@@ -22,7 +22,6 @@ export const configuratorQuestions: ConfiguratorQuestion[] = [
         id: "lever-charge",
         label: "Lever une charge",
         description: "Choisir une potence, un palan et les accessoires compatibles.",
-        recommended: true,
       },
       {
         id: "equiper-poste",

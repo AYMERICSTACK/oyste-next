@@ -443,40 +443,6 @@ function prepareModel(
       };
     }
 
-    const materials = Array.isArray(mesh.material)
-      ? mesh.material
-      : [mesh.material];
-    const preparedMaterials = materials.map((sourceMaterial) => {
-      const clonedMaterial = sourceMaterial?.clone?.() as
-        THREE.Material | undefined;
-
-      if (!clonedMaterial) {
-        return new THREE.MeshStandardMaterial({
-          color: "#f59e0b",
-          roughness: 0.62,
-          metalness: 0.08,
-        });
-      }
-
-      if (clonedMaterial instanceof THREE.MeshStandardMaterial) {
-        clonedMaterial.roughness = 0.58;
-        clonedMaterial.metalness = Math.min(
-          clonedMaterial.metalness ?? 0,
-          0.35,
-        );
-        const isVeryDark =
-          clonedMaterial.color.r < 0.08 &&
-          clonedMaterial.color.g < 0.08 &&
-          clonedMaterial.color.b < 0.08;
-        if (isVeryDark) clonedMaterial.color.set("#f59e0b");
-      }
-
-      return clonedMaterial;
-    });
-    mesh.material = Array.isArray(mesh.material)
-      ? preparedMaterials
-      : preparedMaterials[0];
-
     meshes.push({
       id,
       index: meshIndex,
@@ -501,6 +467,31 @@ function prepareModel(
   cloned.traverse((object) => {
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh) return;
+
+    // Rebuild materials after geometry extraction so only the actual potence
+    // structure receives the brand yellow. Switches, power supply, trolley,
+    // hoist and other extracted options retain their source colors.
+    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const preparedMaterials = materials.map((sourceMaterial) => {
+      const clonedMaterial = sourceMaterial?.clone?.() as THREE.Material | undefined;
+      if (!clonedMaterial) {
+        return new THREE.MeshStandardMaterial({
+          color: mesh.userData.configuratorGroup === "structure" ? "#dca600" : "#64748b",
+          roughness: 0.62,
+          metalness: 0.08,
+        });
+      }
+
+      if (clonedMaterial instanceof THREE.MeshStandardMaterial) {
+        clonedMaterial.roughness = 0.58;
+        clonedMaterial.metalness = Math.min(clonedMaterial.metalness ?? 0, 0.35);
+        if (mesh.userData.configuratorGroup === "structure") {
+          clonedMaterial.color.set("#dca600");
+        }
+      }
+      return clonedMaterial;
+    });
+    mesh.material = Array.isArray(mesh.material) ? preparedMaterials : preparedMaterials[0];
 
     mesh.geometry.computeBoundingBox();
     mesh.geometry.computeBoundingSphere();
@@ -779,7 +770,7 @@ export default function Configurator3DScene({
       </group>
       <ContactShadows
         position={[0, -0.02, 0]}
-        opacity={0.38}
+        opacity={0.24}
         scale={10}
         blur={2.5}
         far={6}

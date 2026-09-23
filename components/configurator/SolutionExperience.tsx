@@ -239,11 +239,29 @@ export default function SolutionExperience() {
         spanM,
         additionalWeightKg: wallFixingWeightKg + hoistWeightKg,
         weightComplete: configuration.hoistDetail ? configuration.hoistDetail.weightComplete !== false : true,
-      }
+    }
     : undefined;
+  const configuredCartProps = {
+    name: solution?.label ?? configuration.selectedVariant?.label ?? "Potence configurée OYSTE",
+    code: configuration.selectedVariant?.reference ?? solution?.code,
+    priceHT: configuration.priceBreakdown.totalHt,
+    editHref: "/configurateur",
+    pfiShipping,
+    wallPotenceShipping,
+    technicalLines: [
+      { label: "Type", value: potenceType ?? "Non renseigné" },
+      { label: "Charge", value: capacity ?? "Non renseigné" },
+      { label: "Portée", value: reach ?? "Non renseigné" },
+      ...(hasUnderBeamHeight
+        ? [{ label: "Hauteur", value: underBeamHeight ?? "Non renseigné" }]
+        : []),
+      { label: "Fixation", value: fixing ?? "Non renseigné" },
+      { label: "Environnement", value: environment ?? "Non renseigné" },
+    ],
+  };
 
   return (
-    <section className="bg-slate-50 py-6 lg:min-h-[calc(100dvh-90px)]">
+    <section className="bg-slate-50 py-6 pb-32 lg:min-h-[calc(100dvh-90px)] lg:pb-6">
       <Container className="max-w-[1500px]">
         <Link href="/configurateur" className="inline-flex items-center gap-2 text-sm font-black uppercase text-slate-600 transition hover:text-orange-600">
           <ArrowLeft size={17} /> Modifier la configuration
@@ -311,24 +329,7 @@ export default function SolutionExperience() {
                 <div className="flex justify-between gap-4"><span>Compléments</span><span>{configuration.priceBreakdown.complementsTotal > 0 ? formatPrice(configuration.priceBreakdown.complementsTotal) : "—"}</span></div>
               </div>
 
-              <ConfiguredCartButton
-                name={solution?.label ?? configuration.selectedVariant?.label ?? "Potence configurée OYSTE"}
-                code={configuration.selectedVariant?.reference ?? solution?.code}
-                priceHT={configuration.priceBreakdown.totalHt}
-                editHref="/configurateur"
-                pfiShipping={pfiShipping}
-                wallPotenceShipping={wallPotenceShipping}
-                technicalLines={[
-                  { label: "Type", value: potenceType ?? "Non renseigné" },
-                  { label: "Charge", value: capacity ?? "Non renseigné" },
-                  { label: "Portée", value: reach ?? "Non renseigné" },
-                  ...(hasUnderBeamHeight
-                    ? [{ label: "Hauteur", value: underBeamHeight ?? "Non renseigné" }]
-                    : []),
-                  { label: "Fixation", value: fixing ?? "Non renseigné" },
-                  { label: "Environnement", value: environment ?? "Non renseigné" },
-                ]}
-              />
+              <ConfiguredCartButton {...configuredCartProps} />
               <button type="button" className="mt-3 inline-flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 px-5 py-4 text-sm font-black uppercase text-white transition hover:bg-white/10">
                 <Download size={19} /> Télécharger le récapitulatif
               </button>
@@ -346,6 +347,15 @@ export default function SolutionExperience() {
           </aside>
         </div>
       </Container>
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-12px_35px_rgba(15,23,42,0.16)] backdrop-blur lg:hidden">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <div className="shrink-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Total HT</p>
+            <p className="text-lg font-black text-slate-950">{formatPrice(configuration.priceBreakdown.totalHt)}</p>
+          </div>
+          <ConfiguredCartButton {...configuredCartProps} className="mt-0 min-h-12 flex-1 px-3 py-3 text-xs" />
+        </div>
+      </div>
     </section>
   );
 }

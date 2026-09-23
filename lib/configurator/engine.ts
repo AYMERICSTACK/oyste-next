@@ -52,7 +52,6 @@ const POTENCE_TYPE_CHOICES: ConfiguratorChoice[] = [
     id: "PFI",
     label: "Potence sur fût inversée",
     description: "Solution autoportante fixée au sol, adaptée lorsqu’aucun support mural n’est disponible.",
-    recommended: true,
   },
   {
     id: "PFT",
@@ -227,7 +226,6 @@ function buildDynamicUnderBeamHeightChoices(
       description: isStandard
         ? "Hauteur sous fer standard, sans supplément."
         : `${index} supplément${index > 1 ? "s" : ""} de 10 cm appliqué${index > 1 ? "s" : ""} automatiquement.`,
-      recommended: isStandard,
     };
   });
 }
@@ -363,7 +361,6 @@ function buildPfiFixingChoices(answers: Answers): ConfiguratorChoice[] {
       description:
         gabarit?.label ??
         "Semelle standard obligatoire pour cette configuration.",
-      recommended: true,
     },
   ];
 
@@ -402,7 +399,6 @@ function getBusinessChoices(
     description:
       choice.description ??
       "Choix guidé selon le besoin de votre installation.",
-    recommended: choice.recommended,
   }));
 }
 

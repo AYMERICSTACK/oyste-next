@@ -25,7 +25,7 @@ export default function AssistantHero() {
               Démarrer l’assistant <ArrowRight size={18} />
             </Button>
             <Button href="/catalogue/levage" variant="secondary">
-              Parcourir les familles <ShoppingCart size={18} />
+              Parcourir les catégories <ShoppingCart size={18} />
             </Button>
           </div>
         </div>

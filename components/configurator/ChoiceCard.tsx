@@ -11,7 +11,6 @@ import {
   Radio,
   Ruler,
   ShieldCheck,
-  Sparkles,
   SquareStack,
   Weight,
   Wrench,
@@ -21,8 +20,6 @@ import {
 import type { ConfiguratorChoice } from "@/lib/configurator/types";
 
 function getChoiceBadge(choice: ConfiguratorChoice) {
-  if (choice.recommended) return "Recommandé";
-
   const familyBadges: Record<string, string> = {
     PFI: "Sur fût",
     PFT: "Sur fût",
@@ -104,12 +101,9 @@ export default function ChoiceCard({
             {badge && (
               <span
                 className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${
-                  choice.recommended
-                    ? "bg-orange-100 text-orange-700"
-                    : "bg-[#007f8f]/10 text-[#005466]"
+                  "bg-[#007f8f]/10 text-[#005466]"
                 }`}
               >
-                {choice.recommended ? <Sparkles size={10} /> : null}
                 {badge}
               </span>
             )}

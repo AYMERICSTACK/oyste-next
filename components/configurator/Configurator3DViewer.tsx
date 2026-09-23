@@ -456,10 +456,10 @@ export default function Configurator3DViewer({
     <div
       className={
         immersive
-          ? "h-full min-h-0 overflow-hidden bg-slate-950"
+          ? "h-full min-h-0 overflow-hidden bg-white"
           : presentation
-            ? "h-full min-h-0 overflow-hidden bg-slate-950"
-            : "h-[376px] overflow-hidden rounded-2xl border border-slate-800 bg-slate-950 shadow-inner"
+            ? "h-full min-h-0 overflow-hidden bg-white"
+            : "h-[376px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-inner"
       }
     >
       {!presentation ? (
@@ -780,9 +780,9 @@ export default function Configurator3DViewer({
           shadows
           camera={{ position: [5.6, 3.8, 6.8], fov: 38, near: 0.01, far: 500 }}
         >
-          <color attach="background" args={["#0f172a"]} />
-          <ambientLight intensity={1.15} />
-          <hemisphereLight args={["#e0f2fe", "#172033", 1.1]} />
+          <color attach="background" args={["#ffffff"]} />
+          <ambientLight intensity={1.35} />
+          <hemisphereLight args={["#ffffff", "#dbe4ea", 1.2]} />
           <directionalLight position={[7, 9, 6]} intensity={3.1} castShadow />
           <directionalLight position={[-4, 3, -4]} intensity={0.8} />
           <Suspense fallback={<LoadingModel />}>
