@@ -182,17 +182,17 @@ const virtualPotenceProducts: CatalogueProduct[] = [
 
 export const catalogueSubFamilies: Record<string, CatalogueSubFamily[]> = {
   levage: [
-    { title: "Accessoires de levage", href: "/catalogue/levage?famille=accessoires-de-levage" },
-    { title: "Charge d'essai", href: "/catalogue/levage?famille=charge-dessai" },
-    { title: "Élévateur de charge", href: "/catalogue/levage?famille=elevateur-de-charge" },
     { title: "Palan", href: "/catalogue/levage?famille=palan" },
-    { title: "Treuil", href: "/catalogue/levage?famille=treuil" },
-    { title: "Portique", href: "/catalogue/levage?famille=portique" },
     { title: "Potence murale", href: "/catalogue/levage?famille=potence-murale", mode: "catalogue" },
     { title: "Potence sur fût", href: "/catalogue/levage?famille=potence-sur-fut", mode: "catalogue" },
+    { title: "Portique", href: "/catalogue/levage?famille=portique" },
+    { title: "Treuil", href: "/catalogue/levage?famille=treuil" },
     { title: "Tripode", href: "/catalogue/levage?famille=tripode" },
+    { title: "Charge d'essai", href: "/catalogue/levage?famille=charge-dessai" },
+    { title: "Accessoires de levage", href: "/catalogue/levage?famille=accessoires-de-levage" },
   ],
   "manutention-au-sol": [
+    { title: "Élévateur de charge", href: "/catalogue/levage?famille=elevateur-de-charge" },
     { title: "Accessoire de chariot élévateur", href: "/catalogue/manutention-au-sol?famille=accessoire-de-chariot-elevateur" },
     { title: "Chariot et servante", href: "/catalogue/manutention-au-sol?famille=chariot-et-servante" },
     { title: "Coins roulants et patins rouleurs", href: "/catalogue/manutention-au-sol?famille=coins-roulants-et-patins-rouleurs" },

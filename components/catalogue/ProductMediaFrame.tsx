@@ -2,7 +2,7 @@ import { FileText, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const frameSizes = {
-  card: "h-64",
+  card: "h-44 sm:h-48",
   hero: "aspect-[4/3] min-h-[320px]",
   thumb: "aspect-[4/3]",
 } as const;
@@ -56,7 +56,7 @@ export default function ProductMediaFrame({
 
       {documentCount > 0 && !compact ? (
         <div className="absolute right-5 top-5 z-10 inline-flex items-center gap-2 rounded-full bg-[#007f8f] px-3 py-1 text-xs font-black text-white shadow-sm">
-          <FileText size={13} /> PDF
+          <FileText size={13} /> Fiche technique
         </div>
       ) : null}
 

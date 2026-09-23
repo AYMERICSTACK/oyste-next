@@ -10,12 +10,9 @@ import {
   ChevronRight,
   Download,
   FileQuestion,
-  Headphones,
   ImageIcon,
   Layers3,
-  ShieldCheck,
   SlidersHorizontal,
-  Truck,
   X,
   ZoomIn,
 } from "lucide-react";
@@ -23,6 +20,7 @@ import Button from "@/components/ui/Button";
 import AddToCartButton from "@/components/cart/AddToCartButton";
 import { getProductImageUrl } from "@/lib/product-images";
 import ProductMediaFrame from "./ProductMediaFrame";
+import CapacityRecommendations, { type CapacityRecommendation } from "./CapacityRecommendations";
 import { getSupplierLeadTimeInfo } from "@/lib/catalogue/supplier-lead-time";
 import { calculateKitoDynamicWeightKg, getKitoChainWeightRule, getRequestedKitoLiftM } from "@/lib/shipping/kito-chain-weight";
 import {
@@ -105,6 +103,15 @@ function stockLabel(stock: number | null | undefined) {
   return `${stock} en stock`;
 }
 
+function capacityInKg(variant: CatalogueVariant | undefined) {
+  const option = Object.entries(variant?.options || {}).find(([label]) => /^(cmu|capacit)/i.test(label))?.[1];
+  const feature = variant?.features?.find((item) => /cmu|capacit/i.test(item.label))?.value;
+  const match = `${option || ""} ${feature || ""} ${variant?.name || ""}`.replace(/\s/g, "").match(/(\d+(?:[.,]\d+)?)\s*(kg|t)/i);
+  if (!match) return null;
+  const amount = Number(match[1].replace(",", "."));
+  return /t/i.test(match[2]) ? amount * 1000 : amount;
+}
+
 
 export default function ProductVariantSelector({
   productName,
@@ -123,6 +130,7 @@ export default function ProductVariantSelector({
   galleryImages = [],
   variantGalleryImages = {},
   documentCount = 0,
+  recommendationCandidates = [],
 }: {
   productName: string;
   productCode: string;
@@ -140,6 +148,7 @@ export default function ProductVariantSelector({
   galleryImages?: string[];
   variantGalleryImages?: Record<string, string[]>;
   documentCount?: number;
+  recommendationCandidates?: CapacityRecommendation[];
 }) {
   const effectiveOptionSchema = useMemo(
     () => buildOptionSchema(variants, optionSchema),
@@ -272,6 +281,10 @@ export default function ProductVariantSelector({
       : preferredImage;
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const hasOptions = variants.length > 1 && effectiveOptionSchema.length > 0;
+  const isHoistProduct = /palan|porte.?palan|chariot/i.test(`${familyLabel || ""} ${productName}`);
+  const hasIncludedDirectionLimit = /fin de course de direction.{0,30}(incluse|inclus|série|serie)/i.test(
+    JSON.stringify([selectedVariant?.features, selectedVariant?.options, selectedVariant?.name]),
+  );
 
   useEffect(() => {
     if (!lightboxOpen) return;
@@ -350,6 +363,29 @@ export default function ProductVariantSelector({
   const kitoCartItemId = needsDynamicKitoLift && effectiveKitoLiftM !== null
     ? `catalogue:${selectedVariant?.code || productCode}:lift:${effectiveKitoLiftM}`
     : undefined;
+  const hasCapacityOption = effectiveOptionSchema.some((option) => /^(cmu|capacit)/i.test(option.label));
+  const dynamicKitoHeightControl = needsDynamicKitoLift && kitoChainRule ? (
+    <fieldset>
+      <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-600">Hauteur de levage</legend>
+      <div className="flex max-w-[260px] items-center rounded-xl border border-slate-200 bg-white px-3 shadow-sm focus-within:border-[#007f8f] focus-within:ring-4 focus-within:ring-[#007f8f]/10">
+        <input
+          type="number"
+          min={kitoChainRule.baseLiftM}
+          step="1"
+          value={effectiveKitoLiftM ?? kitoChainRule.baseLiftM}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            setKitoLiftM(Number.isFinite(value) ? Math.max(kitoChainRule.baseLiftM, value) : kitoChainRule.baseLiftM);
+          }}
+          className="w-full bg-transparent py-3 text-right text-base font-black text-slate-950 outline-none"
+          aria-label="Hauteur de levage en mètres"
+        />
+        <span className="ml-2 text-sm font-black text-slate-500">m</span>
+      </div>
+      <p className="mt-1.5 text-xs font-semibold text-slate-500">Hauteur standard : {kitoChainRule.baseLiftM} m. Le prix final se met à jour automatiquement.</p>
+      {extraKitoLiftM > 0 && !kitoPricingLoading && !kitoChainPricing ? <p className="mt-2 text-xs font-bold text-orange-800">Tarif indisponible pour cette hauteur : commande sur devis.</p> : null}
+    </fieldset>
+  ) : null;
 
   return (
     <>
@@ -414,13 +450,13 @@ export default function ProductVariantSelector({
           </div>
         </div>
 
-        <div className="rounded-[2.5rem] border border-slate-200 bg-white p-6 shadow-sm lg:p-8">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:p-6">
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">
-                {isConfiguratorProduct ? "Votre solution sur mesure" : "Référence sélectionnée"}
+                {isConfiguratorProduct ? "Votre solution sur mesure" : "Votre produit"}
               </p>
-              <h2 className="mt-3 text-3xl font-black text-slate-950">
+              <h2 className="mt-2 text-2xl font-black text-slate-950">
                 {formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
               </h2>
               <p className="mt-2 text-sm font-bold text-slate-500">
@@ -432,25 +468,29 @@ export default function ProductVariantSelector({
             </span>
           </div>
 
-          {hasOptions ? (
-            <div className="mt-7 rounded-3xl border border-[#007f8f]/20 bg-[#007f8f]/5 p-5">
+          {hasOptions || dynamicKitoHeightControl ? (
+            <div className="mt-5 rounded-2xl border border-[#007f8f]/20 bg-[#007f8f]/5 p-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-[#007f8f] shadow-sm">
                   <SlidersHorizontal size={18} />
                 </span>
                 <div>
                   <p className="text-sm font-black uppercase tracking-[0.22em] text-[#005466]">
-                    Choisissez votre configuration
+                    {isHoistProduct ? "Choisissez les caractéristiques de votre palan" : "Options disponibles"}
                   </p>
                   <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
-                    Les choix impossibles sont automatiquement écartés. La référence, le prix, le stock et le poids se mettent à jour instantanément.
+                    {isHoistProduct
+                      ? "Sélectionnez la capacité, la hauteur de levage et, lorsqu’elle est renseignée, la largeur de fer adaptée à l’installation."
+                      : "Sélectionnez les caractéristiques nécessaires à votre utilisation."}
                   </p>
                 </div>
               </div>
 
               <div className="mt-5 grid gap-5">
+                {!hasCapacityOption ? dynamicKitoHeightControl : null}
                 {effectiveOptionSchema.map((option) => (
-                  <fieldset key={option.label}>
+                  <div key={option.label} className="grid gap-5">
+                  <fieldset>
                     <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-600">
                       {option.label}
                     </legend>
@@ -484,93 +524,18 @@ export default function ProductVariantSelector({
                       })}
                     </div>
                   </fieldset>
+                  {/^(cmu|capacit)/i.test(option.label) ? dynamicKitoHeightControl : null}
+                  </div>
                 ))}
               </div>
 
-              {selectedVariant ? (
-                <div className="mt-5 grid gap-3 rounded-2xl bg-white p-4 sm:grid-cols-3">
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Référence</p>
-                    <p className="mt-1 text-sm font-black text-slate-950">{selectedVariant.code}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Stock</p>
-                    <p className="mt-1 text-sm font-black text-slate-950">{stockLabel(selectedVariant.stock)}</p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Poids</p>
-                    <p className="mt-1 text-sm font-black text-slate-950">
-                      {selectedVariant.weightKg ? `${selectedVariant.weightKg} kg` : "À confirmer"}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
+              {selectedVariant ? <p className="mt-4 text-xs font-bold text-slate-500">Réf. {selectedVariant.code} · {stockLabel(selectedVariant.stock)}{selectedVariant.weightKg ? ` · ${selectedVariant.weightKg} kg` : ""}</p> : null}
+              {hasIncludedDirectionLimit ? <p className="mt-3 flex items-center gap-2 text-sm font-black text-emerald-700"><CheckCircle2 size={17} /> Fin de course de direction incluse</p> : null}
             </div>
           ) : null}
 
-          {needsDynamicKitoLift && kitoChainRule ? (
-            <div className="mt-7 rounded-3xl border border-orange-200 bg-orange-50 p-5">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-700">Hauteur de levage KITO</p>
-                  <p className="mt-1 text-sm font-bold leading-5 text-slate-600">
-                    Hauteur standard : {kitoChainRule.baseLiftM} m. Le supplément de chaîne est calculé automatiquement au mètre.
-                  </p>
-                </div>
-                <label className="block min-w-[170px]">
-                  <span className="mb-2 block text-xs font-black uppercase tracking-[0.16em] text-slate-600">Hauteur souhaitée</span>
-                  <div className="flex items-center rounded-xl border border-orange-200 bg-white px-3 shadow-sm">
-                    <input
-                      type="number"
-                      min={kitoChainRule.baseLiftM}
-                      step="1"
-                      value={effectiveKitoLiftM ?? kitoChainRule.baseLiftM}
-                      onChange={(event) => {
-                        const value = Number(event.target.value);
-                        setKitoLiftM(Number.isFinite(value) ? Math.max(kitoChainRule.baseLiftM, value) : kitoChainRule.baseLiftM);
-                      }}
-                      className="w-full bg-transparent py-3 text-right text-base font-black text-slate-950 outline-none"
-                      aria-label="Hauteur de levage KITO en mètres"
-                    />
-                    <span className="ml-2 text-sm font-black text-slate-500">m</span>
-                  </div>
-                </label>
-              </div>
-
-              <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Chaîne supplémentaire</p>
-                  <p className="mt-1 text-sm font-black text-slate-950">+{extraKitoLiftM} m</p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Supplément HT</p>
-                  <p className="mt-1 text-sm font-black text-slate-950">
-                    {extraKitoLiftM <= 0
-                      ? "0 €"
-                      : kitoPricingLoading
-                        ? "Calcul..."
-                        : kitoChainPricing
-                          ? formatPriceHT(kitoChainSupplementHT)
-                          : "À confirmer"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-white p-4">
-                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-400">Poids calculé</p>
-                  <p className="mt-1 text-sm font-black text-slate-950">
-                    {typeof displayedWeightKg === "number" && displayedWeightKg > 0 ? `${displayedWeightKg} kg` : "À confirmer"}
-                  </p>
-                </div>
-              </div>
-
-              {extraKitoLiftM > 0 && !kitoPricingLoading && !kitoChainPricing ? (
-                <p className="mt-3 text-xs font-bold text-orange-800">
-                  Le tarif ERP du mètre supplémentaire n'est pas disponible pour cette référence : commande sur devis pour cette hauteur.
-                </p>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="mt-7 rounded-[1.75rem] bg-slate-950 p-5 text-white">
+          <div className="sticky bottom-0 z-20 mt-7 rounded-[1.75rem] bg-white pt-3 shadow-[0_-16px_24px_rgba(255,255,255,0.96)]">
+          <div className="rounded-[1.75rem] bg-slate-950 p-5 text-white">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
@@ -593,40 +558,7 @@ export default function ProductVariantSelector({
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <ShieldCheck size={19} className="text-[#007f8f]" />
-              <p className="mt-3 text-sm font-black text-slate-950">Achat sécurisé</p>
-              <p className="mt-1 text-xs font-bold leading-5 text-slate-500">Parcours clair et références contrôlées.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <Truck size={19} className="text-[#007f8f]" />
-              <p className="mt-3 text-sm font-black text-slate-950">Livraison adaptée</p>
-              <p className="mt-1 text-xs font-bold leading-5 text-slate-500">Transport selon le matériel commandé.</p>
-            </div>
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <Headphones size={19} className="text-[#007f8f]" />
-              <p className="mt-3 text-sm font-black text-slate-950">Support OYSTE</p>
-              <p className="mt-1 text-xs font-bold leading-5 text-slate-500">Accompagnement avant et après achat.</p>
-            </div>
-          </div>
-
-          <div className="mt-6 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-            <p className="text-sm font-black uppercase tracking-[0.25em] text-slate-500">Points clés</p>
-            <div className="mt-4 grid gap-3 text-sm font-bold text-slate-700">
-              <div className="flex items-center gap-3 rounded-2xl bg-white p-4">
-                <CheckCircle2 size={18} className="shrink-0 text-[#007f8f]" /> Référence : {selectedVariant?.code || productCode}
-              </div>
-              {selectedVariant?.features?.slice(0, 4).map((feature) => (
-                <div key={`${feature.label}-${feature.value}`} className="flex items-start gap-3 rounded-2xl bg-white p-4">
-                  <CheckCircle2 size={18} className="mt-0.5 shrink-0 text-[#007f8f]" />
-                  <span>{feature.label} : {feature.value}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-7 grid gap-3">
+          <div className="mt-5 grid gap-3">
             {isConfiguratorProduct ? (
               <Button href={configuratorHref} className="w-full justify-center py-4 text-base">
                 Configurer ce produit <ArrowRight size={18} />
@@ -655,8 +587,11 @@ export default function ProductVariantSelector({
               Documents techniques {documentCount > 0 ? `(${documentCount})` : ""} <Download size={18} />
             </Button>
           </div>
+          </div>
         </div>
       </section>
+
+      <CapacityRecommendations items={recommendationCandidates} selectedCapacityKg={capacityInKg(selectedVariant)} />
 
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-12px_30px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-7xl items-center gap-3">

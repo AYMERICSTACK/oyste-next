@@ -61,7 +61,7 @@ export default function ProductApplications({ product }: { product: CataloguePro
           <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-300">Applications</p>
           <h2 className="mt-2 max-w-3xl text-3xl font-black">Pensé pour les contraintes du terrain</h2>
           <p className="mt-3 max-w-3xl text-sm font-medium leading-7 text-slate-300">
-            Ce produit de la famille « {productContext} » s&apos;intègre dans de nombreux environnements professionnels. Le choix final dépend de la charge, de la fréquence d&apos;utilisation et des conditions d&apos;exploitation.
+            Ce produit de la catégorie « {productContext} » s&apos;intègre dans de nombreux environnements professionnels. Le choix final dépend de la charge, de la fréquence d&apos;utilisation et des conditions d&apos;exploitation.
           </p>
         </div>
         <span className="w-fit rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-200">

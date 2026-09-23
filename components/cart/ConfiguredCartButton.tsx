@@ -13,6 +13,7 @@ export default function ConfiguredCartButton({
   technicalLines,
   pfiShipping,
   wallPotenceShipping,
+  className = "",
 }: {
   name: string;
   code?: string;
@@ -21,6 +22,7 @@ export default function ConfiguredCartButton({
   technicalLines: CartTechnicalLine[];
   pfiShipping?: PfiShippingConfiguration;
   wallPotenceShipping?: WallPotenceShippingConfiguration;
+  className?: string;
 }) {
   const { addItem } = useCart();
   const [added, setAdded] = useState(false);
@@ -50,7 +52,7 @@ export default function ConfiguredCartButton({
       onClick={handleClick}
       className={`mt-5 inline-flex w-full items-center justify-center gap-3 rounded-xl px-5 py-4 text-sm font-black uppercase text-white transition ${
         added ? "bg-[#007f8f]" : "bg-orange-600 hover:bg-orange-700"
-      }`}
+      } ${className}`}
     >
       {added ? <CheckCircle2 size={19} /> : <ShoppingCart size={19} />}
       {added ? "Solution ajoutée" : "Ajouter cette solution au panier"}
