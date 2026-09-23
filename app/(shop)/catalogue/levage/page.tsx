@@ -8,9 +8,9 @@ import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-reposito
 import { getProductImageUrl } from "@/lib/product-images";
 
 const palanTypes = [
-  { id: "electrique", title: "Palan électrique", text: "Pour les usages motorisés et les cycles de levage réguliers.", image: "ER2M001HL" },
-  { id: "manuel", title: "Palan manuel", text: "Solutions à chaîne ou à levier pour les opérations manuelles.", image: "CB010" },
-  { id: "chariot", title: "Chariot porte-palan manuel", text: "Pour le déplacement du palan sur le profil de roulement.", image: "TSG010" },
+  { id: "electrique", title: "Palan électrique", image: "ER2M010ILIS" },
+  { id: "manuel", title: "Palan manuel", image: "CB010" },
+  { id: "chariot", title: "Chariot porte-palan manuel", image: "TSG1000B" },
 ] as const;
 
 function matchesPalanType(product: { name: string; description: string; code: string }, type?: string) {
@@ -56,7 +56,7 @@ export default async function LevagePage({ searchParams }: { searchParams?: Prom
       {showPalanChoice ? (
         <section className="bg-white py-10"><Container>
           <div className="mb-6 flex items-end justify-between gap-4"><div><h2 className="text-2xl font-black">Quel type de palan recherchez-vous ?</h2><p className="mt-2 text-sm text-slate-600">Choisissez d’abord le mode de levage ou le chariot adapté.</p></div><Link href="/catalogue/levage" className="text-sm font-black text-[#007f8f]">Toutes les catégories</Link></div>
-          <div className="grid gap-4 md:grid-cols-3">{palanTypes.map((item) => <a key={item.id} href={`/catalogue/levage?famille=palan&type=${item.id}`} className="group overflow-hidden rounded-2xl border border-slate-200 transition hover:border-orange-400 hover:shadow-lg"><div className="aspect-[16/9] bg-slate-50"><img src={getProductImageUrl(item.image)} alt="" className="h-full w-full object-contain p-4" /></div><div className="p-4"><h3 className="font-black">{item.title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{item.text}</p><span className="mt-3 inline-flex items-center gap-2 text-sm font-black text-orange-600">Voir les produits <ArrowRight size={16} /></span></div></a>)}</div>
+          <div className="grid gap-4 md:grid-cols-3">{palanTypes.map((item) => <a key={item.id} href={`/catalogue/levage?famille=palan&type=${item.id}`} className="group overflow-hidden rounded-2xl border border-slate-200 transition hover:border-orange-400 hover:shadow-lg"><div className="aspect-[16/9] bg-slate-50"><img src={getProductImageUrl(item.image)} alt="" className="h-full w-full object-contain p-4" /></div><div className="p-4"><h3 className="font-black">{item.title}</h3><span className="mt-2 inline-flex items-center gap-2 text-sm font-black text-orange-600">Voir les produits <ArrowRight size={16} /></span></div></a>)}</div>
         </Container></section>
       ) : null}
 
