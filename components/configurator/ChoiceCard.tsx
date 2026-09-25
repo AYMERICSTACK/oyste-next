@@ -1,3 +1,4 @@
+import Image from "next/image";
 import {
   BadgeCheck,
   Building2,
@@ -83,15 +84,27 @@ export default function ChoiceCard({
       />
 
       <div className="flex items-start gap-3">
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border transition ${
-            selected
-              ? "border-orange-200 bg-orange-100 text-orange-700"
-              : "border-slate-200 bg-slate-50 text-[#005466] group-hover:border-[#007f8f]/30 group-hover:bg-[#007f8f]/10"
-          }`}
-        >
-          <Icon size={18} strokeWidth={2.5} />
-        </div>
+        {choice.imageSrc ? (
+          <div className="relative h-16 w-20 shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <Image
+              src={choice.imageSrc}
+              alt={choice.label}
+              fill
+              sizes="80px"
+              className="object-contain p-1.5"
+            />
+          </div>
+        ) : (
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border transition ${
+              selected
+                ? "border-orange-200 bg-orange-100 text-orange-700"
+                : "border-slate-200 bg-slate-50 text-[#005466] group-hover:border-[#007f8f]/30 group-hover:bg-[#007f8f]/10"
+            }`}
+          >
+            <Icon size={18} strokeWidth={2.5} />
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -109,9 +122,11 @@ export default function ChoiceCard({
             )}
           </div>
 
-          <p className="mt-1 line-clamp-2 text-[12px] leading-[1.15rem] text-slate-600">
-            {choice.description}
-          </p>
+          {choice.description ? (
+            <p className="mt-1 line-clamp-2 text-[12px] leading-[1.15rem] text-slate-600">
+              {choice.description}
+            </p>
+          ) : null}
         </div>
 
         <span

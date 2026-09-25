@@ -52,31 +52,37 @@ const POTENCE_TYPE_CHOICES: ConfiguratorChoice[] = [
     id: "PFI",
     label: "Potence sur fût inversée",
     description: "Solution autoportante fixée au sol, adaptée lorsqu’aucun support mural n’est disponible.",
+    imageSrc: "/media/photos/ADEI/PFI2502000.webp",
   },
   {
     id: "PFT",
     label: "Potence sur fût triangulée",
     description: "Solution autoportante avec structure triangulée pour les configurations nécessitant plus de rigidité.",
+    imageSrc: "/media/photos/ADEI/PFT2502000.webp",
   },
   {
     id: "PMI",
     label: "Potence murale inversée",
     description: "Solution fixée sur un mur ou un poteau existant afin de libérer l’espace au sol.",
+    imageSrc: "/media/photos/ADEI/PMI2502000.webp",
   },
   {
     id: "PMT",
     label: "Potence murale triangulée",
     description: "Solution murale renforcée pour couvrir une zone de travail avec une structure existante adaptée.",
+    imageSrc: "/media/photos/ADEI/PMT2502000.webp",
   },
   {
     id: "PMA",
     label: "Potence murale articulée",
     description: "Solution articulée pour contourner des obstacles et couvrir plusieurs zones autour du poste.",
+    imageSrc: "/media/photos/ADEI/PMA2502000.webp",
   },
   {
     id: "PMAM",
     label: "Potence murale articulée motorisée",
     description: "Version articulée motorisée pour améliorer le confort d’utilisation sur les postes exigeants.",
+    imageSrc: "/media/photos/ADEI/PMAM10002000.webp",
   },
 ];
 
@@ -93,32 +99,11 @@ const POTENCE_TYPE_QUESTION: ConfiguratorQuestion = {
 };
 
 const CAPACITY_CHOICES: ConfiguratorChoice[] = [
-  {
-    id: "150",
-    label: "Jusqu’à 150 kg",
-    description: "Idéal pour les petites charges manipulées régulièrement sur un poste de travail.",
-  },
-  {
-    id: "250",
-    label: "Jusqu’à 250 kg",
-    description: "Adapté aux opérations courantes en atelier, maintenance ou production.",
-  },
-  {
-    id: "500",
-    label: "Jusqu’à 500 kg",
-    description:
-      "Pour les pièces plus lourdes nécessitant une solution de levage plus robuste.",
-  },
-  {
-    id: "1000",
-    label: "Jusqu’à 1 tonne",
-    description: "Pour les charges importantes et les postes utilisés de manière intensive.",
-  },
-  {
-    id: "2000",
-    label: "Jusqu’à 2 tonnes",
-    description: "Pour les charges très lourdes nécessitant une installation renforcée.",
-  },
+  { id: "150", label: "150 kg", description: "" },
+  { id: "250", label: "250 kg", description: "" },
+  { id: "500", label: "500 kg", description: "" },
+  { id: "1000", label: "1 tonne", description: "" },
+  { id: "2000", label: "2 tonnes", description: "" },
 ];
 
 const REACH_CHOICES: ConfiguratorChoice[] = [
@@ -245,6 +230,18 @@ const LIFTING_HEIGHT_CHOICES: ConfiguratorChoice[] = Array.from(
   },
 );
 
+const BUTTON_BOX_LENGTH_CHOICES: ConfiguratorChoice[] = Array.from(
+  { length: 15 },
+  (_, index) => {
+    const meters = index + 1;
+    return {
+      id: `${meters}m`,
+      label: `${meters} m`,
+      description: "",
+    };
+  },
+);
+
 const MANUAL_TROLLEY_CHOICES: ConfiguratorChoice[] = [
   { id: "push", label: "Par poussée", description: "Chariot manuel HTP en largeur standard, déplacé directement par l’opérateur." },
   { id: "chain", label: "Par chaîne", description: "Chariot manuel HTG en largeur standard, commandé par chaîne de manœuvre." },
@@ -272,12 +269,14 @@ const STEP_EYEBROWS: Record<string, string> = {
   electricalOptions: "Options électriques",
   environment: "Environnement",
   outsideOptions: "Options extérieures",
+  protectionHoistType: "Protection",
   calculationNote: "Documents",
   hoist: "Palan",
   hoistType: "Type de palan",
   liftingHeight: "Levage",
   hoistTrolleyMovement: "Chariot",
   hoistCommand: "Commande",
+  buttonBoxLength: "Commande",
   hoistOptions: "Options du palan",
 };
 
@@ -294,12 +293,14 @@ const STEP_ICONS: Record<string, ConfiguratorQuestion["icon"]> = {
   electricalOptions: PlugZap,
   environment: Factory,
   outsideOptions: Factory,
+  protectionHoistType: PackagePlus,
   calculationNote: CheckSquare,
   hoist: PackagePlus,
   hoistType: PackagePlus,
   liftingHeight: Ruler,
   hoistTrolleyMovement: Settings2,
   hoistCommand: PlugZap,
+  buttonBoxLength: Ruler,
   hoistOptions: Settings2,
 };
 
@@ -388,6 +389,21 @@ function getBusinessChoices(
       : GENERIC_UNDER_BEAM_HEIGHT_CHOICES;
   }
   if (step.id === "liftingHeight") return LIFTING_HEIGHT_CHOICES;
+  if (step.id === "buttonBoxLength") return BUTTON_BOX_LENGTH_CHOICES;
+  if (step.id === "electricalOptions") {
+    const reach = asString(answers.reach);
+    return (step.choices ?? []).map((choice: BusinessChoice) => ({
+      id: choice.id,
+      label:
+        choice.id === "ligne-alimentation" && reach
+          ? `${choice.label} · ${reach.replace("-", ",").replace("m", " m")}`
+          : choice.label,
+      description:
+        choice.id === "ligne-alimentation"
+          ? "Longueur adaptée à la portée sélectionnée. Le raccordement final reste à valider selon le palan choisi."
+          : choice.description ?? "",
+    }));
+  }
   if (step.id === "hoistTrolleyMovement") {
     return answers.hoistType === "manual" ? MANUAL_TROLLEY_CHOICES : ELECTRIC_TROLLEY_CHOICES;
   }
@@ -396,9 +412,8 @@ function getBusinessChoices(
   return (step.choices ?? []).map((choice: BusinessChoice) => ({
     id: choice.id,
     label: choice.label,
-    description:
-      choice.description ??
-      "Choix guidé selon le besoin de votre installation.",
+    description: choice.description ?? "",
+    imageSrc: undefined,
   }));
 }
 

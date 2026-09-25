@@ -107,6 +107,14 @@ export const PFI_MANUAL_TROLLEY_MANUAL_HOIST_PRESET = createPreset(
   "pfi-manual-trolley-manual-hoist",
   "manual-trolley-manual-hoist",
   MANUAL_MANUAL_PRESET,
+  [
+    {
+      id: "electric-accessories",
+      label: "Ligne d’alimentation et interrupteur",
+      source: ELECTRIC_ELECTRIC_PRESET,
+      groups: ["powerSupply", "mainSwitch"],
+    },
+  ],
 );
 
 export const PFI_PRODUCTION_PRESET =

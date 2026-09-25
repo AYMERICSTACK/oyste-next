@@ -17,6 +17,7 @@ export type ConfiguratorChoice = {
   description: string;
   priceImpact?: number;
   recommended?: boolean;
+  imageSrc?: string;
 };
 
 export type ConfiguratorQuestionKind =

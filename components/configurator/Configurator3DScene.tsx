@@ -291,6 +291,35 @@ function findMeshByDebugId(
   return found as THREE.Mesh | null;
 }
 
+function createOysteYellowMaterial(
+  sourceMaterial: THREE.Material | THREE.Material[],
+) {
+  const materials = Array.isArray(sourceMaterial)
+    ? sourceMaterial
+    : [sourceMaterial];
+  const prepared = materials.map((material) => {
+    const cloned = material.clone();
+    const colorMaterial = cloned as THREE.Material & { color?: THREE.Color };
+
+    if (colorMaterial.color?.isColor) {
+      colorMaterial.color.set("#dca600");
+      cloned.needsUpdate = true;
+      return cloned;
+    }
+
+    return new THREE.MeshStandardMaterial({
+      color: "#dca600",
+      roughness: 0.58,
+      metalness: 0.08,
+      opacity: cloned.opacity,
+      transparent: cloned.transparent,
+      side: cloned.side,
+    });
+  });
+
+  return Array.isArray(sourceMaterial) ? prepared : prepared[0];
+}
+
 function applyLabFreeExtractions(
   model: THREE.Object3D,
   records: readonly LabFreeExtraction[],
@@ -343,17 +372,22 @@ function applyLabFreeExtractions(
     sourceMesh.userData.configuratorOriginalGeometry?.dispose?.();
     sourceMesh.userData.configuratorOriginalGeometry = remainingGeometry.clone();
     sourceMesh.userData.configuratorGroup =
-      resolveMeshGroup(record.sourceMesh, groups) ??
-      resolveLabGroup(record.remainingGroup);
+      resolveLabGroup(record.remainingGroup) ??
+      resolveMeshGroup(record.sourceMesh, groups);
 
-    const extracted = new THREE.Mesh(extractedGeometry, sourceMesh.material);
+    const extractedGroup =
+      resolveLabGroup(record.group) ?? resolveMeshGroup(record.id, groups);
+    const extractedMaterial =
+      extractedGroup === "structure" || extractedGroup === "trolley"
+        ? createOysteYellowMaterial(sourceMesh.material)
+        : sourceMesh.material;
+    const extracted = new THREE.Mesh(extractedGeometry, extractedMaterial);
     const extractedId = idPrefix ? `${idPrefix}:${record.id}` : record.id;
     extracted.name = extractedId;
     extracted.userData.configuratorDebugId = extractedId;
     extracted.userData.configuratorSourceMeshId = record.sourceMesh;
     extracted.userData.configuratorOriginalGeometry = extractedGeometry.clone();
-    extracted.userData.configuratorGroup =
-      resolveMeshGroup(record.id, groups) ?? resolveLabGroup(record.group);
+    extracted.userData.configuratorGroup = extractedGroup;
     extracted.castShadow = sourceMesh.castShadow;
     extracted.receiveShadow = sourceMesh.receiveShadow;
     extracted.position.copy(sourceMesh.position);
@@ -468,26 +502,55 @@ function prepareModel(
     const mesh = object as THREE.Mesh;
     if (!mesh.isMesh) return;
 
-    // Rebuild materials after geometry extraction so only the actual potence
-    // structure receives the brand yellow. Switches, power supply, trolley,
-    // hoist and other extracted options retain their source colors.
+    // Rebuild materials after geometry extraction. The structural assembly and
+    // trolley-support geometry stay OYSTE yellow across preset changes; the
+    // hoist, electrical power-supply parts and switches retain their source colors;
+    // the structural mounting point for the power supply stays OYSTE yellow.
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    const debugId = String(mesh.userData.configuratorDebugId ?? "");
+    const sourceMeshId = String(mesh.userData.configuratorSourceMeshId ?? "");
+    const isPowerSupplyMount =
+      sourceMeshId === "mesh-009" ||
+      debugId === "mesh-009" ||
+      debugId.endsWith(":mesh-009") ||
+      debugId.includes("point-fixation-ligne-d-alimentation") ||
+      mesh.name.toLowerCase().includes("point fixation ligne d’alimentation") ||
+      mesh.name.toLowerCase().includes("point fixation ligne d'alimentation");
+    const useOysteYellow =
+      ["structure", "trolley"].includes(mesh.userData.configuratorGroup) ||
+      isPowerSupplyMount;
     const preparedMaterials = materials.map((sourceMaterial) => {
       const clonedMaterial = sourceMaterial?.clone?.() as THREE.Material | undefined;
       if (!clonedMaterial) {
         return new THREE.MeshStandardMaterial({
-          color: mesh.userData.configuratorGroup === "structure" ? "#dca600" : "#64748b",
+          color: useOysteYellow ? "#dca600" : "#64748b",
           roughness: 0.62,
           metalness: 0.08,
         });
       }
 
+      if (useOysteYellow) {
+        const colorMaterial = clonedMaterial as THREE.Material & {
+          color?: THREE.Color;
+        };
+        if (colorMaterial.color?.isColor) {
+          colorMaterial.color.set("#dca600");
+          clonedMaterial.needsUpdate = true;
+        } else {
+          return new THREE.MeshStandardMaterial({
+            color: "#dca600",
+            roughness: 0.58,
+            metalness: 0.08,
+            opacity: clonedMaterial.opacity,
+            transparent: clonedMaterial.transparent,
+            side: clonedMaterial.side,
+          });
+        }
+      }
+
       if (clonedMaterial instanceof THREE.MeshStandardMaterial) {
         clonedMaterial.roughness = 0.58;
         clonedMaterial.metalness = Math.min(clonedMaterial.metalness ?? 0, 0.35);
-        if (mesh.userData.configuratorGroup === "structure") {
-          clonedMaterial.color.set("#dca600");
-        }
       }
       return clonedMaterial;
     });
@@ -529,6 +592,117 @@ function prepareModel(
   });
 
   return { model: cloned, meshes };
+}
+
+
+function extendManualTrolleyBeamToPowerSupply(
+  assembly: THREE.Group,
+  variant: ConfiguratorModelPreset["variant"],
+) {
+  if (!variant.startsWith("manual-trolley")) return;
+
+  assembly.updateMatrixWorld(true);
+
+  let bestBeam:
+    | {
+        box: THREE.Box3;
+        span: number;
+      }
+    | undefined;
+  const powerSupplyBox = new THREE.Box3();
+  let hasPowerSupply = false;
+
+  assembly.traverse((object) => {
+    const mesh = object as THREE.Mesh;
+    if (!mesh.isMesh) return;
+
+    const group = mesh.userData.configuratorGroup as
+      | ConfiguratorModuleGroup
+      | undefined;
+
+    if (group === "powerSupply") {
+      const box = new THREE.Box3().setFromObject(mesh);
+      if (!box.isEmpty()) {
+        powerSupplyBox.union(box);
+        hasPowerSupply = true;
+      }
+      return;
+    }
+
+    if (group !== "structure") return;
+
+    const sourceGeometry =
+      (mesh.userData.configuratorOriginalGeometry as
+        | THREE.BufferGeometry
+        | undefined) ?? mesh.geometry;
+    const position = sourceGeometry.getAttribute("position");
+    if (!position) return;
+
+    const index = sourceGeometry.getIndex();
+    const components = splitGeometryComponents(sourceGeometry);
+    components.forEach((component) => {
+      const componentBox = new THREE.Box3();
+      const point = new THREE.Vector3();
+      component.indices.forEach((vertexIndex) => {
+        point.fromBufferAttribute(position, vertexIndex);
+        point.applyMatrix4(mesh.matrixWorld);
+        componentBox.expandByPoint(point);
+      });
+      if (componentBox.isEmpty()) return;
+
+      const size = new THREE.Vector3();
+      componentBox.getSize(size);
+      const looksLikeBeam =
+        size.x > 400 && size.x > size.y * 4 && size.x > size.z * 4;
+      if (!looksLikeBeam) return;
+
+      if (!bestBeam || size.x > bestBeam.span) {
+        bestBeam = { box: componentBox, span: size.x };
+      }
+    });
+  });
+
+  if (!bestBeam || !hasPowerSupply) return;
+
+  const beamBox = bestBeam.box;
+  const missingLength = powerSupplyBox.max.x - beamBox.max.x;
+  if (!Number.isFinite(missingLength) || missingLength <= 20) return;
+
+  const beamSize = new THREE.Vector3();
+  const beamCenter = new THREE.Vector3();
+  beamBox.getSize(beamSize);
+  beamBox.getCenter(beamCenter);
+
+  const overlap = Math.min(25, missingLength * 0.2);
+  const extensionLength = missingLength + overlap;
+  const extensionCenterWorld = new THREE.Vector3(
+    beamBox.max.x + missingLength / 2 - overlap / 2,
+    beamCenter.y,
+    beamCenter.z,
+  );
+  const extensionCenterLocal = assembly.worldToLocal(extensionCenterWorld.clone());
+
+  const geometry = new THREE.BoxGeometry(
+    extensionLength,
+    beamSize.y,
+    beamSize.z,
+  );
+  const material = new THREE.MeshStandardMaterial({
+    color: "#dca600",
+    roughness: 0.58,
+    metalness: 0.08,
+  });
+  const extension = new THREE.Mesh(geometry, material);
+  extension.name = "Extension visuelle flèche potence";
+  extension.position.copy(extensionCenterLocal);
+  extension.castShadow = true;
+  extension.receiveShadow = true;
+  extension.frustumCulled = false;
+  extension.userData.configuratorDebugId = "generated-structure-beam-extension";
+  extension.userData.configuratorSourceMeshId = "generated-structure-beam-extension";
+  extension.userData.configuratorGroup = "structure";
+  extension.userData.configuratorOriginalGeometry = geometry.clone();
+  assembly.add(extension);
 }
 
 export default function Configurator3DScene({
@@ -576,15 +750,45 @@ export default function Configurator3DScene({
           definition.meshes,
         ]).filter(([key]) => Boolean(key)),
       ) as ConfiguratorMeshGroups;
+
+      // Auxiliary modules (power supply / main switch) must survive a base-model
+      // swap, e.g. electric trolley -> manual trolley. Build the module from the
+      // exact source meshes belonging to the requested groups instead of cloning
+      // the complete donor GLB and merely hiding unrelated meshes afterwards.
+      // This keeps the electrical accessories independent from the hoist/trolley
+      // preset selected by getConfiguratorModel().
+      const allowedGroups = new Set(modulePreset.groups);
+      const moduleMeshIds = new Set<string>();
+      modulePreset.groups.forEach((group) => {
+        moduleGroups[group]?.forEach((meshId) => moduleMeshIds.add(meshId));
+      });
+      modulePreset.source.freeExtractions?.forEach((record) => {
+        const extractedGroup = resolveLabGroup(record.group);
+        const remainingGroup = resolveLabGroup(record.remainingGroup);
+        if (extractedGroup && allowedGroups.has(extractedGroup)) {
+          moduleMeshIds.add(record.sourceMesh);
+        }
+        if (remainingGroup && allowedGroups.has(remainingGroup)) {
+          moduleMeshIds.add(record.sourceMesh);
+        }
+      });
+
       const preparedModule = prepareModel(moduleSource, moduleGroups, {
         idPrefix: `module-${modulePreset.id}`,
+        includeMeshes: moduleMeshIds,
         freeExtractions: modulePreset.source.freeExtractions,
-        allowedGroups: new Set(modulePreset.groups),
+        allowedGroups,
       });
       preparedModule.model.name = `module:${modulePreset.id}`;
       assembly.add(preparedModule.model);
       allMeshes.push(...preparedModule.meshes);
     });
+
+    // The manual-trolley GLBs have a shorter visible jib than the donor model
+    // used for the electrical line. Extend only the structural beam so the
+    // yellow jib reaches the end of the power-supply rail without stretching
+    // the rail, hangers or electrical accessories.
+    extendManualTrolleyBeamToPowerSupply(assembly, preset.variant);
 
     const orientedModel = new THREE.Group();
     const [rotationX, rotationY, rotationZ] = preset.rotation.map(
@@ -710,10 +914,9 @@ export default function Configurator3DScene({
     const electricalOptions = selectedValues("electricalOptions");
     const hoistType = selectedValues("hoistType")[0];
     const showHoist = Boolean(hoistType);
-    const showPowerSupply =
-      electricalOptions.some((value) =>
-        /ligne|alimentation|rail/i.test(value),
-      ) || hoistType === "electric";
+    const showPowerSupply = electricalOptions.some((value) =>
+      /ligne|alimentation|rail/i.test(value),
+    );
     const showMainSwitch = electricalOptions.includes(
       "interrupteur-cadenassable",
     );

@@ -2372,6 +2372,27 @@ export default function Oyste3DLab() {
     meshes,
   ]);
   const copyExtractionPreset = useCallback(async () => {
+    const freeRaw = localStorage.getItem(FREE_EXTRACTIONS_STORAGE_KEY);
+    if (freeRaw) {
+      const records = JSON.parse(freeRaw) as FreeExtractionRecord[];
+      if (records.length) {
+        await navigator.clipboard.writeText(
+          JSON.stringify(
+            {
+              model: "PFI125_3_COMPLETE",
+              path: PFI_MODEL_PATH,
+              freeExtractions: records,
+            },
+            null,
+            2,
+          ),
+        );
+        setCopyState("extraction");
+        setTimeout(() => setCopyState("idle"), 1600);
+        return;
+      }
+    }
+
     const raw = localStorage.getItem(EXTRACTION_PRESET_STORAGE_KEY);
     if (!raw) return;
     await navigator.clipboard.writeText(
@@ -2826,6 +2847,9 @@ export default function Oyste3DLab() {
                         hiddenMeshes.has(key),
                       );
                       const activeIsolation = isolatedGroup === group.id;
+                      const inspectionActive =
+                        activeIsolation ||
+                        group.meshKeys.includes(isolatedMesh ?? "");
                       return (
                         <div
                           key={group.id}
@@ -2871,6 +2895,67 @@ export default function Oyste3DLab() {
                               {activeIsolation ? "Quitter" : "Isoler"}
                             </button>
                           </div>
+                          {inspectionActive ? (
+                            <div className="mt-3 space-y-2 rounded-xl border border-violet-200 bg-white/80 p-2">
+                              <div className="flex items-center justify-between px-1">
+                                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-violet-700">
+                                  Inspection mesh par mesh
+                                </p>
+                                <span className="text-[10px] font-bold text-slate-400">
+                                  {group.meshKeys.length} éléments
+                                </span>
+                              </div>
+                              {group.meshKeys.map((meshKey) => {
+                                const descriptor = meshes.find(
+                                  (mesh) => mesh.key === meshKey,
+                                );
+                                const businessName = meshMapping[meshKey]?.trim();
+                                const meshIsolated = isolatedMesh === meshKey;
+                                return (
+                                  <div
+                                    key={meshKey}
+                                    className={`rounded-lg border p-2 ${meshIsolated ? "border-violet-400 bg-violet-50" : "border-slate-200 bg-white"}`}
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-black text-slate-950">
+                                          {meshKey}
+                                        </p>
+                                        <p className="truncate text-[11px] font-bold text-sky-700">
+                                          {businessName || descriptor?.meshName || "Nom à identifier"}
+                                        </p>
+                                        <p className="truncate text-[10px] text-slate-400">
+                                          {descriptor?.materialName || "Matériau inconnu"}
+                                        </p>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setSelectedMesh(meshKey);
+                                          setIsolatedGroup(null);
+                                          setIsolatedMesh((current) =>
+                                            current === meshKey ? null : meshKey,
+                                          );
+                                          setOpenSections((current) => ({
+                                            ...current,
+                                            surface: true,
+                                          }));
+                                        }}
+                                        className={`shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-black text-white ${meshIsolated ? "bg-violet-700" : "bg-slate-950"}`}
+                                      >
+                                        <Crosshair className="mr-1 inline h-3.5 w-3.5" />
+                                        {meshIsolated ? "Quitter" : "Isoler ce mesh"}
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                              <p className="px-1 text-[10px] leading-relaxed text-slate-500">
+                                Isole un mesh pour l’identifier visuellement puis utilise la section
+                                « Sélection de surface » si tu dois inspecter sa géométrie.
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
                       );
                     })}
@@ -3014,7 +3099,7 @@ export default function Oyste3DLab() {
                     </button>
                     <button
                       type="button"
-                      disabled={extractionInfo.stage === "idle"}
+                      disabled={extractionInfo.stage === "idle" && freeExtractions.length === 0}
                       onClick={() => {
                         setResetExtractionKey((value) => value + 1);
                         setSurfaceSelectionPoint(null);
@@ -3608,7 +3693,7 @@ export default function Oyste3DLab() {
               <div className="border-t border-slate-200 bg-slate-50 p-4">
                 <button
                   type="button"
-                  disabled={extractionInfo.stage === "idle"}
+                  disabled={extractionInfo.stage === "idle" && freeExtractions.length === 0}
                   onClick={copyExtractionPreset}
                   className="mb-2 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-700 px-4 py-3 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >

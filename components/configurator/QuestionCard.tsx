@@ -75,6 +75,8 @@ export default function QuestionCard({
   onPrevious,
   isCompleting = false,
   hideNavigation = false,
+  capotHoistTypeValue,
+  onCapotHoistTypeChange,
 }: {
   step: ConfiguratorQuestion;
   stepIndex: number;
@@ -85,11 +87,14 @@ export default function QuestionCard({
   onPrevious: () => void;
   isCompleting?: boolean;
   hideNavigation?: boolean;
+  capotHoistTypeValue?: string;
+  onCapotHoistTypeChange?: (choiceId: string) => void;
 }) {
   const Icon = step.icon;
   const canGoNext = hasSelection(step, selectedChoice);
   const isLastStep = stepIndex === totalSteps - 1;
   const helpText = getCustomerHelp(step);
+  const usesCompactSelect = ["underBeamHeight", "protectionHoistType", "buttonBoxLength"].includes(step.id);
 
   return (
     <div className="rounded-[1.35rem] border border-slate-200 bg-white p-3.5 shadow-[0_12px_34px_rgba(15,23,42,0.07)]">
@@ -132,22 +137,30 @@ export default function QuestionCard({
         </div>
       )}
 
-      {step.id === "underBeamHeight" ? (
+      {usesCompactSelect ? (
         <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
           <label
-            htmlFor="under-beam-height"
+            htmlFor={`configurator-select-${step.id}`}
             className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500"
           >
-            Hauteur sous fer disponible
+            {step.id === "underBeamHeight"
+              ? "Hauteur sous fer"
+              : step.id === "protectionHoistType"
+                ? "Type de palan"
+                : "Longueur de câble"}
           </label>
           <select
-            id="under-beam-height"
+            id={`configurator-select-${step.id}`}
             value={typeof selectedChoice === "string" ? selectedChoice : ""}
             onChange={(event) => onSelect(event.target.value)}
             className="mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm font-black text-slate-950 outline-none transition focus:border-[#007f8f] focus:ring-2 focus:ring-[#007f8f]/15"
           >
             <option value="" disabled>
-              Choisissez une hauteur
+              {step.id === "underBeamHeight"
+                ? "Choisissez une hauteur"
+                : step.id === "protectionHoistType"
+                  ? "Choisissez le type de palan"
+                  : "Choisissez une longueur"}
             </option>
             {step.choices.map((choice) => (
               <option key={choice.id} value={choice.id}>
@@ -155,27 +168,46 @@ export default function QuestionCard({
               </option>
             ))}
           </select>
-          {typeof selectedChoice === "string" ? (
-            <p className="mt-2 text-[12px] font-semibold leading-5 text-slate-600">
-              {
-                step.choices.find(
-                  (choice) => choice.id === selectedChoice,
-                )?.description
-              }
-            </p>
-          ) : null}
         </div>
       ) : (
-        <div className="mt-3 grid grid-cols-1 gap-2">
-          {step.choices.map((choice) => (
-            <ChoiceCard
-              key={choice.id}
-              choice={choice}
-              selected={isChoiceSelected(selectedChoice, choice.id)}
-              onSelect={() => onSelect(choice.id)}
-            />
-          ))}
-        </div>
+        <>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            {step.choices.map((choice) => (
+              <ChoiceCard
+                key={choice.id}
+                choice={choice}
+                selected={isChoiceSelected(selectedChoice, choice.id)}
+                onSelect={() => onSelect(choice.id)}
+              />
+            ))}
+          </div>
+
+          {step.id === "outsideOptions" &&
+            Array.isArray(selectedChoice) &&
+            selectedChoice.includes("capot-protection") &&
+            onCapotHoistTypeChange ? (
+              <div className="mt-2 rounded-2xl border border-orange-200 bg-orange-50/70 p-3">
+                <label
+                  htmlFor="configurator-select-protectionHoistType-inline"
+                  className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600"
+                >
+                  Capot de protection · Type de palan
+                </label>
+                <select
+                  id="configurator-select-protectionHoistType-inline"
+                  value={capotHoistTypeValue ?? ""}
+                  onChange={(event) => onCapotHoistTypeChange(event.target.value)}
+                  className="mt-2 w-full rounded-xl border border-orange-200 bg-white px-3 py-3 text-sm font-black text-slate-950 outline-none transition focus:border-orange-500 focus:ring-2 focus:ring-orange-500/15"
+                >
+                  <option value="" disabled>
+                    Choisissez le type de palan
+                  </option>
+                  <option value="manual">Palan manuel</option>
+                  <option value="electric">Palan électrique</option>
+                </select>
+              </div>
+            ) : null}
+        </>
       )}
 
       {isCompleting && (

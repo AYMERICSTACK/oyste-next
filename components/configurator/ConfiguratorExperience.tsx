@@ -81,6 +81,18 @@ export default function ConfiguratorExperience() {
   );
 
   const currentStep = configuration.currentQuestion;
+  const visualConfiguration = useMemo(() => {
+    const visibleQuestionIds = new Set(
+      configuration.questions.slice(0, stepIndex + 1).map((question) => question.id),
+    );
+    const visualAnswers = Object.fromEntries(
+      Object.entries(configuration.answers).filter(([questionId]) =>
+        visibleQuestionIds.has(questionId),
+      ),
+    ) as Answers;
+
+    return { ...configuration, answers: visualAnswers };
+  }, [configuration, stepIndex]);
   const selectedChoice = answers[currentStep.id];
   const isLastStep = stepIndex >= configuration.questions.length - 1;
   const selectedFamily = typeof answers.potenceType === "string"
@@ -156,9 +168,20 @@ export default function ConfiguratorExperience() {
     setIsCompleting(false);
 
     if (!currentStep.multiple) {
-      window.setTimeout(() => {
-        if (!isLastStep) setStepIndex((current) => Math.min(current + 1, configuration.questions.length - 1));
-      }, 180);
+      const nextConfiguration = buildConfiguration({
+        answers: nextAnswers,
+        stepIndex,
+        selectedAccessoryIds: [],
+      });
+      const hasNextStep = stepIndex < nextConfiguration.questions.length - 1;
+
+      if (hasNextStep) {
+        window.setTimeout(() => {
+          setStepIndex((current) =>
+            Math.min(current + 1, nextConfiguration.questions.length - 1),
+          );
+        }, 180);
+      }
     }
   }
 
@@ -175,7 +198,19 @@ export default function ConfiguratorExperience() {
 
   function handleNext() {
     if (isLastStep) return revealSummary();
-    setStepIndex((current) => Math.min(current + 1, configuration.questions.length - 1));
+
+    const nextQuestion = configuration.questions[stepIndex + 1];
+    const shouldSkipProtectionHoistType =
+      currentStep.id === "outsideOptions" &&
+      nextQuestion?.id === "protectionHoistType" &&
+      typeof answers.protectionHoistType === "string";
+
+    setStepIndex((current) =>
+      Math.min(
+        current + (shouldSkipProtectionHoistType ? 2 : 1),
+        configuration.questions.length - 1,
+      ),
+    );
   }
 
   function handlePrevious() {
@@ -197,7 +232,7 @@ export default function ConfiguratorExperience() {
         onSelect={setStepIndex}
       />
 
-      <main className="flex h-[calc(100dvh-84px)] min-h-[700px] flex-col overflow-hidden bg-[#eef3f6]">
+      <main className="flex h-[calc(100dvh-108px)] min-h-[620px] flex-col overflow-hidden bg-[#eef3f6]">
         <ConfiguratorTopProgress
           questions={configuration.questions}
           answers={answers}
@@ -207,10 +242,10 @@ export default function ConfiguratorExperience() {
           onOpenAll={() => setStepsOpen(true)}
         />
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_420px]">
-          <section className="relative min-h-[440px] overflow-hidden bg-white xl:min-h-0">
+        <div className="grid min-h-0 flex-1 grid-cols-1 xl:grid-cols-[minmax(420px,0.85fr)_minmax(0,1.15fr)]">
+          <section className="relative order-2 min-h-[520px] overflow-hidden bg-white xl:min-h-0">
             {hasInteractive3D ? (
-              <Configurator3DViewer configuration={configuration} immersive />
+              <Configurator3DViewer configuration={visualConfiguration} immersive />
             ) : familyExperience ? (
               <ConfiguratorVisualFallback
                 configuration={configuration}
@@ -236,7 +271,7 @@ export default function ConfiguratorExperience() {
             ) : null}
           </section>
 
-          <aside className="flex min-h-0 flex-col border-l border-slate-200 bg-[#f6f8fa]">
+          <aside className="order-1 flex min-h-0 flex-col border-r border-slate-200 bg-[#f6f8fa]">
             <div ref={questionRef} className="min-h-0 flex-1 overflow-y-auto p-4 lg:p-5">
               <QuestionCard
                 step={currentStep}
@@ -248,6 +283,20 @@ export default function ConfiguratorExperience() {
                 onPrevious={handlePrevious}
                 isCompleting={isCompleting}
                 hideNavigation
+                capotHoistTypeValue={
+                  typeof answers.protectionHoistType === "string"
+                    ? answers.protectionHoistType
+                    : undefined
+                }
+                onCapotHoistTypeChange={(choiceId) => {
+                  const nextAnswers = reconcileAnswers({
+                    ...answers,
+                    protectionHoistType: choiceId,
+                  });
+                  setAnswers(nextAnswers);
+                  setSelectedAccessoryIds([]);
+                  setIsCompleting(false);
+                }}
               />
 
               {configuration.warnings.map((warning) => (
@@ -261,7 +310,7 @@ export default function ConfiguratorExperience() {
           </aside>
         </div>
 
-        <footer className="z-30 shrink-0 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] lg:px-6">
+        <footer className="sticky bottom-0 z-30 shrink-0 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] lg:px-6">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-3">

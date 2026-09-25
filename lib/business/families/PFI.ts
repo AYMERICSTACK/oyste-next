@@ -96,6 +96,28 @@ export const PFI_DEFINITION: BusinessFamilyDefinition = {
       choices: pfiOutsideOptionChoices,
     },
     {
+      id: "protectionHoistType",
+      kind: "exclusive-choice",
+      title: "Quel type de palan souhaitez-vous protéger ?",
+      required: true,
+      help: "Le capot est adapté au type de palan installé sur la potence.",
+      showWhen: [{ answerId: "outsideOptions", includes: "capot-protection" }],
+      choices: [
+        {
+          id: "manual",
+          label: "Palan manuel",
+          description: "Capot 2 faces + toiture pour palan manuel.",
+          actions: [{ type: "add", ref: "CAPOTPM" }],
+        },
+        {
+          id: "electric",
+          label: "Palan électrique",
+          description: "Capot 2 faces + toiture pour palan électrique à chaîne.",
+          actions: [{ type: "add", ref: "CAPOTPE" }],
+        },
+      ],
+    },
+    {
       id: "calculationNote",
       kind: "boolean-option",
       title: "Souhaitez-vous ajouter une note de calcul ?",
@@ -203,6 +225,14 @@ export const PFI_DEFINITION: BusinessFamilyDefinition = {
             "Commande filaire suspendue au palan, simple et directe.",
         },
       ],
+    },
+    {
+      id: "buttonBoxLength",
+      kind: "exclusive-choice",
+      title: "Quelle longueur de câble souhaitez-vous pour la boîte à boutons ?",
+      required: true,
+      showWhen: [{ answerId: "hoistCommand", equals: "button-box" }],
+      help: "Choisissez une longueur de câble de commande entre 1 et 15 m.",
     },
     {
       id: "hoistOptions",

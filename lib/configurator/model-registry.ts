@@ -125,6 +125,7 @@ export function getConfiguratorModel(state?: Configurator3DState) {
 
   if (
     state.hoistType === "electric" &&
+    state.trolleyMovement &&
     state.trolleyMovement !== "motorized"
   ) {
     return (

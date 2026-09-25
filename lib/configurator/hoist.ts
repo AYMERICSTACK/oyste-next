@@ -79,6 +79,10 @@ function getLiftingHeightMeters(answers: Answers) {
   return parseNumber(answers.liftingHeight) ?? MANUAL_HOIST_BASE_HEIGHT_M;
 }
 
+function getButtonBoxLengthMeters(answers: Answers, liftingHeightM: number) {
+  return parseNumber(answers.buttonBoxLength) ?? Math.max(1, liftingHeightM - 0.5);
+}
+
 function normalizeRef(ref: string) {
   return ref.trim().toUpperCase();
 }
@@ -279,8 +283,8 @@ function buildElectricLineNotes(answers: Answers, liftingHeightM: number) {
   if (isButtonBoxCommand(answers)) {
     notes.push({
       label: "Longueur câble de commande",
-      value: `${Math.max(0, liftingHeightM - 0.5)} m`,
-      description: "Hauteur de levage - 0,5 m.",
+      value: `${getButtonBoxLengthMeters(answers, liftingHeightM)} m`,
+      description: "Longueur choisie pour la boîte à boutons.",
     });
   }
 
@@ -354,7 +358,9 @@ function getElectricQuantity({
       /CABLEBAB/,
     ])
   ) {
-    return isButtonBoxCommand(answers) ? Math.max(0, liftingHeightM - 0.5) : 0;
+    return isButtonBoxCommand(answers)
+      ? getButtonBoxLengthMeters(answers, liftingHeightM)
+      : 0;
   }
 
   if (
@@ -474,7 +480,7 @@ function buildElectricHoistDetail(answers: Answers): HoistDetail | undefined {
     chainBucketLabel:
       liftingHeightM <= 6 ? "Bac à chaîne 6 m" : "Bac à chaîne 15 m",
     controlCableLengthM: isButtonBoxCommand(answers)
-      ? Math.max(0, liftingHeightM - 0.5)
+      ? getButtonBoxLengthMeters(answers, liftingHeightM)
       : undefined,
     componentLines: lines,
     notes: buildElectricLineNotes(answers, liftingHeightM),
