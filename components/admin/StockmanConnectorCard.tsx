@@ -35,7 +35,8 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
       sessionHealth.diagnostic.decryptOk &&
       sessionHealth.diagnostic.source === "DATABASE",
   );
-  const canTestReference = Boolean(sessionHealth?.valid || persistentSessionReady);
+  const sessionReady = Boolean(sessionHealth?.valid || persistentSessionReady);
+  const canTestReference = sessionReady;
 
   async function refreshSessionHealth() {
     setCheckingSession(true);
@@ -156,10 +157,10 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
           </div>
         </div>
         <div className={`inline-flex items-center gap-2 self-start rounded-full px-3 py-2 text-[10px] font-black uppercase tracking-[0.12em] ${
-          sessionHealth?.valid ? "bg-emerald-50 text-emerald-700" : sessionHealth ? "bg-amber-50 text-amber-700" : status.configured ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700"
+          sessionReady ? "bg-emerald-50 text-emerald-700" : sessionHealth ? "bg-amber-50 text-amber-700" : status.configured ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700"
         }`}>
-          {sessionHealth?.valid ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-          {checkingSession ? "Vérification…" : sessionHealth?.valid ? "Session revendeur active" : sessionHealth?.state === "expired" ? "Session expirée" : status.configured ? "Session à vérifier" : "Configuration requise"}
+          {sessionReady ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
+          {checkingSession ? "Vérification…" : sessionReady ? "Session revendeur active" : sessionHealth?.state === "expired" ? "Session expirée" : status.configured ? "Session à vérifier" : "Configuration requise"}
         </div>
       </div>
 
@@ -189,7 +190,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
                 <p className="mt-2 text-[10px] leading-4 text-slate-400">Empreintes SHA-256 tronquées : elles permettent uniquement de comparer les environnements sans afficher les secrets.</p>
               </div>
             ) : null}
-            {(!sessionHealth?.valid || authJobId) ? (
+            {(!sessionReady || authJobId) ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="font-black text-amber-900">Connexion revendeur requise</p>
                 <p className="mt-1 text-[11px] leading-5 text-amber-800">OYSTE peut ouvrir Chromium sur ce poste. Connectez-vous manuellement à Stockman : aucun mot de passe n’est enregistré par OYSTE.</p>
