@@ -30,6 +30,13 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
   const [authJobId, setAuthJobId] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
 
+  const persistentSessionReady = Boolean(
+    sessionHealth?.diagnostic?.dbFound &&
+      sessionHealth.diagnostic.decryptOk &&
+      sessionHealth.diagnostic.source === "DATABASE",
+  );
+  const canTestReference = Boolean(sessionHealth?.valid || persistentSessionReady);
+
   async function refreshSessionHealth() {
     setCheckingSession(true);
     try {
@@ -202,7 +209,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
           </div>
           <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Référence fournisseur</span><input value={reference} onChange={(event) => setReference(event.target.value.toUpperCase())} placeholder="SC102N" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" /></label>
           <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">URL de la fiche Stockman</span><input type="url" value={productUrl} onChange={(event) => setProductUrl(event.target.value)} placeholder="https://www.stockman.fr/fr/..." className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" /></label>
-          <button type="submit" disabled={loading || (sessionHealth ? !sessionHealth.valid : !status.configured)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3.5 text-xs font-black text-white shadow-lg shadow-cyan-900/10 transition hover:bg-[#006c79] disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="submit" disabled={loading || (sessionHealth ? !canTestReference : !status.configured)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3.5 text-xs font-black text-white shadow-lg shadow-cyan-900/10 transition hover:bg-[#006c79] disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{loading ? "Lecture de la fiche…" : "Tester cette référence"}
           </button>
           {message && <div className="flex gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"><AlertCircle size={18} className="mt-0.5 shrink-0" /><span>{message}</span></div>}
