@@ -100,6 +100,20 @@ export async function inspectSavedStockmanSession() {
     };
   }
 
+  // Sur Vercel, ce GET sert d'abord a diagnostiquer la persistance.
+  // Ne pas charger Playwright ici : le navigateur n'est pas necessaire pour
+  // confirmer que la session existe en base et qu'elle est dechiffrable.
+  if (process.env.VERCEL) {
+    return {
+      state: "missing" as const,
+      valid: false,
+      message: persistedState
+        ? "Session persistante lisible. Test navigateur non execute sur Vercel."
+        : "Session locale detectee, mais le test navigateur n'est pas execute sur Vercel.",
+      diagnostic: diagnosticPayload,
+    };
+  }
+
   const chromium = await loadChromium();
   const browser = await chromium.launch({
     headless: true,
