@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { getStockmanAuthFile, stockmanAuthFileExists } from "@/lib/suppliers/stockman/browser";
+import { inspectStockmanSessionPersistence, loadStockmanSessionState, saveStockmanSessionState } from "@/lib/suppliers/stockman/session-store";
 
 const STOCKMAN_HOME = "https://www.stockman.fr/";
 const TEST_URL = "https://www.stockman.fr/fr/diables-et-chariots-de-manutention--6/chariots-et-servantes--11/--1/chariot-acier-1000-x-700-mm-modulable-1-ou-2-timons-300-a-500-kg--CHM.aspx";
@@ -24,6 +25,11 @@ type GlobalAuthJobs = typeof globalThis & {
 const globalJobs = globalThis as GlobalAuthJobs;
 const jobs = globalJobs.__oysteStockmanAuthJobs ?? new Map<string, AuthJob>();
 globalJobs.__oysteStockmanAuthJobs = jobs;
+
+async function loadChromium() {
+  const { chromium } = await import("playwright");
+  return chromium;
+}
 
 async function cleanupExpiredJobs() {
   const now = Date.now();
@@ -61,21 +67,39 @@ export async function checkCommercialAccess(page: Page) {
   }, TEST_REFERENCE);
 }
 
-async function loadChromium() {
-  const { chromium } = await import("playwright");
-  return chromium;
-}
-
 export async function inspectSavedStockmanSession() {
-  if (!(await stockmanAuthFileExists())) {
+  const [diagnostic, hasLocalFile] = await Promise.all([
+    inspectStockmanSessionPersistence(),
+    stockmanAuthFileExists(),
+  ]);
+
+  const source = diagnostic.dbFound
+    ? ("DATABASE" as const)
+    : hasLocalFile
+      ? ("FICHIER LOCAL" as const)
+      : ("AUCUNE" as const);
+
+  const diagnosticPayload = {
+    ...diagnostic,
+    source,
+  };
+
+  let persistedState: Awaited<ReturnType<typeof loadStockmanSessionState>> = null;
+  if (diagnostic.dbFound && diagnostic.decryptOk) {
+    persistedState = await loadStockmanSessionState();
+  }
+
+  if (!persistedState && !hasLocalFile) {
     return {
       state: "missing" as const,
       valid: false,
-      message: "Aucune session Stockman enregistrée.",
+      message: diagnostic.dbCheckOk
+        ? "Aucune session Stockman utilisable n’est disponible."
+        : "La persistance Stockman n’a pas pu être interrogée.",
+      diagnostic: diagnosticPayload,
     };
   }
 
-  const authFile = getStockmanAuthFile();
   const chromium = await loadChromium();
   const browser = await chromium.launch({
     headless: true,
@@ -83,7 +107,9 @@ export async function inspectSavedStockmanSession() {
   });
 
   try {
-    const context = await browser.newContext({ storageState: authFile });
+    const context = await browser.newContext({
+      storageState: persistedState ?? getStockmanAuthFile(),
+    });
     try {
       const page = await context.newPage();
       const access = await checkCommercialAccess(page);
@@ -91,10 +117,12 @@ export async function inspectSavedStockmanSession() {
       return {
         state: valid ? ("valid" as const) : ("expired" as const),
         valid,
+        source: persistedState ? ("persistent" as const) : ("local-file" as const),
         message: valid
           ? `Session revendeur active · ${TEST_REFERENCE} : stock ${access.stockText || "détecté"}, prix ${access.priceText || "détecté"}.`
           : "La session Stockman existe mais l’accès revendeur a expiré. Reconnectez-vous.",
         access,
+        diagnostic: diagnosticPayload,
       };
     } finally {
       await context.close().catch(() => undefined);
@@ -104,6 +132,7 @@ export async function inspectSavedStockmanSession() {
       state: "expired" as const,
       valid: false,
       message: error instanceof Error ? error.message : "La session Stockman n’a pas pu être vérifiée.",
+      diagnostic: diagnosticPayload,
     };
   } finally {
     await browser.close().catch(() => undefined);
@@ -154,7 +183,11 @@ export async function confirmInteractiveStockmanLogin(jobId: string) {
 
   const authFile = getStockmanAuthFile();
   await mkdir(path.dirname(authFile), { recursive: true });
-  await job.context.storageState({ path: authFile });
+  const storageState = await job.context.storageState({ path: authFile });
+
+  // La session est chiffrée puis persistée en base pour être utilisable
+  // par les runtimes éphémères (Vercel) sans commiter stockman-auth.json.
+  await saveStockmanSessionState(storageState);
 
   // On valide la session sauvegardée dans un nouveau contexte avant d'écraser
   // définitivement l'état de connexion côté interface.

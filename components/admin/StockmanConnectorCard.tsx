@@ -14,7 +14,18 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<StockmanSyncResult | null>(null);
-  const [sessionHealth, setSessionHealth] = useState<StockmanSessionHealth | null>(null);
+  type SessionHealthWithDiagnostic = StockmanSessionHealth & {
+    diagnostic?: {
+      dbFound: boolean;
+      decryptOk: boolean;
+      source: "DATABASE" | "FICHIER LOCAL" | "AUCUNE";
+      validatedAt: string | null;
+      dbFingerprint: string | null;
+      authSecretFingerprint: string | null;
+      dbCheckOk: boolean;
+    };
+  };
+  const [sessionHealth, setSessionHealth] = useState<SessionHealthWithDiagnostic | null>(null);
   const [checkingSession, setCheckingSession] = useState(false);
   const [authJobId, setAuthJobId] = useState<string | null>(null);
   const [authBusy, setAuthBusy] = useState(false);
@@ -156,7 +167,22 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
                 <RefreshCw size={13} className={checkingSession ? "animate-spin" : ""} /> Vérifier
               </button>
             </div>
-            {!sessionHealth?.valid ? (
+            {sessionHealth?.diagnostic ? (
+              <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+                <p className="font-black text-slate-900">Diagnostic session Stockman</p>
+                <div className="mt-2 grid gap-x-4 gap-y-1 text-[11px] sm:grid-cols-2">
+                  <DiagnosticLine label="Lecture DB" value={sessionHealth.diagnostic.dbCheckOk ? "OK" : "ÉCHEC"} />
+                  <DiagnosticLine label="Session DB trouvée" value={sessionHealth.diagnostic.dbFound ? "OUI" : "NON"} />
+                  <DiagnosticLine label="Déchiffrement réussi" value={sessionHealth.diagnostic.decryptOk ? "OUI" : "NON"} />
+                  <DiagnosticLine label="Source session" value={sessionHealth.diagnostic.source} />
+                  <DiagnosticLine label="Dernière validation" value={sessionHealth.diagnostic.validatedAt ? new Date(sessionHealth.diagnostic.validatedAt).toLocaleString("fr-FR") : "—"} />
+                  <DiagnosticLine label="Empreinte base" value={sessionHealth.diagnostic.dbFingerprint || "INDISPONIBLE"} mono />
+                  <DiagnosticLine label="Empreinte AUTH_SECRET" value={sessionHealth.diagnostic.authSecretFingerprint || "INDISPONIBLE"} mono />
+                </div>
+                <p className="mt-2 text-[10px] leading-4 text-slate-400">Empreintes SHA-256 tronquées : elles permettent uniquement de comparer les environnements sans afficher les secrets.</p>
+              </div>
+            ) : null}
+            {(!sessionHealth?.valid || authJobId) ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="font-black text-amber-900">Connexion revendeur requise</p>
                 <p className="mt-1 text-[11px] leading-5 text-amber-800">OYSTE peut ouvrir Chromium sur ce poste. Connectez-vous manuellement à Stockman : aucun mot de passe n’est enregistré par OYSTE.</p>
@@ -211,4 +237,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
 
 function Result({ icon: Icon, label, value }: { icon: typeof Warehouse; label: string; value: string }) {
   return <div className="rounded-xl border border-slate-200 bg-white p-4"><Icon size={17} className="text-[#007f8f]" /><p className="mt-3 text-lg font-black text-slate-950">{value}</p><p className="mt-1 text-[9px] font-black uppercase tracking-[0.14em] text-slate-400">{label}</p></div>;
+}
+function DiagnosticLine({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return <div className="flex items-center justify-between gap-3 border-b border-slate-100 py-1"><span className="text-slate-500">{label}</span><strong className={`text-right text-slate-800 ${mono ? "font-mono" : ""}`}>{value}</strong></div>;
 }
