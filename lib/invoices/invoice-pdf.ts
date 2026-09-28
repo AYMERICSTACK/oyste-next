@@ -225,7 +225,7 @@ export async function generateInvoicePdf(invoiceId: string) {
   const gap = 18;
   const cardWidth = (CONTENT_WIDTH - gap) / 2;
   const cardTop = y;
-  const cardHeight = 146;
+  const cardHeight = 168;
 
   page!.drawRectangle({
     x: MARGIN_X,
@@ -276,6 +276,8 @@ export async function generateInvoicePdf(invoiceId: string) {
     invoice.sellerSiret ? `SIRET : ${invoice.sellerSiret}` : "",
     invoice.sellerSiren ? `SIREN : ${invoice.sellerSiren}` : "",
     invoice.sellerVatNumber ? `TVA : ${invoice.sellerVatNumber}` : "",
+    "NAF : 2822Z",
+    "Email : contact@oyste.fr",
   ].filter(Boolean);
   drawLines(page!, sellerLines, {
     x: sellerX,
@@ -492,17 +494,19 @@ export async function generateInvoicePdf(invoiceId: string) {
   const totalsW = 210;
   page!.drawRectangle({
     x: totalsX,
-    y: y - 92,
+    y: y - 120,
     width: totalsW,
-    height: 102,
+    height: 130,
     color: COLORS.light,
     borderColor: COLORS.border,
     borderWidth: 0.7,
   });
+  const remainingDue = invoice.paymentStatus === "PAID" ? 0 : invoice.totalTtc;
   const totalRows = [
     ["Total HT", money(invoice.subtotalHt, invoice.currency)],
     ["TVA", money(invoice.taxAmount, invoice.currency)],
     ["TOTAL TTC", money(invoice.totalTtc, invoice.currency)],
+    ["Reste à payer", money(remainingDue, invoice.currency)],
   ];
   totalRows.forEach(([label, value], index) => {
     const rowY = y - 18 - index * 28;
@@ -525,7 +529,7 @@ export async function generateInvoicePdf(invoiceId: string) {
       color: index === 2 ? COLORS.orange : COLORS.navy,
     });
   });
-  y -= 120;
+  y -= 148;
 
   ensureSpace(85);
   page!.drawText("INFORMATIONS", {
