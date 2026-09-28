@@ -749,3 +749,11 @@ model StockmanImportDraft {
   @@index([status])
   @@index([preparedAt])
 }
+
+model StockmanAuthSession {
+  id             String   @id
+  encryptedState String   @db.Text
+  validatedAt    DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
