@@ -1,15 +1,16 @@
 import { access } from "node:fs/promises";
 import path from "node:path";
 
-import type { Browser, BrowserContext } from "playwright";
+import type { Browser, BrowserContext } from "playwright-core";
+import { loadStockmanSessionState } from "@/lib/suppliers/stockman/session-store";
 
 const DEFAULT_AUTH_FILE = "stockman-auth.json";
 
 export function getStockmanAuthFile() {
-  // Un chemin relatif est volontairement conservé tel quel.
-  // Node le résoudra par rapport au cwd au runtime.
-  // Cela évite à Turbopack de générer un pattern dynamique
-  // basé sur process.cwd() pendant le build Vercel.
+  // Un chemin relatif est volontairement conserve tel quel.
+  // Node le resoudra par rapport au cwd au runtime.
+  // Cela evite a Turbopack de generer un pattern dynamique
+  // base sur process.cwd() pendant le build Vercel.
   return process.env.STOCKMAN_AUTH_FILE?.trim() || DEFAULT_AUTH_FILE;
 }
 
@@ -22,32 +23,58 @@ export async function stockmanAuthFileExists() {
   }
 }
 
+async function launchStockmanBrowser(): Promise<Browser> {
+  const configuredExecutablePath = process.env.STOCKMAN_CHROMIUM_PATH?.trim();
+
+  if (process.env.VERCEL) {
+    // Vercel ne dispose pas du Chromium telecharge par le package Playwright.
+    // On conserve l'API Playwright, mais on lui fournit un Chromium Linux
+    // adapte au runtime serverless.
+    const [{ chromium: playwrightChromium }, { default: serverlessChromium }] =
+      await Promise.all([
+        import("playwright-core"),
+        import("@sparticuz/chromium"),
+      ]);
+
+    serverlessChromium.setGraphicsMode = false;
+
+    return playwrightChromium.launch({
+      args: serverlessChromium.args,
+      executablePath:
+        configuredExecutablePath || (await serverlessChromium.executablePath()),
+      headless: true,
+    });
+  }
+
+  // En local, on garde le navigateur Playwright installe sur le poste.
+  const { chromium } = await import("playwright");
+
+  return chromium.launch({
+    headless: process.env.STOCKMAN_HEADLESS !== "false",
+    executablePath: configuredExecutablePath || undefined,
+  });
+}
+
 export async function openStockmanBrowser(): Promise<{
   browser: Browser;
   context: BrowserContext;
 }> {
   const authFile = getStockmanAuthFile();
+  const persistedState = await loadStockmanSessionState();
+  const hasLocalFile = await stockmanAuthFileExists();
 
-  if (!(await stockmanAuthFileExists())) {
+  if (!persistedState && !hasLocalFile) {
     throw new Error(
-      `Session Stockman introuvable. Lancez "npm run stockman:auth" pour créer ${path.basename(
+      `Session Stockman introuvable. Lancez "npm run stockman:auth" ou la reconnexion depuis le BO local pour creer ${path.basename(
         authFile,
-      )} avec une vraie session revendeur.`,
+      )}.`,
     );
   }
 
-  // Chargement uniquement lorsque Stockman est réellement utilisé.
-  // /admin/fournisseurs ne charge donc pas Playwright simplement
-  // pour afficher le statut fournisseur.
-  const { chromium } = await import("playwright");
-
-  const browser = await chromium.launch({
-    headless: process.env.STOCKMAN_HEADLESS !== "false",
-    executablePath: process.env.STOCKMAN_CHROMIUM_PATH?.trim() || undefined,
-  });
+  const browser = await launchStockmanBrowser();
 
   const context = await browser.newContext({
-    storageState: authFile,
+    storageState: persistedState ?? authFile,
   });
 
   return { browser, context };
