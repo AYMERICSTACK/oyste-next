@@ -5,11 +5,20 @@ const nextConfig: NextConfig = {
   // Les garder externes evite que Turbopack n'en perde des ressources internes.
   serverExternalPackages: ["@sparticuz/chromium", "playwright-core", "playwright"],
 
-  // @sparticuz/chromium resout ses archives Brotli dynamiquement depuis bin/.
-  // Le tracer Next ne peut pas toujours inferer ces fichiers tout seul.
+  // Chromium et Playwright resolvent certains fichiers runtime dynamiquement.
+  // Le tracer Next ne peut pas toujours les inferer automatiquement.
   outputFileTracingIncludes: {
     "/api/admin/suppliers/stockman/*": [
       "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/playwright-core/browsers.json",
+    ],
+    "/api/admin/suppliers/pricing": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/playwright-core/browsers.json",
+    ],
+    "/api/admin/catalogue/\\[id\\]/stockman/sync": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/playwright-core/browsers.json",
     ],
   },
 };
