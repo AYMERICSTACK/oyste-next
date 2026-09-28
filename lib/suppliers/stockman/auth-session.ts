@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import path from "node:path";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright";
 import { getStockmanAuthFile, stockmanAuthFileExists } from "@/lib/suppliers/stockman/browser";
 
 const STOCKMAN_HOME = "https://www.stockman.fr/";
@@ -61,6 +61,11 @@ export async function checkCommercialAccess(page: Page) {
   }, TEST_REFERENCE);
 }
 
+async function loadChromium() {
+  const { chromium } = await import("playwright");
+  return chromium;
+}
+
 export async function inspectSavedStockmanSession() {
   if (!(await stockmanAuthFileExists())) {
     return {
@@ -71,6 +76,7 @@ export async function inspectSavedStockmanSession() {
   }
 
   const authFile = getStockmanAuthFile();
+  const chromium = await loadChromium();
   const browser = await chromium.launch({
     headless: true,
     executablePath: process.env.STOCKMAN_CHROMIUM_PATH?.trim() || undefined,
@@ -113,6 +119,7 @@ export async function startInteractiveStockmanLogin() {
     );
   }
 
+  const chromium = await loadChromium();
   const browser = await chromium.launch({
     headless: false,
     executablePath: process.env.STOCKMAN_CHROMIUM_PATH?.trim() || undefined,
