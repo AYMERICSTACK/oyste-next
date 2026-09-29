@@ -32,6 +32,8 @@ type CatalogueFilter = `catalogue:${StockmanCatalogueState}`;
 type Filter = "all" | StockmanCatalogMatch["status"] | MissingFilter | CatalogueFilter;
 
 export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boolean }) {
+  const [persistentSessionReady, setPersistentSessionReady] = useState(false);
+  const effectiveEnabled = enabled || persistentSessionReady;
   const [seedUrl, setSeedUrl] = useState("https://www.stockman.fr/");
   const [scan, setScan] = useState<StockmanCatalogDiscovery | null>(null);
   const [loading, setLoading] = useState(false);
@@ -76,9 +78,37 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
   const [auditingDuplicateStructure, setAuditingDuplicateStructure] = useState(false);
   const [restoringPersistentAudit, setRestoringPersistentAudit] = useState(true);
   const [persistentAuditDate, setPersistentAuditDate] = useState<string | null>(null);
+  const [referenceDiagnosticQuery, setReferenceDiagnosticQuery] = useState("P476, C30 PINCES, C50 PINCES, P1604-05");
 
   useEffect(() => {
-    if (!enabled) { setRestoringPersistentAudit(false); return; }
+    if (enabled) {
+      setPersistentSessionReady(false);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await fetch("/api/admin/suppliers/stockman/auth", { cache: "no-store" });
+        const payload = await response.json().catch(() => ({}));
+        if (cancelled || !response.ok) return;
+        setPersistentSessionReady(Boolean(
+          payload?.valid ||
+          (payload?.diagnostic?.dbFound &&
+            payload?.diagnostic?.decryptOk &&
+            payload?.diagnostic?.source === "DATABASE"),
+        ));
+      } catch {
+        if (!cancelled) setPersistentSessionReady(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!effectiveEnabled) { setRestoringPersistentAudit(false); return; }
+    setRestoringPersistentAudit(true);
     let cancelled = false;
     (async () => {
       try {
@@ -108,7 +138,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
       }
     })();
     return () => { cancelled = true; };
-  }, [enabled]);
+  }, [effectiveEnabled]);
 
   const visible = useMemo(() => {
     if (!scan) return [];
@@ -123,6 +153,45 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
     }
     return scan.matches.filter((item) => item.status === filter);
   }, [scan, filter]);
+
+  const referenceDiagnostics = useMemo(() => {
+    if (!scan) return [];
+    const normalize = (value: unknown) => String(value || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+    const terms = referenceDiagnosticQuery
+      .split(/[,;\n]+/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+
+    return terms.map((term) => {
+      const key = normalize(term);
+      const matches = scan.matches.filter((item) => {
+        const fields = [item.reference, item.designation, item.sourceUrl, item.targetReference, item.equivalentReference];
+        return fields.some((field) => normalize(field).includes(key));
+      });
+      const auditRows = unresolvedAudit?.rows.filter((row) => {
+        const fields = [row.reference, row.designation, row.sourceUrl, row.candidate?.targetReference, row.candidate?.targetName];
+        return fields.some((field) => normalize(field).includes(key));
+      }) ?? [];
+      const pageTraces = (scan.pageTraces ?? []).filter((trace) => {
+        const fields = [
+          trace.requestedUrl,
+          trace.finalUrl,
+          trace.discoveryLabel,
+          trace.title,
+          trace.heading,
+          trace.bodySample,
+          ...trace.commercialRows.flatMap((row) => [row.reference, row.text]),
+          ...trace.extractedReferences,
+        ];
+        return fields.some((field) => normalize(field).includes(key));
+      });
+      const productLinkTraces = (scan.productLinkTraces ?? []).filter((trace) => {
+        const fields = [trace.rawHref, trace.normalizedUrl, trace.anchorText, trace.pathname, trace.legacyReference, trace.rejectionReason];
+        return fields.some((field) => normalize(field).includes(key));
+      });
+      return { term, matches, auditRows, pageTraces, productLinkTraces };
+    });
+  }, [scan, referenceDiagnosticQuery, unresolvedAudit]);
 
   const breadcrumbChangePreview = useMemo(() => {
     const rows = Array.isArray(breadcrumbAudit?.rows) ? breadcrumbAudit.rows : [];
@@ -1042,7 +1111,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             <button
               type="button"
               onClick={() => void runRebuildAudit()}
-              disabled={!enabled || auditingRebuild || loading}
+              disabled={!effectiveEnabled || auditingRebuild || loading}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-amber-600 px-5 py-3 text-xs font-black text-white disabled:opacity-50"
             >
               {auditingRebuild ? <LoaderCircle size={16} className="animate-spin" /> : <Database size={16} />}
@@ -1142,7 +1211,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                 Supprime uniquement l'ancien catalogue rattaché à STOCKMAN. Le référentiel vivant reste intact et servira à reconstruire le catalogue depuis l'intranet.
               </p>
             </div>
-            <button type="button" onClick={() => void checkCleanRebuild()} disabled={!enabled || checkingCleanRebuild || executingCleanRebuild}
+            <button type="button" onClick={() => void checkCleanRebuild()} disabled={!effectiveEnabled || checkingCleanRebuild || executingCleanRebuild}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-5 py-3 text-xs font-black text-red-700 disabled:opacity-50">
               {checkingCleanRebuild ? <LoaderCircle size={16} className="animate-spin" /> : <TriangleAlert size={16} />}
               {checkingCleanRebuild ? "Contrôle…" : "Contrôler avant suppression"}
@@ -1167,7 +1236,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                   className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-black outline-none focus:border-red-400" />
               </label>
               <button type="button" onClick={() => void executeCleanRebuild()}
-                disabled={!enabled || executingCleanRebuild || rebuildConfirmation !== "REBUILD STOCKMAN"}
+                disabled={!effectiveEnabled || executingCleanRebuild || rebuildConfirmation !== "REBUILD STOCKMAN"}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">
                 {executingCleanRebuild ? <LoaderCircle size={16} className="animate-spin" /> : <Database size={16} />}
                 {executingCleanRebuild ? "Nettoyage…" : "Supprimer l'ancien STOCKMAN"}
@@ -1187,7 +1256,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             <button
               type="button"
               onClick={() => void checkLivingRebuild()}
-              disabled={!enabled || checkingLivingRebuild || executingLivingRebuild || loading}
+              disabled={!effectiveEnabled || checkingLivingRebuild || executingLivingRebuild || loading}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-white px-5 py-3 text-xs font-black text-[#007f8f] disabled:opacity-50"
             >
               {checkingLivingRebuild ? <LoaderCircle size={16} className="animate-spin" /> : <PackageSearch size={16} />}
@@ -1229,7 +1298,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                     <button
                       type="button"
                       onClick={() => void diagnoseRemainingLivingRebuild()}
-                      disabled={!enabled || diagnosingRemaining || executingLivingRebuild}
+                      disabled={!effectiveEnabled || diagnosingRemaining || executingLivingRebuild}
                       className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-violet-700 px-5 py-3 text-xs font-black text-white disabled:opacity-40"
                     >
                       {diagnosingRemaining ? <LoaderCircle size={16} className="animate-spin" /> : <ScanSearch size={16} />}
@@ -1325,7 +1394,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                     <button
                       type="button"
                       onClick={() => void diagnoseBlockedLivingRebuild()}
-                      disabled={!enabled || diagnosingLivingRebuild || executingLivingRebuild}
+                      disabled={!effectiveEnabled || diagnosingLivingRebuild || executingLivingRebuild}
                       className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-xs font-black text-white disabled:opacity-40"
                     >
                       {diagnosingLivingRebuild ? <LoaderCircle size={16} className="animate-spin" /> : <ScanSearch size={16} />}
@@ -1390,7 +1459,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                 <button
                   type="button"
                   onClick={() => void retryBlockedLivingRebuild()}
-                  disabled={!enabled || executingLivingRebuild || Number(livingRebuild?.blockedReferences || 0) === 0}
+                  disabled={!effectiveEnabled || executingLivingRebuild || Number(livingRebuild?.blockedReferences || 0) === 0}
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-5 py-3 text-xs font-black text-amber-900 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <RefreshCcw size={16} />
@@ -1399,7 +1468,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                 <button
                   type="button"
                   onClick={() => void executeLivingRebuild()}
-                  disabled={!enabled || executingLivingRebuild || livingRebuild.partiallyLinkedFamilies > 0 || livingRebuild.remainingFamilies === 0}
+                  disabled={!effectiveEnabled || executingLivingRebuild || livingRebuild.partiallyLinkedFamilies > 0 || livingRebuild.remainingFamilies === 0}
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   {executingLivingRebuild ? <LoaderCircle size={16} className="animate-spin" /> : <Sparkles size={16} />}
@@ -1422,7 +1491,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             <button
               type="button"
               onClick={() => void runClassificationAudit()}
-              disabled={!enabled || auditingClassification}
+              disabled={!effectiveEnabled || auditingClassification}
               className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-indigo-700 px-5 py-3 text-xs font-black text-white disabled:opacity-40"
             >
               {auditingClassification ? <LoaderCircle size={16} className="animate-spin" /> : <ClipboardCheck size={16} />}
@@ -1451,7 +1520,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                     </p>
                   </div>
                   <div className="flex shrink-0 flex-wrap gap-2">
-                    <button type="button" onClick={() => void runBreadcrumbDebug()} disabled={!enabled || debuggingBreadcrumb}
+                    <button type="button" onClick={() => void runBreadcrumbDebug()} disabled={!effectiveEnabled || debuggingBreadcrumb}
                       className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-xs font-black text-white disabled:opacity-40">
                       {debuggingBreadcrumb ? <LoaderCircle size={16} className="animate-spin" /> : <ScanSearch size={16} />}
                       {debuggingBreadcrumb ? "Diagnostic LFC300…" : "Diagnostiquer LFC300"}
@@ -1459,7 +1528,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
                   <button
                     type="button"
                     onClick={() => void runBreadcrumbAudit()}
-                    disabled={!enabled || auditingBreadcrumbs}
+                    disabled={!effectiveEnabled || auditingBreadcrumbs}
                     className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-sky-700 px-5 py-3 text-xs font-black text-white disabled:opacity-40"
                   >
                     {auditingBreadcrumbs ? <LoaderCircle size={16} className="animate-spin" /> : <ScanSearch size={16} />}
@@ -1851,7 +1920,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">URL de départ</span>
             <input value={seedUrl} onChange={(event) => setSeedUrl(event.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" />
           </label>
-          <button type="button" onClick={() => void runScan()} disabled={!enabled || loading || linking || restoringPersistentAudit} className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3.5 text-xs font-black text-white disabled:opacity-50">
+          <button type="button" onClick={() => void runScan()} disabled={!effectiveEnabled || loading || linking || restoringPersistentAudit} className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3.5 text-xs font-black text-white disabled:opacity-50">
             {loading ? <LoaderCircle size={17} className="animate-spin" /> : <ScanSearch size={17} />}
             {loading ? "Audit exhaustivité en cours…" : restoringPersistentAudit ? "Restauration du dernier audit…" : "Auditer tout l’intranet STOCKMAN"}
           </button>
@@ -1896,6 +1965,140 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
               <Metric label="Brouillons d’import préparés" value={scan.differential.preparedForImport ?? 0} tone="info" />
             </div>
           ) : null}
+
+          <div className="mt-4 rounded-2xl border border-cyan-200 bg-cyan-50/50 p-4 md:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex-1">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-cyan-900">Diagnostic ciblé des références · lecture seule</p>
+                <p className="mt-1 text-[11px] font-bold leading-5 text-cyan-800">
+                  Recherche dans les références extraites, les fiches réellement ouvertes ET les liens produits détectés pendant l’exploration. La V3 indique si le lien a été accepté, traité comme navigation ou rejeté par le filtre URL. Aucune donnée n’est modifiée.
+                </p>
+                <input
+                  value={referenceDiagnosticQuery}
+                  onChange={(event) => setReferenceDiagnosticQuery(event.target.value)}
+                  placeholder="P476, C30 PINCES, C50 PINCES, P1604-05"
+                  className="mt-3 w-full rounded-xl border border-cyan-200 bg-white px-4 py-3 text-sm font-bold text-slate-900 outline-none focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                />
+                <p className="mt-1 text-[10px] font-bold text-slate-500">Sépare plusieurs recherches par une virgule. Les tirets, espaces et majuscules/minuscules sont ignorés.</p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3">
+              {referenceDiagnostics.map(({ term, matches, auditRows, pageTraces, productLinkTraces }) => (
+                <div key={term} className="rounded-xl border border-cyan-100 bg-white p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-black text-slate-950">{term}</p>
+                    <span className={`rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-wide ${matches.length ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+                      {matches.length ? `${matches.length} occurrence(s) extraite(s)` : "Non extraite par le scan"}
+                    </span>
+                  </div>
+                  {matches.length ? (
+                    <div className="mt-2 grid gap-2">
+                      {matches.slice(0, 12).map((item) => {
+                        const audit = auditRows.find((row) => row.reference.trim().toUpperCase() === item.reference.trim().toUpperCase());
+                        return (
+                          <div key={`${term}-${item.reference}-${item.sourceUrl}`} className="rounded-lg bg-slate-50 p-3 text-[11px] font-bold leading-5 text-slate-600">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <a href={item.sourceUrl} target="_blank" rel="noreferrer" className="font-black text-[#007f8f] hover:underline">{item.reference}</a>
+                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${catalogueStateClass(item.catalogueState ?? "to_review")}`}>{item.catalogueState ? catalogueStateLabel(item.catalogueState) : "À vérifier"}</span>
+                              <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${statusClass(item.status)}`}>{statusLabel(item.status)}</span>
+                            </div>
+                            <p>{item.designation || "Sans désignation"}</p>
+                            {item.targetReference ? <p className="text-emerald-700">Cible OYSTE : {item.targetReference}{item.targetName ? ` · ${item.targetName}` : ""}</p> : null}
+                            {audit ? <p className="text-violet-700">Résolution finale : {audit.decision === "to_import" ? "À importer" : audit.decision === "existing" ? "Déjà présente / structure existante" : "Ambiguë"} · {audit.reason}</p> : null}
+                            <p className="break-all text-[10px] text-slate-400">{item.sourceUrl}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] font-bold leading-5 text-amber-800">
+                      Aucune occurrence dans les références commerciales extraites du dernier scan.
+                    </p>
+                  )}
+                  {productLinkTraces.length ? (
+                    <div className="mt-3 rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-blue-800">
+                        Lien(s) produit détecté(s) pendant l’exploration : {productLinkTraces.length}
+                      </p>
+                      <div className="mt-2 grid gap-2">
+                        {productLinkTraces.slice(0, 12).map((trace, index) => {
+                          const opened = (scan.pageTraces ?? []).some((pageTrace) => pageTrace.requestedUrl === trace.normalizedUrl || pageTrace.finalUrl === trace.normalizedUrl);
+                          return (
+                            <div key={`${term}-link-${trace.normalizedUrl}-${index}`} className="rounded-lg bg-white p-3 text-[11px] font-bold leading-5 text-slate-600">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${trace.acceptedAsProduct ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>
+                                  {trace.acceptedAsProduct ? "Accepté comme fiche produit" : "Non accepté comme fiche produit"}
+                                </span>
+                                {trace.acceptedAsBrowse ? <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[9px] font-black uppercase text-cyan-700">Traité comme navigation</span> : null}
+                                <span className={`rounded-full px-2 py-0.5 text-[9px] font-black uppercase ${opened ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                                  {opened ? "Fiche ouverte" : "Pas ouverte comme fiche produit"}
+                                </span>
+                              </div>
+                              {trace.legacyReference ? <p className="mt-1 font-black text-orange-700">Référence legacy détectée dans l’URL : {trace.legacyReference}</p> : null}
+                              {trace.rejectionReason ? <p className="mt-1 font-black text-rose-700">Raison : {trace.rejectionReason}</p> : null}
+                              {trace.anchorText ? <p>Texte du lien : {trace.anchorText}</p> : null}
+                              <p className="break-all text-[10px] text-slate-500">href brut : {trace.rawHref || "(vide)"}</p>
+                              <a href={trace.normalizedUrl} target="_blank" rel="noreferrer" className="block break-all text-[10px] font-black text-[#007f8f] hover:underline">URL normalisée : {trace.normalizedUrl}</a>
+                              <p className="break-all text-[10px] text-slate-400">Page source : {trace.sourcePageUrl}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[10px] font-bold leading-5 text-slate-500">
+                      {(scan.productLinkTraces ?? []).length
+                        ? "Aucun lien produit candidat du nouvel audit ne contient ce terme."
+                        : "Les traces de classification des liens n’existent pas dans cet audit. Relancez une fois « Auditer tout l’intranet STOCKMAN » avec la V3."}
+                    </p>
+                  )}
+                  {pageTraces.length ? (
+                    <div className="mt-3 rounded-lg border border-violet-100 bg-violet-50/60 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-violet-800">
+                        Fiche(s) visitée(s) contenant ce terme : {pageTraces.length}
+                      </p>
+                      <div className="mt-2 grid gap-2">
+                        {pageTraces.slice(0, 8).map((trace, index) => (
+                          <div key={`${term}-trace-${trace.finalUrl}-${index}`} className="rounded-lg bg-white p-3 text-[11px] font-bold leading-5 text-slate-600">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[9px] font-black uppercase text-violet-800">Page visitée</span>
+                              {trace.extractedReferences.length ? (
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-700">
+                                  Réfs extraites : {trace.extractedReferences.join(", ")}
+                                </span>
+                              ) : (
+                                <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-black uppercase text-amber-800">Aucune réf extraite</span>
+                              )}
+                            </div>
+                            {trace.title ? <p className="mt-1 font-black text-slate-900">Titre : {trace.title}</p> : null}
+                            {trace.heading ? <p>En-tête : {trace.heading}</p> : null}
+                            {trace.discoveryLabel ? <p>Libellé de découverte : {trace.discoveryLabel}</p> : null}
+                            {trace.commercialRows.length ? (
+                              <div className="mt-1">
+                                <p className="font-black text-slate-700">Lignes commerciales détectées :</p>
+                                {trace.commercialRows.slice(0, 8).map((row, rowIndex) => (
+                                  <p key={`${trace.finalUrl}-row-${rowIndex}`} className="break-words text-[10px] text-slate-500">
+                                    {row.reference || "(sans ref)"} · {row.text}
+                                  </p>
+                                ))}
+                              </div>
+                            ) : null}
+                            <a href={trace.finalUrl} target="_blank" rel="noreferrer" className="mt-1 block break-all text-[10px] font-black text-[#007f8f] hover:underline">{trace.finalUrl}</a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[10px] font-bold leading-5 text-slate-500">
+                      {(scan.pageTraces ?? []).length
+                        ? "Aucune fiche visitée du nouvel audit ne contient ce terme dans son URL, titre, en-tête, extrait de page ou lignes commerciales."
+                        : "Les traces détaillées des fiches n’existent pas dans l’ancien snapshot PostgreSQL. Relancez une fois « Auditer tout l’intranet STOCKMAN » avec ce patch pour obtenir ce diagnostic, sans importer ni reconstruire."}
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
 
           {scan.differential && (scan.differential.toImport + scan.differential.toReview) > 0 ? (
             <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50/60 p-4 md:p-5">
