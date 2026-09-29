@@ -48,9 +48,31 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
   const failures = discovery.diagnostics.productPageFailures;
   const opened = discovery.diagnostics.productPagesOpened;
   const coverage = attempts > 0 ? opened / attempts : 0;
-  const disappearanceCheckSkipped = failures > 0 || coverage < 0.995;
+  const browseLimitReached = discovery.diagnostics.browseLimitReached === true;
+  const productLimitReached = discovery.diagnostics.productLimitReached === true;
+  const scanExplicitlyComplete = discovery.diagnostics.scanComplete === true;
+
+  // Sécurité catalogue : une absence n'est exploitable que si le scanner a
+  // explicitement prouvé que le parcours était complet. Une information de
+  // complétude absente, un plafond atteint ou une fiche non ouverte bloque
+  // toute désactivation, tout en laissant les références observées être
+  // créées, mises à jour ou réactivées normalement.
+  const disappearanceCheckSkipped = !scanExplicitlyComplete
+    || browseLimitReached
+    || productLimitReached
+    || failures > 0
+    || coverage < 0.995;
+
+  const incompleteReasons = [
+    !scanExplicitlyComplete ? "complétude non confirmée" : null,
+    browseLimitReached ? "plafond de navigation atteint" : null,
+    productLimitReached ? "plafond de fiches atteint" : null,
+    failures > 0 ? `${failures} échec(s) de fiche` : null,
+    coverage < 0.995 ? `${opened}/${attempts} fiches ouvertes` : null,
+  ].filter((reason): reason is string => Boolean(reason));
+
   const disappearanceCheckReason = disappearanceCheckSkipped
-    ? `Disparitions non évaluées : scan incomplet (${opened}/${attempts} fiches ouvertes, ${failures} échec(s)).`
+    ? `Disparitions non évaluées : scan non prouvé complet (${incompleteReasons.join(", ")}).`
     : undefined;
 
   const disappeared = disappearanceCheckSkipped
