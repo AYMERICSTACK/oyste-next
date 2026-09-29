@@ -161,6 +161,11 @@ export type StockmanCatalogScanDiagnostics = {
   browseQueueRemaining?: number;
   browseLimitReached?: boolean;
   productLimitReached?: boolean;
+  queueLimitReached?: boolean;
+  discardedUrls?: number;
+  unvisitedUrls?: number;
+  navigationErrors?: number;
+  productErrors?: number;
   scanComplete?: boolean;
 };
 
@@ -280,6 +285,29 @@ export type StockmanCatalogueDifferential = {
   preparedForImport: number;
 };
 
+export type StockmanProductPageTrace = {
+  requestedUrl: string;
+  finalUrl: string;
+  discoveryLabel: string | null;
+  title: string;
+  heading: string;
+  bodySample: string;
+  commercialRows: Array<{ reference: string; text: string }>;
+  extractedReferences: string[];
+};
+
+export type StockmanProductLinkTrace = {
+  sourcePageUrl: string;
+  rawHref: string;
+  normalizedUrl: string;
+  anchorText: string;
+  pathname: string;
+  acceptedAsProduct: boolean;
+  acceptedAsBrowse: boolean;
+  legacyReference: string | null;
+  rejectionReason: string | null;
+};
+
 export type StockmanCatalogDiscovery = {
   startedAt: string;
   finishedAt: string;
@@ -305,6 +333,8 @@ export type StockmanCatalogDiscovery = {
     alreadyLinked: number;
   };
   matches: StockmanCatalogMatch[];
+  pageTraces?: StockmanProductPageTrace[];
+  productLinkTraces?: StockmanProductLinkTrace[];
   warnings: string[];
   livingReference?: StockmanLivingReferenceStats;
   differential?: StockmanCatalogueDifferential;

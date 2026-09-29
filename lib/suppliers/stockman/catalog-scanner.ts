@@ -38,7 +38,35 @@ export type StockmanCatalogScanDiagnostics = {
   browseQueueRemaining: number;
   browseLimitReached: boolean;
   productLimitReached: boolean;
+  queueLimitReached: boolean;
+  discardedUrls: number;
+  unvisitedUrls: number;
+  navigationErrors: number;
+  productErrors: number;
   scanComplete: boolean;
+};
+
+export type StockmanProductPageTrace = {
+  requestedUrl: string;
+  finalUrl: string;
+  discoveryLabel: string | null;
+  title: string;
+  heading: string;
+  bodySample: string;
+  commercialRows: Array<{ reference: string; text: string }>;
+  extractedReferences: string[];
+};
+
+export type StockmanProductLinkTrace = {
+  sourcePageUrl: string;
+  rawHref: string;
+  normalizedUrl: string;
+  anchorText: string;
+  pathname: string;
+  acceptedAsProduct: boolean;
+  acceptedAsBrowse: boolean;
+  legacyReference: string | null;
+  rejectionReason: string | null;
 };
 
 export type StockmanCatalogScan = {
@@ -47,6 +75,8 @@ export type StockmanCatalogScan = {
   pagesVisited: number;
   productPages: number;
   references: StockmanDiscoveredReference[];
+  pageTraces: StockmanProductPageTrace[];
+  productLinkTraces: StockmanProductLinkTrace[];
   diagnostics: StockmanCatalogScanDiagnostics;
   warnings: string[];
 };
@@ -74,6 +104,29 @@ function normalizeUrl(value: string, base: string) {
 function looksLikeProductUrl(value: string) {
   const url = new URL(value);
   return /\.aspx$/i.test(url.pathname) && /--[^/]+\.aspx$/i.test(url.pathname) && !EXCLUDED_PATHS.test(url.pathname);
+}
+
+function legacyReferenceFromProductUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const file = url.pathname.split("/").pop() ?? "";
+    const match = file.match(/__([A-Z0-9][A-Z0-9./_-]{1,30})\.aspx$/i);
+    if (!match?.[1]) return null;
+    const candidate = cleanReferenceToken(match[1]);
+    return isPlausibleReference(candidate, candidate, true) ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+function productLinkRejectionReason(value: string, acceptedAsProduct: boolean, legacyReference: string | null) {
+  if (acceptedAsProduct) return null;
+  const url = new URL(value);
+  if (EXCLUDED_PATHS.test(url.pathname)) return "Chemin exclu par EXCLUDED_PATHS";
+  if (!/\.aspx$/i.test(url.pathname)) return "Le chemin ne se termine pas par .aspx";
+  if (legacyReference) return `Format legacy __${legacyReference}.aspx non accepté par le filtre produit actuel (--REF.aspx attendu)`;
+  if (!/--[^/]+\.aspx$/i.test(url.pathname)) return "Format URL non reconnu comme fiche produit (--REF.aspx attendu)";
+  return "Lien non retenu comme fiche produit";
 }
 
 function looksLikeBrowseUrl(value: string) {
@@ -286,6 +339,7 @@ function deduplicatePageReferences(items: StockmanDiscoveredReference[]) {
 async function linksFrom(page: Page) {
   return page.locator("a[href]").evaluateAll((anchors: Element[]) => anchors.map((anchor: Element) => ({
     href: (anchor as HTMLAnchorElement).href,
+    rawHref: anchor.getAttribute("href") ?? "",
     text: (anchor.textContent ?? "").trim(),
   })));
 }
@@ -333,7 +387,10 @@ export async function scanStockmanCatalog(options?: {
   const browseQueue = [seedUrl];
   const visited = new Set<string>();
   const productUrls = new Map<string, string | null>();
+  const productLinkTraces = new Map<string, StockmanProductLinkTrace>();
+  const discardedBrowseUrls = new Set<string>();
   let productLinksCollected = 0;
+  let navigationErrors = 0;
   const warnings: string[] = [];
   const reportProgress = async (progress: StockmanCatalogScanProgress) => {
     await options?.onProgress?.(progress);
@@ -350,14 +407,43 @@ export async function scanStockmanCatalog(options?: {
         for (const link of links) {
           const normalized = normalizeUrl(link.href, page.url());
           if (!normalized) continue;
-          if (looksLikeProductUrl(normalized)) {
+          const acceptedAsProduct = looksLikeProductUrl(normalized);
+          const acceptedAsBrowse = !acceptedAsProduct && looksLikeBrowseUrl(normalized);
+          const legacyReference = legacyReferenceFromProductUrl(normalized);
+          const parsed = new URL(normalized);
+          const looksProductish = /\.aspx$/i.test(parsed.pathname)
+            && (acceptedAsProduct || legacyReference !== null || /(?:produit|palan|chariot|gerbeur|tendeur|pince|cerclage|transpalette|pont|table|cric|verin|vérin)/i.test(parsed.pathname));
+
+          // V2.12.10 diagnostic lecture seule : mémoriser une occurrence par URL
+          // candidate afin d'expliquer pourquoi un lien produit a été accepté,
+          // basculé en navigation ou rejeté. Aucun changement de classification.
+          if (looksProductish && !productLinkTraces.has(normalized)) {
+            productLinkTraces.set(normalized, {
+              sourcePageUrl: page.url(),
+              rawHref: link.rawHref,
+              normalizedUrl: normalized,
+              anchorText: link.text || "",
+              pathname: parsed.pathname,
+              acceptedAsProduct,
+              acceptedAsBrowse,
+              legacyReference,
+              rejectionReason: productLinkRejectionReason(normalized, acceptedAsProduct, legacyReference),
+            });
+          }
+
+          if (acceptedAsProduct) {
             productLinksCollected += 1;
             if (!productUrls.has(normalized)) productUrls.set(normalized, link.text || null);
-          } else if (looksLikeBrowseUrl(normalized) && !visited.has(normalized) && browseQueue.length < maxBrowsePages * 3) {
-            browseQueue.push(normalized);
+          } else if (acceptedAsBrowse && !visited.has(normalized)) {
+            if (browseQueue.length < maxBrowsePages * 3) {
+              browseQueue.push(normalized);
+            } else {
+              discardedBrowseUrls.add(normalized);
+            }
           }
         }
       } catch (error) {
+        navigationErrors += 1;
         warnings.push(`${current} · ${error instanceof Error ? error.message : "Lecture impossible"}`);
       }
       await reportProgress({
@@ -384,6 +470,7 @@ export async function scanStockmanCatalog(options?: {
     let extractedFromBody = 0;
     const noReferenceSamples: string[] = [];
     const failedPageSamples: string[] = [];
+    const pageTraces: StockmanProductPageTrace[] = [];
 
     for (const [productUrl, category] of productUrls) {
       if (productPages >= maxProductPages) break;
@@ -396,6 +483,8 @@ export async function scanStockmanCatalog(options?: {
         if (finalUrl !== productUrl) productPageRedirects += 1;
 
         const bodyText = await page.locator("body").innerText();
+        const title = clean(await page.title().catch(() => ""));
+        const heading = clean(await page.locator("h1, h2").first().innerText().catch(() => ""));
         const appearsLoggedOut = /(?:se connecter|connexion|identifiez-vous|mot de passe)/i.test(bodyText)
           && !/Déconnexion/i.test(bodyText)
           && !COMMERCIAL_MARKER_RE.test(bodyText);
@@ -404,7 +493,8 @@ export async function scanStockmanCatalog(options?: {
         }
 
         productPagesOpened += 1;
-        const rowItems = extractReferencesFromRows(await commercialRows(page), finalUrl, category);
+        const rawCommercialRows = await commercialRows(page);
+        const rowItems = extractReferencesFromRows(rawCommercialRows, finalUrl, category);
         const urlReference = referenceFromProductUrl(finalUrl);
         const urlItems: StockmanDiscoveredReference[] = urlReference ? [{
           reference: urlReference,
@@ -422,6 +512,24 @@ export async function scanStockmanCatalog(options?: {
         const pageItems = deduplicatePageReferences([...urlItems, ...rowItems])
           .filter((item) => !isKnownFalseStockmanReference(item.reference));
         extractedOccurrences += pageItems.length;
+
+        // V2.12.9 diagnostic lecture seule : conserver une trace légère de
+        // chaque fiche réellement ouverte afin de distinguer "page non visitée"
+        // de "page visitée mais référence non extraite". Aucun contenu n'est
+        // utilisé pour créer/importer automatiquement une référence.
+        pageTraces.push({
+          requestedUrl: productUrl,
+          finalUrl,
+          discoveryLabel: category,
+          title,
+          heading,
+          bodySample: clean(bodyText).slice(0, 4_000),
+          commercialRows: rawCommercialRows.slice(0, 40).map((row) => ({
+            reference: clean(row.reference),
+            text: clean(row.text).slice(0, 1_200),
+          })),
+          extractedReferences: pageItems.map((item) => item.reference),
+        });
 
         if (pageItems.length) {
           productPagesWithReferences += 1;
@@ -468,7 +576,19 @@ export async function scanStockmanCatalog(options?: {
     const browseQueueRemaining = browseQueue.length;
     const browseLimitReached = browseQueueRemaining > 0 && visited.size >= maxBrowsePages;
     const productLimitReached = productUrls.size >= maxProductPages || (productPages >= maxProductPages && productUrls.size > productPages);
-    const scanComplete = !browseLimitReached && !productLimitReached && productPageFailures === 0;
+    const queueLimitReached = discardedBrowseUrls.size > 0;
+    const discardedUrls = discardedBrowseUrls.size;
+    const unvisitedUrls = new Set([
+      ...browseQueue.filter((url) => !visited.has(url)),
+      ...discardedBrowseUrls,
+    ]).size;
+    const productErrors = productPageFailures;
+    const scanComplete = !browseLimitReached
+      && !productLimitReached
+      && !queueLimitReached
+      && navigationErrors === 0
+      && productErrors === 0
+      && unvisitedUrls === 0;
 
     if (browseLimitReached) {
       warnings.unshift(
@@ -480,6 +600,16 @@ export async function scanStockmanCatalog(options?: {
         `Audit exhaustivité V2.12.3 : plafond de fiches atteint (${Math.min(productPages, maxProductPages)}/${maxProductPages}). Le scan n'est pas exhaustif.`,
       );
     }
+    if (queueLimitReached) {
+      warnings.unshift(
+        `Audit exhaustivité : ${discardedUrls} URL(s) de navigation n'ont pas été mises en file car la capacité de la file était atteinte. Le scan n'est pas exhaustif.`,
+      );
+    }
+    if (navigationErrors > 0) {
+      warnings.unshift(
+        `Audit exhaustivité : ${navigationErrors} page(s) de navigation n'ont pas pu être lues. Le scan n'est pas exhaustif.`,
+      );
+    }
 
     return {
       startedAt: startedAt.toISOString(),
@@ -487,6 +617,8 @@ export async function scanStockmanCatalog(options?: {
       pagesVisited: visited.size,
       productPages,
       references: [...discovered.values()].sort((a, b) => a.reference.localeCompare(b.reference, "fr")),
+      pageTraces,
+      productLinkTraces: [...productLinkTraces.values()],
       diagnostics: {
         productLinksCollected,
         uniqueProductUrls: productUrls.size,
@@ -505,6 +637,11 @@ export async function scanStockmanCatalog(options?: {
         browseQueueRemaining,
         browseLimitReached,
         productLimitReached,
+        queueLimitReached,
+        discardedUrls,
+        unvisitedUrls,
+        navigationErrors,
+        productErrors,
         scanComplete,
       },
       warnings: warnings.slice(0, 100),
