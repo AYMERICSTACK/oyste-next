@@ -1,12 +1,20 @@
 import type { Page } from "playwright";
 import { isKnownFalseStockmanReference } from "@/lib/suppliers/stockman/reference-hygiene";
 import { openStockmanBrowser } from "@/lib/suppliers/stockman/browser";
+import {
+  breadcrumbTaxonomy,
+  classifyCommercialRow,
+  classifyStockmanNavigationLink,
+  type StockmanCommercialRowSnapshot,
+  type StockmanLinkDomContext,
+  type StockmanNavigationKind,
+  type StockmanRelationType,
+} from "@/lib/suppliers/stockman/page-structure";
+import { canonicalizeStockmanUrl, stockmanTaxonomyBranch } from "@/lib/suppliers/stockman/url";
 
-const STOCKMAN_HOST = /(^|\.)stockman\.fr$/i;
 const REFERENCE_RE = /^[A-Z0-9][A-Z0-9./_-]{1,30}$/;
-const EXCLUDED_PATHS = /connexion|contact|actualites|catalogues?|video|piece[s-]?detachee|mentions|condition|recrutement|devenir-revendeur/i;
+const EXCLUDED_PATHS = /connexion|contact|actualites|catalogues?|video|mentions|condition|recrutement|devenir-revendeur/i;
 const COMMERCIAL_MARKER_RE = /Poids\s*:|Catalogue\b|€\s*HT|Prix\s+Unitaire\s+HT|Code[- ]?barres?|Stock\b/i;
-const REFERENCE_LABEL_RE = /(?:réf(?:érence)?|ref)\s*[:.]?\s*([A-Z0-9][A-Z0-9./_-]{1,30})/i;
 const REFERENCE_STOPWORDS = new Set([
   "POIDS", "CATALOGUE", "STOCK", "PRIX", "UNITAIRE", "HT", "TTC", "CODE", "BARRES", "REFERENCE", "RÉFÉRENCE",
   "PRODUIT", "PRODUITS", "DISPONIBLE", "DISPONIBLES", "QUANTITE", "QUANTITÉ", "AJOUTER", "PANIER", "VOIR", "DETAIL",
@@ -18,6 +26,12 @@ export type StockmanDiscoveredReference = {
   designation: string;
   sourceUrl: string;
   category: string | null;
+  subcategory: string | null;
+  familyReference: string | null;
+  familyTitle: string | null;
+  relationType: StockmanRelationType;
+  classificationConfidence: "EXPLICIT" | "STRUCTURAL" | "UNKNOWN";
+  classificationEvidence: string[];
 };
 
 export type StockmanCatalogScanDiagnostics = {
@@ -43,6 +57,16 @@ export type StockmanCatalogScanDiagnostics = {
   unvisitedUrls: number;
   navigationErrors: number;
   productErrors: number;
+  canonicalizedUrls: number;
+  duplicateUrlsAvoided: number;
+  categoriesDiscovered: number;
+  subcategoriesDiscovered: number;
+  familiesDiscovered: number;
+  primaryReferences: number;
+  accessoryReferences: number;
+  optionReferences: number;
+  relatedProducts: number;
+  unknownReferences: number;
   scanComplete: boolean;
 };
 
@@ -53,7 +77,16 @@ export type StockmanProductPageTrace = {
   title: string;
   heading: string;
   bodySample: string;
-  commercialRows: Array<{ reference: string; text: string }>;
+  breadcrumb: string[];
+  category: string | null;
+  subcategory: string | null;
+  familyReference: string | null;
+  familyTitle: string | null;
+  commercialRows: Array<StockmanCommercialRowSnapshot & {
+    relationType: StockmanRelationType;
+    classificationEvidence: string[];
+  }>;
+  relatedProducts: Array<{ url: string; label: string; relationType: "RECOMMENDED_PRODUCT" }>;
   extractedReferences: string[];
 };
 
@@ -61,8 +94,10 @@ export type StockmanProductLinkTrace = {
   sourcePageUrl: string;
   rawHref: string;
   normalizedUrl: string;
+  canonicalUrl: string;
   anchorText: string;
   pathname: string;
+  navigationKind: StockmanNavigationKind | null;
   acceptedAsProduct: boolean;
   acceptedAsBrowse: boolean;
   legacyReference: string | null;
@@ -90,17 +125,6 @@ export type StockmanCatalogScanProgress = {
   failures: number;
 };
 
-function normalizeUrl(value: string, base: string) {
-  try {
-    const url = new URL(value, base);
-    if (!STOCKMAN_HOST.test(url.hostname) || !/^https?:$/.test(url.protocol)) return null;
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return null;
-  }
-}
-
 function looksLikeProductUrl(value: string) {
   const url = new URL(value);
   return /\.aspx$/i.test(url.pathname) && /--[^/]+\.aspx$/i.test(url.pathname) && !EXCLUDED_PATHS.test(url.pathname);
@@ -109,11 +133,11 @@ function looksLikeProductUrl(value: string) {
 function legacyReferenceFromProductUrl(value: string) {
   try {
     const url = new URL(value);
-    const file = url.pathname.split("/").pop() ?? "";
+    const file = decodeURIComponent(url.pathname).split("/").pop() ?? "";
     const match = file.match(/__([A-Z0-9][A-Z0-9./_-]{1,30})\.aspx$/i);
     if (!match?.[1]) return null;
     const candidate = cleanReferenceToken(match[1]);
-    return isPlausibleReference(candidate, candidate, true) ? candidate : null;
+    return isPlausibleReference(candidate, candidate) ? candidate : null;
   } catch {
     return null;
   }
@@ -129,22 +153,6 @@ function productLinkRejectionReason(value: string, acceptedAsProduct: boolean, l
   return "Lien non retenu comme fiche produit";
 }
 
-function looksLikeBrowseUrl(value: string) {
-  const url = new URL(value);
-  if (EXCLUDED_PATHS.test(url.pathname)) return false;
-
-  // V2.12.3 — Stockman utilise massivement overview.aspx?search=... comme
-  // pages de famille / résultats. L'ancien filtre ne les suivait pas lorsque
-  // le terme de recherche (cerclage, vérin, cric, etc.) n'était pas dans la
-  // petite whitelist métier, ce qui rendait le scan non exhaustif.
-  if (/\/overview\.aspx$/i.test(url.pathname) && (url.searchParams.has("search") || url.searchParams.has("tsearch"))) {
-    return true;
-  }
-
-  return url.pathname === "/"
-    || /produit|nouveaute|destockage|manutention|levage|stockage|rouleur|chariot|palan|table|convoyeur|emballage|cerclage|cric|verin|vérin|acces|accès|escabeau|marchepied/i.test(url.pathname + url.search);
-}
-
 function clean(value: string) {
   return value.replace(/\u00a0/g, " ").replace(/[ \t]+/g, " ").trim();
 }
@@ -157,7 +165,7 @@ function cleanReferenceToken(value: string) {
     .toUpperCase();
 }
 
-function isPlausibleReference(value: string, original = value, _explicitlyLabelled = false) {
+function isPlausibleReference(value: string, original = value) {
   const candidate = cleanReferenceToken(value);
   if (!REFERENCE_RE.test(candidate) || REFERENCE_STOPWORDS.has(candidate) || isKnownFalseStockmanReference(candidate)) return false;
   if (/^\d+(?:[.,]\d+)?$/.test(candidate)) return false;
@@ -179,47 +187,18 @@ function isPlausibleReference(value: string, original = value, _explicitlyLabell
     && original.trim() === original.trim().toUpperCase();
 }
 
-function candidateScore(candidate: string, original: string, position: number, text: string) {
-  let score = 0;
-  if (/\d/.test(candidate) && /[A-Z]/.test(candidate)) score += 8;
-  if (/[./_-]/.test(candidate)) score += 4;
-  if (position === 0) score += 5;
-  else if (position <= 2) score += 3;
-  if (original === original.toUpperCase()) score += 2;
-  if (new RegExp(`(?:réf(?:érence)?|ref)\\s*[:.]?\\s*${escapeRegExp(candidate)}`, "i").test(text)) score += 10;
-  return score;
-}
-
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function bestReferenceFromText(value: string) {
-  const text = clean(value);
-  if (!text || !COMMERCIAL_MARKER_RE.test(text)) return null;
-
-  const labelled = text.match(REFERENCE_LABEL_RE)?.[1];
-  if (labelled && isPlausibleReference(labelled, labelled, true)) return cleanReferenceToken(labelled);
-
-  const tokens = text.split(/\s+/).slice(0, 20);
-  const candidates = tokens
-    .map((original, position) => ({ original, position, candidate: cleanReferenceToken(original) }))
-    .filter((item) => isPlausibleReference(item.candidate, item.original))
-    .map((item) => ({ ...item, score: candidateScore(item.candidate, item.original, item.position, text) }))
-    .sort((a, b) => b.score - a.score || a.position - b.position);
-
-  return candidates[0]?.candidate ?? null;
-}
-
-
 function referenceFromProductUrl(value: string) {
   try {
     const url = new URL(value);
-    const file = url.pathname.split("/").pop() ?? "";
+    const file = decodeURIComponent(url.pathname).split("/").pop() ?? "";
     const match = file.match(/--([A-Z0-9][A-Z0-9./_-]{1,30})\.aspx$/i);
     if (!match?.[1]) return null;
     const candidate = cleanReferenceToken(match[1]);
-    return isPlausibleReference(candidate, candidate, true) ? candidate : null;
+    return isPlausibleReference(candidate, candidate) ? candidate : null;
   } catch {
     return null;
   }
@@ -247,18 +226,6 @@ async function gotoStockmanPage(page: Page, url: string, timeout = 45_000) {
   throw lastError;
 }
 
-function designationAfter(lines: string[], index: number) {
-  return lines.slice(index + 1, index + 7).find((line) =>
-    line.length > 7
-    && !/^poids\s*:/i.test(line)
-    && !/^code[- ]?barres?\s*:/i.test(line)
-    && !/^catalogue\b/i.test(line)
-    && !/^\d+(?:[.,]\d+)?\s*€/.test(line)
-    && !/^stock$/i.test(line)
-    && !/^prix/i.test(line),
-  ) ?? "Référence Stockman";
-}
-
 function designationFromBlock(value: string, reference: string) {
   const text = clean(value);
   const withoutReference = clean(text.replace(new RegExp(`^\\s*${escapeRegExp(reference)}\\b[\\s:;·-]*`, "i"), ""));
@@ -266,64 +233,38 @@ function designationFromBlock(value: string, reference: string) {
   return beforeCommercialData.length > 7 ? beforeCommercialData.slice(0, 220) : "Référence Stockman";
 }
 
-type StockmanCommercialRow = {
-  reference: string;
-  text: string;
+type StockmanFamilyContext = {
+  sourceUrl: string;
+  category: string | null;
+  subcategory: string | null;
+  familyReference: string | null;
+  familyTitle: string | null;
+  breadcrumb: string[];
 };
 
-function extractReferencesFromRows(rows: StockmanCommercialRow[], sourceUrl: string, category: string | null) {
+export function extractReferencesFromStructuredRows(
+  rows: StockmanCommercialRowSnapshot[],
+  context: StockmanFamilyContext,
+) {
   const results: StockmanDiscoveredReference[] = [];
   for (const row of rows) {
     const text = clean(row.text);
     const reference = cleanReferenceToken(row.reference);
-    if (!isPlausibleReference(reference, reference, true)) continue;
+    if (!isPlausibleReference(reference, reference)) continue;
+    const classification = classifyCommercialRow(row, context);
     results.push({
       reference,
       designation: designationFromBlock(text, reference),
-      sourceUrl,
-      category,
+      sourceUrl: context.sourceUrl,
+      category: context.category,
+      subcategory: context.subcategory,
+      familyReference: context.familyReference,
+      familyTitle: context.familyTitle,
+      relationType: classification.relationType,
+      classificationConfidence: classification.confidence,
+      classificationEvidence: classification.evidence,
     });
   }
-  return results;
-}
-
-function extractReferencesFromBody(bodyText: string, sourceUrl: string, category: string | null) {
-  const lines = bodyText.split(/\r?\n/).map(clean).filter(Boolean);
-  const results: StockmanDiscoveredReference[] = [];
-
-  // Stratégie historique : référence sur sa propre ligne.
-  for (let index = 0; index < lines.length; index += 1) {
-    const original = lines[index];
-    const candidate = cleanReferenceToken(original);
-    if (!isPlausibleReference(candidate, original)) continue;
-    const nearby = lines.slice(index, index + 10).join(" ");
-    if (!COMMERCIAL_MARKER_RE.test(nearby)) continue;
-    results.push({
-      reference: candidate,
-      designation: designationAfter(lines, index),
-      sourceUrl,
-      category,
-    });
-  }
-
-  // Stratégie V2.4 : les variantes peuvent être aplaties dans une ligne ou
-  // séparées de leur prix/stock. Chaque zone commerciale cherche donc sa
-  // référence dans une petite fenêtre autour de la ligne concernée.
-  for (let index = 0; index < lines.length; index += 1) {
-    if (!COMMERCIAL_MARKER_RE.test(lines[index])) continue;
-    const start = Math.max(0, index - 5);
-    const end = Math.min(lines.length, index + 5);
-    const window = lines.slice(start, end).join(" ");
-    const reference = bestReferenceFromText(window);
-    if (!reference) continue;
-    results.push({
-      reference,
-      designation: designationFromBlock(window, reference),
-      sourceUrl,
-      category,
-    });
-  }
-
   return results;
 }
 
@@ -331,9 +272,60 @@ function deduplicatePageReferences(items: StockmanDiscoveredReference[]) {
   const unique = new Map<string, StockmanDiscoveredReference>();
   for (const item of items) {
     const current = unique.get(item.reference);
-    if (!current || current.designation === "Référence Stockman") unique.set(item.reference, item);
+    if (!current
+      || current.classificationConfidence === "UNKNOWN" && item.classificationConfidence !== "UNKNOWN"
+      || current.designation === "Référence Stockman" && item.designation !== "Référence Stockman") {
+      unique.set(item.reference, item);
+    }
   }
   return [...unique.values()];
+}
+
+type BrowseNode = {
+  url: string;
+  kind: Exclude<StockmanNavigationKind, "FAMILY_PAGE">;
+  branch: string;
+};
+
+class FairTaxonomyQueue {
+  private readonly branches = new Map<string, BrowseNode[]>();
+  private readonly branchOrder: string[] = [];
+  private cursor = 0;
+  private count = 0;
+
+  get size() {
+    return this.count;
+  }
+
+  push(node: BrowseNode) {
+    let queue = this.branches.get(node.branch);
+    if (!queue) {
+      queue = [];
+      this.branches.set(node.branch, queue);
+      this.branchOrder.push(node.branch);
+    }
+    queue.push(node);
+    this.count += 1;
+  }
+
+  shift() {
+    if (!this.count) return null;
+    for (let checked = 0; checked < this.branchOrder.length; checked += 1) {
+      const index = this.cursor % this.branchOrder.length;
+      this.cursor = (index + 1) % this.branchOrder.length;
+      const branch = this.branchOrder[index];
+      const queue = this.branches.get(branch);
+      const node = queue?.shift();
+      if (!node) continue;
+      this.count -= 1;
+      return node;
+    }
+    return null;
+  }
+
+  urls() {
+    return [...this.branches.values()].flat().map((node) => node.url);
+  }
 }
 
 async function linksFrom(page: Page) {
@@ -341,10 +333,24 @@ async function linksFrom(page: Page) {
     href: (anchor as HTMLAnchorElement).href,
     rawHref: anchor.getAttribute("href") ?? "",
     text: (anchor.textContent ?? "").trim(),
+    context: (() => {
+      const owner = anchor.closest("nav, aside, .menu, .navigation, .content-ariane, #div_ariane_content, article, .product, .produit, [class*='product'], [class*='produit']");
+      const dataAttributes = owner
+        ? [...owner.attributes].filter((attribute) => attribute.name.startsWith("data-")).map((attribute) => `${attribute.name}=${attribute.value}`)
+        : [];
+      return {
+        inCatalogueNavigation: Boolean(anchor.closest("aside, .menu, .navigation, [class*='catalogue'], [class*='category'], [class*='categorie']")),
+        inBreadcrumb: Boolean(anchor.closest(".content-ariane, #div_ariane_content, [class*='breadcrumb']")),
+        inProductCard: Boolean(anchor.closest("article, .product, .produit, [class*='product-card'], [class*='produit-card']")),
+        ancestorText: (owner?.textContent ?? "").replace(/\s+/g, " ").trim().slice(0, 500),
+        ancestorClass: owner?.getAttribute("class") ?? "",
+        dataAttributes,
+      } satisfies StockmanLinkDomContext;
+    })(),
   })));
 }
 
-async function commercialRows(page: Page): Promise<StockmanCommercialRow[]> {
+async function commercialRows(page: Page): Promise<StockmanCommercialRowSnapshot[]> {
   // V2.12.8.2 — source stricte : une variante n'est retenue que si Stockman
   // l'expose dans une vraie ligne commerciale avec son champ `ref_article`.
   // Les <article>/<li> et paragraphes SEO ne sont plus parcourus : des mots
@@ -352,8 +358,8 @@ async function commercialRows(page: Page): Promise<StockmanCommercialRow[]> {
   // références fournisseur.
   return page.locator("tr").evaluateAll((elements: Element[]) => {
     const seen = new Set<string>();
-    const rows: Array<{ reference: string; text: string }> = [];
-    for (const element of elements) {
+    const rows: StockmanCommercialRowSnapshot[] = [];
+    for (const [rowIndex, element] of elements.entries()) {
       const referenceElement = element.querySelector(
         ".ref_article, [id*='rp_articles_ref_article']",
       );
@@ -364,9 +370,57 @@ async function commercialRows(page: Page): Promise<StockmanCommercialRow[]> {
       const key = `${reference}::${text}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      rows.push({ reference, text });
+      const table = element.closest("table");
+      const section = element.closest("section, article, fieldset, .bloc, .block, [class*='option'], [class*='accessoir'], [class*='piece']");
+      const precedingHeadings = section
+        ? [...section.querySelectorAll("h1, h2, h3, h4, legend")]
+          .filter((heading) => Boolean(heading.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))
+          .map((heading) => heading.textContent ?? "")
+        : [];
+      const badgeTexts = [...element.querySelectorAll(".badge, .label, .tag, [class*='badge'], [class*='accessoir'], [class*='option']")]
+        .map((badge) => (badge.textContent ?? "").replace(/\s+/g, " ").trim())
+        .filter(Boolean);
+      const owner = section ?? table ?? element;
+      const dataAttributes = [...owner.attributes]
+        .filter((attribute) => attribute.name.startsWith("data-"))
+        .map((attribute) => `${attribute.name}=${attribute.value}`);
+      rows.push({
+        reference,
+        text,
+        badgeTexts,
+        sectionLabels: precedingHeadings,
+        ancestorClass: owner.getAttribute("class") ?? "",
+        dataAttributes,
+        isCommercialTable: Boolean(table),
+        rowIndex,
+      });
     }
     return rows;
+  });
+}
+
+async function pageStructure(page: Page) {
+  return page.evaluate(() => {
+    const cleanText = (value: string | null | undefined) => (value ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
+    const breadcrumbContainer = document.querySelector(".container.content-ariane, #div_ariane_content .content-ariane, .content-ariane, [class*='breadcrumb']");
+    const breadcrumb = breadcrumbContainer
+      ? [...breadcrumbContainer.querySelectorAll("a, span")].map((element) => cleanText(element.textContent)).filter(Boolean)
+      : [];
+
+    const relatedProducts: Array<{ url: string; label: string; relationType: "RECOMMENDED_PRODUCT" }> = [];
+    const headings = [...document.querySelectorAll("h1, h2, h3, h4, strong")];
+    for (const heading of headings) {
+      if (!/consultez\s+[ée]galement/i.test(cleanText(heading.textContent))) continue;
+      const container = heading.closest("section, article, div, table") ?? heading.parentElement;
+      if (!container) continue;
+      for (const anchor of container.querySelectorAll("a[href]")) {
+        const url = (anchor as HTMLAnchorElement).href;
+        const label = cleanText(anchor.textContent || anchor.getAttribute("title"));
+        if (!url || relatedProducts.some((item) => item.url === url)) continue;
+        relatedProducts.push({ url, label, relationType: "RECOMMENDED_PRODUCT" });
+      }
+    }
+    return { breadcrumb, relatedProducts };
   });
 }
 
@@ -377,68 +431,98 @@ export async function scanStockmanCatalog(options?: {
   onProgress?: (progress: StockmanCatalogScanProgress) => void | Promise<void>;
 }): Promise<StockmanCatalogScan> {
   const startedAt = new Date();
-  const seedUrl = normalizeUrl(options?.seedUrl?.trim() || "https://www.stockman.fr/", "https://www.stockman.fr/");
+  const seedUrl = canonicalizeStockmanUrl(options?.seedUrl?.trim() || "https://www.stockman.fr/");
   if (!seedUrl) throw new Error("L’URL de départ Stockman est invalide.");
 
   const maxBrowsePages = Math.min(Math.max(options?.maxBrowsePages ?? 120, 1), 500);
   const maxProductPages = Math.min(Math.max(options?.maxProductPages ?? 800, 1), 2_000);
   const { browser, context } = await openStockmanBrowser();
   const page = await context.newPage();
-  const browseQueue = [seedUrl];
+  const browseQueue = new FairTaxonomyQueue();
+  browseQueue.push({ url: seedUrl, kind: "BROWSE", branch: "root" });
+  const queued = new Set([seedUrl]);
   const visited = new Set<string>();
-  const productUrls = new Map<string, string | null>();
+  const productUrls = new Map<string, { label: string | null; sourcePageUrl: string }>();
   const productLinkTraces = new Map<string, StockmanProductLinkTrace>();
   const discardedBrowseUrls = new Set<string>();
+  const discardedProductUrls = new Set<string>();
   let productLinksCollected = 0;
   let navigationErrors = 0;
+  let canonicalizedUrls = 0;
+  let duplicateUrlsAvoided = 0;
+  const categoriesDiscovered = new Set<string>();
+  const subcategoriesDiscovered = new Set<string>();
+  const familyUrlsDiscovered = new Set<string>();
   const warnings: string[] = [];
   const reportProgress = async (progress: StockmanCatalogScanProgress) => {
     await options?.onProgress?.(progress);
   };
 
   try {
-    while (browseQueue.length && visited.size < maxBrowsePages && productUrls.size < maxProductPages) {
-      const current = browseQueue.shift()!;
+    while (browseQueue.size && visited.size < maxBrowsePages) {
+      const node = browseQueue.shift();
+      if (!node) break;
+      const current = node.url;
       if (visited.has(current)) continue;
       visited.add(current);
       try {
         await gotoStockmanPage(page, current);
         const links = await linksFrom(page);
         for (const link of links) {
-          const normalized = normalizeUrl(link.href, page.url());
-          if (!normalized) continue;
-          const acceptedAsProduct = looksLikeProductUrl(normalized);
-          const acceptedAsBrowse = !acceptedAsProduct && looksLikeBrowseUrl(normalized);
-          const legacyReference = legacyReferenceFromProductUrl(normalized);
-          const parsed = new URL(normalized);
+          const canonical = canonicalizeStockmanUrl(link.href, page.url());
+          if (!canonical) continue;
+          if (canonical !== link.href) canonicalizedUrls += 1;
+          const navigationKind = classifyStockmanNavigationLink(canonical, link.context);
+          const acceptedAsProduct = navigationKind === "FAMILY_PAGE" && looksLikeProductUrl(canonical);
+          const acceptedAsBrowse = navigationKind !== null && navigationKind !== "FAMILY_PAGE";
+          const legacyReference = legacyReferenceFromProductUrl(canonical);
+          const parsed = new URL(canonical);
           const looksProductish = /\.aspx$/i.test(parsed.pathname)
             && (acceptedAsProduct || legacyReference !== null || /(?:produit|palan|chariot|gerbeur|tendeur|pince|cerclage|transpalette|pont|table|cric|verin|vérin)/i.test(parsed.pathname));
 
           // V2.12.10 diagnostic lecture seule : mémoriser une occurrence par URL
           // candidate afin d'expliquer pourquoi un lien produit a été accepté,
           // basculé en navigation ou rejeté. Aucun changement de classification.
-          if (looksProductish && !productLinkTraces.has(normalized)) {
-            productLinkTraces.set(normalized, {
+          if (looksProductish && !productLinkTraces.has(canonical)) {
+            productLinkTraces.set(canonical, {
               sourcePageUrl: page.url(),
               rawHref: link.rawHref,
-              normalizedUrl: normalized,
+              normalizedUrl: canonical,
+              canonicalUrl: canonical,
               anchorText: link.text || "",
               pathname: parsed.pathname,
+              navigationKind,
               acceptedAsProduct,
               acceptedAsBrowse,
               legacyReference,
-              rejectionReason: productLinkRejectionReason(normalized, acceptedAsProduct, legacyReference),
+              rejectionReason: productLinkRejectionReason(canonical, acceptedAsProduct, legacyReference),
             });
           }
 
           if (acceptedAsProduct) {
             productLinksCollected += 1;
-            if (!productUrls.has(normalized)) productUrls.set(normalized, link.text || null);
-          } else if (acceptedAsBrowse && !visited.has(normalized)) {
-            if (browseQueue.length < maxBrowsePages * 3) {
-              browseQueue.push(normalized);
+            familyUrlsDiscovered.add(canonical);
+            if (productUrls.has(canonical)) {
+              duplicateUrlsAvoided += 1;
+            } else if (productUrls.size < maxProductPages) {
+              productUrls.set(canonical, { label: link.text || null, sourcePageUrl: current });
             } else {
-              discardedBrowseUrls.add(normalized);
+              discardedProductUrls.add(canonical);
+            }
+          } else if (acceptedAsBrowse) {
+            if (navigationKind === "CATEGORY") categoriesDiscovered.add(canonical);
+            if (navigationKind === "SUBCATEGORY") subcategoriesDiscovered.add(canonical);
+            if (visited.has(canonical) || queued.has(canonical)) {
+              duplicateUrlsAvoided += 1;
+            } else if (browseQueue.size < maxBrowsePages * 3) {
+              browseQueue.push({
+                url: canonical,
+                kind: navigationKind ?? "BROWSE",
+                branch: stockmanTaxonomyBranch(canonical),
+              });
+              queued.add(canonical);
+            } else {
+              discardedBrowseUrls.add(canonical);
             }
           }
         }
@@ -467,19 +551,19 @@ export async function scanStockmanCatalog(options?: {
     let extractedOccurrences = 0;
     let duplicateReferences = 0;
     let extractedFromRows = 0;
-    let extractedFromBody = 0;
+    const extractedFromBody = 0;
     const noReferenceSamples: string[] = [];
     const failedPageSamples: string[] = [];
     const pageTraces: StockmanProductPageTrace[] = [];
 
-    for (const [productUrl, category] of productUrls) {
+    for (const [productUrl, discoveryContext] of productUrls) {
       if (productPages >= maxProductPages) break;
       productPages += 1;
       productPageAttempts += 1;
       try {
         await gotoStockmanPage(page, productUrl);
 
-        const finalUrl = page.url();
+        const finalUrl = canonicalizeStockmanUrl(page.url(), productUrl) ?? page.url();
         if (finalUrl !== productUrl) productPageRedirects += 1;
 
         const bodyText = await page.locator("body").innerText();
@@ -493,23 +577,27 @@ export async function scanStockmanCatalog(options?: {
         }
 
         productPagesOpened += 1;
+        const structure = await pageStructure(page);
+        const taxonomy = breadcrumbTaxonomy(structure.breadcrumb);
         const rawCommercialRows = await commercialRows(page);
-        const rowItems = extractReferencesFromRows(rawCommercialRows, finalUrl, category);
         const urlReference = referenceFromProductUrl(finalUrl);
-        const urlItems: StockmanDiscoveredReference[] = urlReference ? [{
-          reference: urlReference,
-          designation: designationFromBlock(bodyText.slice(0, 1_800), urlReference),
+        const familyContext: StockmanFamilyContext = {
           sourceUrl: finalUrl,
-          category,
-        }] : [];
+          category: taxonomy.category,
+          subcategory: taxonomy.subcategory,
+          familyReference: urlReference,
+          familyTitle: heading || title || discoveryContext.label,
+          breadcrumb: structure.breadcrumb,
+        };
+        const rowItems = extractReferencesFromStructuredRows(rawCommercialRows, familyContext);
         extractedFromRows += rowItems.length;
 
         // V2.10.17.5 : l'intranet est la seule source de vérité.
-        // On conserve la référence famille portée par l'URL et UNIQUEMENT les
-        // références réellement présentes dans les lignes commerciales.
+        // La référence portée par l'URL identifie la famille. Elle n'est ajoutée
+        // comme article que si une ligne commerciale la confirme.
         // Plus aucune extraction du body : MINI/MAXI, ENCOMBRANTES, textes de
         // caractéristiques ou menus ne peuvent devenir des références catalogue.
-        const pageItems = deduplicatePageReferences([...urlItems, ...rowItems])
+        const pageItems = deduplicatePageReferences(rowItems)
           .filter((item) => !isKnownFalseStockmanReference(item.reference));
         extractedOccurrences += pageItems.length;
 
@@ -520,14 +608,28 @@ export async function scanStockmanCatalog(options?: {
         pageTraces.push({
           requestedUrl: productUrl,
           finalUrl,
-          discoveryLabel: category,
+          discoveryLabel: discoveryContext.label,
           title,
           heading,
           bodySample: clean(bodyText).slice(0, 4_000),
-          commercialRows: rawCommercialRows.slice(0, 40).map((row) => ({
-            reference: clean(row.reference),
-            text: clean(row.text).slice(0, 1_200),
-          })),
+          breadcrumb: structure.breadcrumb,
+          category: taxonomy.category,
+          subcategory: taxonomy.subcategory,
+          familyReference: urlReference,
+          familyTitle: familyContext.familyTitle,
+          commercialRows: rawCommercialRows.slice(0, 40).map((row) => {
+            const classification = classifyCommercialRow(row, familyContext);
+            return {
+              ...row,
+              reference: clean(row.reference),
+              text: clean(row.text).slice(0, 1_200),
+              relationType: classification.relationType,
+              classificationEvidence: classification.evidence,
+            };
+          }),
+          relatedProducts: structure.relatedProducts
+            .map((item) => ({ ...item, url: canonicalizeStockmanUrl(item.url, finalUrl) }))
+            .filter((item): item is { url: string; label: string; relationType: "RECOMMENDED_PRODUCT" } => Boolean(item.url)),
           extractedReferences: pageItems.map((item) => item.reference),
         });
 
@@ -573,16 +675,22 @@ export async function scanStockmanCatalog(options?: {
       );
     }
 
-    const browseQueueRemaining = browseQueue.length;
+    const browseQueueRemaining = browseQueue.size;
     const browseLimitReached = browseQueueRemaining > 0 && visited.size >= maxBrowsePages;
-    const productLimitReached = productUrls.size >= maxProductPages || (productPages >= maxProductPages && productUrls.size > productPages);
+    const productLimitReached = discardedProductUrls.size > 0 || (productPages >= maxProductPages && productUrls.size > productPages);
     const queueLimitReached = discardedBrowseUrls.size > 0;
-    const discardedUrls = discardedBrowseUrls.size;
+    const discardedUrls = discardedBrowseUrls.size + discardedProductUrls.size;
     const unvisitedUrls = new Set([
-      ...browseQueue.filter((url) => !visited.has(url)),
+      ...browseQueue.urls().filter((url) => !visited.has(url)),
       ...discardedBrowseUrls,
+      ...discardedProductUrls,
     ]).size;
     const productErrors = productPageFailures;
+    const relationCounts = [...discovered.values()].reduce((counts, item) => {
+      counts[item.relationType] = (counts[item.relationType] ?? 0) + 1;
+      return counts;
+    }, {} as Partial<Record<StockmanRelationType, number>>);
+    const relatedProducts = pageTraces.reduce((sum, trace) => sum + trace.relatedProducts.length, 0);
     const scanComplete = !browseLimitReached
       && !productLimitReached
       && !queueLimitReached
@@ -642,6 +750,16 @@ export async function scanStockmanCatalog(options?: {
         unvisitedUrls,
         navigationErrors,
         productErrors,
+        canonicalizedUrls,
+        duplicateUrlsAvoided,
+        categoriesDiscovered: categoriesDiscovered.size,
+        subcategoriesDiscovered: subcategoriesDiscovered.size,
+        familiesDiscovered: familyUrlsDiscovered.size,
+        primaryReferences: (relationCounts.PRIMARY ?? 0) + (relationCounts.PRIMARY_VARIANT ?? 0),
+        accessoryReferences: relationCounts.ACCESSORY ?? 0,
+        optionReferences: relationCounts.OPTION ?? 0,
+        relatedProducts,
+        unknownReferences: relationCounts.UNKNOWN ?? 0,
         scanComplete,
       },
       warnings: warnings.slice(0, 100),

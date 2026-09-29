@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import type { StockmanCatalogDiscovery, StockmanLivingReferenceStats } from "@/lib/suppliers/stockman/types";
 import { isKnownFalseStockmanReference, knownFalseStockmanReferences } from "@/lib/suppliers/stockman/reference-hygiene";
+import { hasProvenCompleteStockmanScan } from "@/lib/suppliers/stockman/scan-completeness";
 
 function changed(previous: { designation: string; category: string | null; sourceUrl: string }, current: { designation: string; category: string | null; sourceUrl: string }) {
   return previous.designation !== current.designation
@@ -50,7 +51,7 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
   const coverage = attempts > 0 ? opened / attempts : 0;
   const browseLimitReached = discovery.diagnostics.browseLimitReached === true;
   const productLimitReached = discovery.diagnostics.productLimitReached === true;
-  const scanExplicitlyComplete = discovery.diagnostics.scanComplete === true;
+  const scanExplicitlyComplete = hasProvenCompleteStockmanScan(discovery.diagnostics);
 
   // Sécurité catalogue : une absence n'est exploitable que si le scanner a
   // explicitement prouvé que le parcours était complet. Une information de

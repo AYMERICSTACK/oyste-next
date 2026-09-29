@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "test:stockman": "node --import tsx --test lib/suppliers/stockman/__tests__/*.test.ts",
     "import:erp": "node scripts/import-erp.js",
     "erp:check": "node scripts/check-erp.js",
     "import:catalog": "node scripts/import-catalogue.js",

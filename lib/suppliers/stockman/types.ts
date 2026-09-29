@@ -1,3 +1,9 @@
+import type {
+  StockmanCommercialRowSnapshot,
+  StockmanNavigationKind,
+  StockmanRelationType,
+} from "@/lib/suppliers/stockman/page-structure";
+
 export type StockmanProduct = {
   reference: string;
   designation: string;
@@ -126,6 +132,12 @@ export type StockmanCatalogMatch = {
   designation: string;
   sourceUrl: string;
   category: string | null;
+  subcategory?: string | null;
+  familyReference?: string | null;
+  familyTitle?: string | null;
+  relationType?: StockmanRelationType;
+  classificationConfidence?: "EXPLICIT" | "STRUCTURAL" | "UNKNOWN";
+  classificationEvidence?: string[];
   status: "matched" | "missing" | "ambiguous" | "already_linked" | "suggested";
   matchMethod: StockmanMatchMethod;
   confidence: number;
@@ -166,6 +178,16 @@ export type StockmanCatalogScanDiagnostics = {
   unvisitedUrls?: number;
   navigationErrors?: number;
   productErrors?: number;
+  canonicalizedUrls?: number;
+  duplicateUrlsAvoided?: number;
+  categoriesDiscovered?: number;
+  subcategoriesDiscovered?: number;
+  familiesDiscovered?: number;
+  primaryReferences?: number;
+  accessoryReferences?: number;
+  optionReferences?: number;
+  relatedProducts?: number;
+  unknownReferences?: number;
   scanComplete?: boolean;
 };
 
@@ -292,7 +314,16 @@ export type StockmanProductPageTrace = {
   title: string;
   heading: string;
   bodySample: string;
-  commercialRows: Array<{ reference: string; text: string }>;
+  breadcrumb: string[];
+  category: string | null;
+  subcategory: string | null;
+  familyReference: string | null;
+  familyTitle: string | null;
+  commercialRows: Array<StockmanCommercialRowSnapshot & {
+    relationType: StockmanRelationType;
+    classificationEvidence: string[];
+  }>;
+  relatedProducts: Array<{ url: string; label: string; relationType: "RECOMMENDED_PRODUCT" }>;
   extractedReferences: string[];
 };
 
@@ -300,8 +331,10 @@ export type StockmanProductLinkTrace = {
   sourcePageUrl: string;
   rawHref: string;
   normalizedUrl: string;
+  canonicalUrl: string;
   anchorText: string;
   pathname: string;
+  navigationKind: StockmanNavigationKind | null;
   acceptedAsProduct: boolean;
   acceptedAsBrowse: boolean;
   legacyReference: string | null;
