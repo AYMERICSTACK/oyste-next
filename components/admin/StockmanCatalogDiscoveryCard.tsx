@@ -785,7 +785,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
         const job = statusPayload as StockmanDiscoveryJobStatus;
         setProgress(job.progress);
 
-        if (job.status === "completed") {
+        if (job.status === "completed" || job.status === "partial") {
           if (!job.result) throw new Error("Le scan est terminé mais aucun résultat n’a été retourné.");
           const discovery = job.result;
           setScan(discovery);
@@ -795,10 +795,13 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
               .map((item) => item.reference),
           ));
           activeJobRef.current = null;
+          if (job.status === "partial") {
+            setMessage("Scan terminé partiellement : les résultats sont conservés, sans désactivation de références absentes.");
+          }
           break;
         }
 
-        if (job.status === "failed") {
+        if (job.status === "failed" || job.status === "cancelled") {
           activeJobRef.current = null;
           throw new Error(job.error || job.progress.message || "Le scan Stockman a échoué.");
         }

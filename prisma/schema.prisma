@@ -757,3 +757,75 @@ model StockmanAuthSession {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
+
+/// Durable state for a Stockman catalogue discovery. The JSON columns keep the
+/// public API contract stable while the queue below provides resumable work.
+model StockmanDiscoveryJob {
+  id             String   @id @default(cuid())
+  status         String   @default("QUEUED")
+  phase          String   @default("DISCOVERING")
+  options        Json
+  progress       Json
+  diagnostics    Json?
+  result         Json?
+  error          String?  @db.Text
+  startedAt      DateTime?
+  finishedAt     DateTime?
+  leaseOwner        String?
+  leaseExpiresAt    DateTime?
+  leaseVersion      Int      @default(0)
+  checkpointVersion Int     @default(0)
+  cancelRequestedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  queueItems     StockmanDiscoveryQueueItem[]
+  results        StockmanDiscoveryResult[]
+
+  @@index([status, updatedAt])
+  @@index([leaseExpiresAt])
+}
+
+model StockmanDiscoveryQueueItem {
+  id             String   @id @default(cuid())
+  jobId          String
+  job            StockmanDiscoveryJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  canonicalUrl   String   @db.Text
+  urlHash        String
+  nodeType       String
+  state          String   @default("PENDING")
+  attempts       Int      @default(0)
+  depth          Int      @default(0)
+  priority       Int      @default(0)
+  branchKey      String?
+  claimVersion   Int?
+  discoveredFrom String?  @db.Text
+  label          String?
+  leaseOwner     String?
+  leaseExpiresAt DateTime?
+  lastError      String?  @db.Text
+  trace          Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([jobId, nodeType, urlHash])
+  @@index([jobId, state, priority, createdAt])
+  @@index([jobId, branchKey, state])
+  @@index([leaseExpiresAt])
+}
+
+model StockmanDiscoveryResult {
+  id            String   @id @default(cuid())
+  jobId         String
+  job           StockmanDiscoveryJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  occurrenceKey String
+  reference     String
+  sourceUrl     String   @db.Text
+  relationType  String
+  payload       Json
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([jobId, occurrenceKey])
+  @@index([jobId, reference])
+  @@index([jobId, relationType])
+}

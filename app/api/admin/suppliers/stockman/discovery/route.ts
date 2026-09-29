@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { prisma } from "@/lib/db/prisma";
-import { getStockmanDiscoveryJob, startStockmanDiscoveryJob } from "@/lib/suppliers/stockman/discovery-jobs";
+import { getStockmanDiscoveryJob, runNextStockmanDiscoveryBatch, startStockmanDiscoveryJob } from "@/lib/suppliers/stockman/discovery-jobs";
 import { getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import { auditStockmanUnresolved } from "@/lib/suppliers/stockman/unresolved-audit";
 import { auditStockmanDuplicateStructure } from "@/lib/suppliers/stockman/duplicate-structure-audit";
@@ -170,7 +170,10 @@ export async function GET(request: Request) {
   const jobId = url.searchParams.get("jobId")?.trim();
   if (!jobId) return NextResponse.json({ message: "jobId manquant." }, { status: 400 });
 
-  const job = getStockmanDiscoveryJob(jobId);
+  // Chaque poll fait avancer au plus un lot borné. L'état reste en base et un
+  // cron reprend le même travail si le navigateur BO est fermé.
+  await runNextStockmanDiscoveryBatch(jobId);
+  const job = await getStockmanDiscoveryJob(jobId);
   if (!job) return NextResponse.json({ message: "Ce scan n’existe plus ou a expiré." }, { status: 404 });
   return NextResponse.json(job, { headers: { "Cache-Control": "no-store" } });
 }
@@ -185,7 +188,7 @@ export async function POST(request: Request) {
     const parsed = scanSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ message: "Paramètres de scan invalides." }, { status: 400 });
 
-    const job = startStockmanDiscoveryJob({
+    const job = await startStockmanDiscoveryJob({
       ...parsed.data,
       // V2.12.3 : le bouton d'audit doit parcourir l'intranet, pas seulement
       // l'échantillon historique limité à 120 pages.
@@ -193,7 +196,7 @@ export async function POST(request: Request) {
       maxProductPages: parsed.data.maxProductPages ?? 2_000,
     });
     return NextResponse.json(
-      { jobId: job.jobId, status: job.status, progress: job.progress },
+      { jobId: job!.jobId, status: job!.status, progress: job!.progress },
       { status: 202, headers: { "Cache-Control": "no-store" } },
     );
   }

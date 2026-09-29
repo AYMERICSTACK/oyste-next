@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
       "./node_modules/@sparticuz/chromium/bin/**",
       "./node_modules/playwright-core/browsers.json",
     ],
+    "/api/cron/stockman-discovery": [
+      "./node_modules/@sparticuz/chromium/bin/**",
+      "./node_modules/playwright-core/browsers.json",
+    ],
   },
 };
 

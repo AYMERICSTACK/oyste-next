@@ -209,16 +209,16 @@ function isRetryableNavigationError(error: unknown) {
   return /interrupted by another navigation|navigation.+interrupted|timeout .* exceeded/i.test(message);
 }
 
-async function gotoStockmanPage(page: Page, url: string, timeout = 45_000) {
+async function gotoStockmanPage(page: Page, url: string, timeout = 45_000, maxAttempts = 3) {
   let lastError: unknown;
-  for (let attempt = 1; attempt <= 3; attempt += 1) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
       await page.goto(url, { waitUntil: "domcontentloaded", timeout });
       await page.waitForTimeout(attempt === 1 ? 650 : 900);
       return;
     } catch (error) {
       lastError = error;
-      if (!isRetryableNavigationError(error) || attempt === 3) break;
+      if (!isRetryableNavigationError(error) || attempt === maxAttempts) break;
       await page.waitForTimeout(500 * attempt);
       await page.goto("about:blank", { waitUntil: "domcontentloaded", timeout: 10_000 }).catch(() => undefined);
     }
@@ -764,6 +764,163 @@ export async function scanStockmanCatalog(options?: {
       },
       warnings: warnings.slice(0, 100),
     };
+  } finally {
+    await page.close().catch(() => undefined);
+    await context.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
+  }
+}
+
+export type StockmanDiscoveryBatchNode = {
+  id: string;
+  url: string;
+  nodeType: "BROWSE" | "PRODUCT";
+  label?: string | null;
+  depth: number;
+};
+
+export type StockmanDiscoveryBatchResult = {
+  nodeId: string;
+  ok: boolean;
+  finalUrl: string;
+  error?: string;
+  children: Array<{
+    url: string;
+    nodeType: "BROWSE" | "PRODUCT";
+    label: string | null;
+    depth: number;
+    navigationKind: StockmanNavigationKind;
+  }>;
+  references: StockmanDiscoveredReference[];
+  pageTrace?: StockmanProductPageTrace;
+  linkTraces: StockmanProductLinkTrace[];
+};
+
+/**
+ * Processes a bounded set of persisted queue nodes. Unlike scanStockmanCatalog,
+ * this function owns no crawl state: callers persist returned children/results
+ * before starting another invocation, which makes interruption recoverable.
+ */
+export async function scanStockmanDiscoveryBatch(
+  nodes: StockmanDiscoveryBatchNode[],
+): Promise<StockmanDiscoveryBatchResult[]> {
+  if (!nodes.length) return [];
+  const { browser, context } = await openStockmanBrowser();
+  const page = await context.newPage();
+  const results: StockmanDiscoveryBatchResult[] = [];
+
+  try {
+    for (const node of nodes) {
+      const result: StockmanDiscoveryBatchResult = {
+        nodeId: node.id,
+        ok: false,
+        finalUrl: node.url,
+        children: [],
+        references: [],
+        linkTraces: [],
+      };
+      try {
+        await gotoStockmanPage(page, node.url, 12_000, 2);
+        const finalUrl = canonicalizeStockmanUrl(page.url(), node.url) ?? page.url();
+        result.finalUrl = finalUrl;
+
+        if (node.nodeType === "BROWSE") {
+          const links = await linksFrom(page);
+          for (const link of links) {
+            const canonical = canonicalizeStockmanUrl(link.href, finalUrl);
+            if (!canonical) continue;
+            const navigationKind = classifyStockmanNavigationLink(canonical, link.context);
+            if (!navigationKind) continue;
+            const acceptedAsProduct = navigationKind === "FAMILY_PAGE" && looksLikeProductUrl(canonical);
+            const acceptedAsBrowse = navigationKind !== "FAMILY_PAGE";
+            const legacyReference = legacyReferenceFromProductUrl(canonical);
+            const parsed = new URL(canonical);
+            const looksProductish = /\.aspx$/i.test(parsed.pathname)
+              && (acceptedAsProduct || legacyReference !== null || /(?:produit|palan|chariot|gerbeur|tendeur|pince|cerclage|transpalette|pont|table|cric|verin|vérin)/i.test(parsed.pathname));
+            if (looksProductish) {
+              result.linkTraces.push({
+                sourcePageUrl: finalUrl,
+                rawHref: link.rawHref,
+                normalizedUrl: canonical,
+                canonicalUrl: canonical,
+                anchorText: link.text || "",
+                pathname: parsed.pathname,
+                navigationKind,
+                acceptedAsProduct,
+                acceptedAsBrowse,
+                legacyReference,
+                rejectionReason: productLinkRejectionReason(canonical, acceptedAsProduct, legacyReference),
+              });
+            }
+            if (acceptedAsProduct || acceptedAsBrowse) {
+              result.children.push({
+                url: canonical,
+                nodeType: acceptedAsProduct ? "PRODUCT" : "BROWSE",
+                label: link.text || null,
+                depth: node.depth + 1,
+                navigationKind,
+              });
+            }
+          }
+        } else {
+          const bodyText = await page.locator("body").innerText();
+          const title = clean(await page.title().catch(() => ""));
+          const heading = clean(await page.locator("h1, h2").first().innerText().catch(() => ""));
+          const appearsLoggedOut = /(?:se connecter|connexion|identifiez-vous|mot de passe)/i.test(bodyText)
+            && !/Déconnexion/i.test(bodyText)
+            && !COMMERCIAL_MARKER_RE.test(bodyText);
+          if (appearsLoggedOut) throw new Error("Session revendeur inactive : la fiche affiche l’écran de connexion.");
+
+          const structure = await pageStructure(page);
+          const taxonomy = breadcrumbTaxonomy(structure.breadcrumb);
+          const rawCommercialRows = await commercialRows(page);
+          const familyReference = referenceFromProductUrl(finalUrl);
+          const familyContext: StockmanFamilyContext = {
+            sourceUrl: finalUrl,
+            category: taxonomy.category,
+            subcategory: taxonomy.subcategory,
+            familyReference,
+            familyTitle: heading || title || node.label || null,
+            breadcrumb: structure.breadcrumb,
+          };
+          result.references = deduplicatePageReferences(
+            extractReferencesFromStructuredRows(rawCommercialRows, familyContext),
+          ).filter((item) => !isKnownFalseStockmanReference(item.reference));
+          result.pageTrace = {
+            requestedUrl: node.url,
+            finalUrl,
+            discoveryLabel: node.label ?? null,
+            title,
+            heading,
+            bodySample: clean(bodyText).slice(0, 4_000),
+            breadcrumb: structure.breadcrumb,
+            category: taxonomy.category,
+            subcategory: taxonomy.subcategory,
+            familyReference,
+            familyTitle: familyContext.familyTitle,
+            commercialRows: rawCommercialRows.slice(0, 40).map((row) => {
+              const classification = classifyCommercialRow(row, familyContext);
+              return {
+                ...row,
+                reference: clean(row.reference),
+                text: clean(row.text).slice(0, 1_200),
+                relationType: classification.relationType,
+                classificationEvidence: classification.evidence,
+              };
+            }),
+            relatedProducts: structure.relatedProducts
+              .map((item) => ({ ...item, url: canonicalizeStockmanUrl(item.url, finalUrl) }))
+              .filter((item): item is { url: string; label: string; relationType: "RECOMMENDED_PRODUCT" } => Boolean(item.url)),
+            extractedReferences: result.references.map((item) => item.reference),
+          };
+        }
+        result.ok = true;
+      } catch (error) {
+        result.error = error instanceof Error ? error.message : "Lecture Stockman impossible";
+      }
+      results.push(result);
+    }
+    return results;
   } finally {
     await page.close().catch(() => undefined);
     await context.close().catch(() => undefined);

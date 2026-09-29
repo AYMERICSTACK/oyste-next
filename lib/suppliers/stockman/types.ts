@@ -389,7 +389,7 @@ export type StockmanDiscoveryJobProgress = {
 
 export type StockmanDiscoveryJobStatus = {
   jobId: string;
-  status: "queued" | "running" | "completed" | "failed";
+  status: "queued" | "running" | "completed" | "partial" | "failed" | "cancelled";
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
