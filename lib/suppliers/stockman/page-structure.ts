@@ -96,9 +96,16 @@ export function classifyStockmanNavigationLink(
   context: StockmanLinkDomContext,
 ): StockmanNavigationKind | null {
   const url = new URL(value);
-  if (/--[^/]+\.aspx$/i.test(url.pathname)) return "FAMILY_PAGE";
 
-  const taxonomyLevels = [...url.pathname.matchAll(/--\d+(?=\/|$)/g)].length;
+  // Stockman uses the same `--TOKEN.aspx` shape for taxonomy pages and
+  // commercial family pages. Numeric terminal tokens are taxonomy ids
+  // (`--19.aspx`, `--162.aspx`), while a non-numeric terminal token is the
+  // family/reference slug (`--CL.aspx`, `--P1604-05.aspx`). Classifying the
+  // generic shape as FAMILY_PAGE makes category pages terminal PRODUCT nodes.
+  const terminalToken = url.pathname.match(/--([^/]+)\.aspx$/i)?.[1] ?? null;
+  if (terminalToken && !/^\d+$/.test(terminalToken)) return "FAMILY_PAGE";
+
+  const taxonomyLevels = [...url.pathname.matchAll(/--\d+(?=\.aspx$|\/|$)/g)].length;
   if (taxonomyLevels >= 2) return "SUBCATEGORY";
   if (taxonomyLevels === 1) return "CATEGORY";
 

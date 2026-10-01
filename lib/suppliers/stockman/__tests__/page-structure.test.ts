@@ -98,4 +98,11 @@ test("la structure taxonomique classe les liens sans vocabulaire métier", () =>
   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/famille--15", context), "CATEGORY");
   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/famille--15/enfant--67", context), "SUBCATEGORY");
   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/famille--15/enfant--67/produit--CL.aspx", context), "FAMILY_PAGE");
+
+  // Real Stockman taxonomy URLs end in `.aspx` too: the numeric suffix must
+  // remain navigable instead of being consumed as a PRODUCT node.
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/transpalettes-electriques--19.aspx", context), "CATEGORY");
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/emballage--7.aspx", context), "CATEGORY");
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/transpalettes-electriques--19/transpalettes-electriques-tout-terrain--162.aspx", context), "SUBCATEGORY");
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/palans-et-accessoires-de-levage--15/pinces-de-levage--67/--1/pince-de-levage--CL.aspx", context), "FAMILY_PAGE");
 });
