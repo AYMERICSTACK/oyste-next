@@ -10,7 +10,7 @@ import {
   type StockmanNavigationKind,
   type StockmanRelationType,
 } from "@/lib/suppliers/stockman/page-structure";
-import { canonicalizeStockmanUrl, stockmanTaxonomyBranch } from "@/lib/suppliers/stockman/url";
+import { canonicalizeStockmanUrl, stockmanTaxonomyBranch, stockmanUrlLanguage } from "@/lib/suppliers/stockman/url";
 
 const REFERENCE_RE = /^[A-Z0-9][A-Z0-9./_-]{1,30}$/;
 const EXCLUDED_PATHS = /connexion|contact|actualites|catalogues?|video|mentions|condition|recrutement|devenir-revendeur/i;
@@ -32,6 +32,8 @@ export type StockmanDiscoveredReference = {
   relationType: StockmanRelationType;
   classificationConfidence: "EXPLICIT" | "STRUCTURAL" | "UNKNOWN";
   classificationEvidence: string[];
+  commercialText?: string;
+  supplierData?: { purchasePriceExVat: number | null; stock: number | null; weightKg: number | null; barcode: string | null };
 };
 
 export type StockmanCatalogScanDiagnostics = {
@@ -68,6 +70,9 @@ export type StockmanCatalogScanDiagnostics = {
   relatedProducts: number;
   unknownReferences: number;
   scanComplete: boolean;
+  crawlCounters?: Record<string, number>;
+  languageCoverage?: Record<string, number>;
+  matchingPayloadBytes?: number;
 };
 
 export type StockmanProductPageTrace = {
@@ -213,7 +218,8 @@ async function gotoStockmanPage(page: Page, url: string, timeout = 45_000, maxAt
   let lastError: unknown;
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout });
+      const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout });
+      if (!response || response.status() >= 400) throw new Error(`Réponse catalogue invalide : HTTP ${response?.status() ?? "absent"}.`);
       await page.waitForTimeout(attempt === 1 ? 650 : 900);
       return;
     } catch (error) {
@@ -242,6 +248,21 @@ type StockmanFamilyContext = {
   breadcrumb: string[];
 };
 
+function numeric(value: string | undefined) {
+  if (value === undefined) return null;
+  const result = Number(value.replace(/\s/g, "").replace(",", "."));
+  return Number.isFinite(result) ? result : null;
+}
+
+function commercialPrice(text: string) {
+  const explicit = text.match(/\b(?:Prix(?:\s+Unitaire)?(?:\s+HT)?|Unit price(?:\s+HT)?)\s*:?\s*(\d[\d ]*(?:[.,]\d+)?)\s*€(?:\s*HT)?/i)?.[1];
+  if (explicit) return numeric(explicit);
+  // Flattened adjacent stock/price cells cannot distinguish "9 146" from
+  // a grouped monetary amount. Keep ambiguity null and preserve raw evidence.
+  const isolated = text.match(/(?:^|[^\d\s])\s*(\d+(?:[.,]\d+)?)\s*€\s*HT/i)?.[1];
+  return numeric(isolated);
+}
+
 export function extractReferencesFromStructuredRows(
   rows: StockmanCommercialRowSnapshot[],
   context: StockmanFamilyContext,
@@ -263,19 +284,27 @@ export function extractReferencesFromStructuredRows(
       relationType: classification.relationType,
       classificationConfidence: classification.confidence,
       classificationEvidence: classification.evidence,
+      commercialText: text.slice(0, 1_200),
+      supplierData: {
+        purchasePriceExVat: commercialPrice(text),
+        stock: numeric(text.match(/\bStock\s*:?\s*(\d+)/i)?.[1]),
+        weightKg: numeric(text.match(/(?:Poids|Weight)\s*:\s*(\d+(?:[.,]\d+)?)\s*kg/i)?.[1]),
+        barcode: text.match(/(?:Code[- ]?barres?|Bar code)\s*:\s*(\d{8,14})/i)?.[1] ?? null,
+      },
     });
   }
   return results;
 }
 
-function deduplicatePageReferences(items: StockmanDiscoveredReference[]) {
+export function deduplicatePageReferences(items: StockmanDiscoveredReference[]) {
   const unique = new Map<string, StockmanDiscoveredReference>();
   for (const item of items) {
-    const current = unique.get(item.reference);
+    const key = [item.reference, item.sourceUrl, item.familyReference, item.relationType].join("\u001f");
+    const current = unique.get(key);
     if (!current
       || current.classificationConfidence === "UNKNOWN" && item.classificationConfidence !== "UNKNOWN"
       || current.designation === "Référence Stockman" && item.designation !== "Référence Stockman") {
-      unique.set(item.reference, item);
+      unique.set(key, item);
     }
   }
   return [...unique.values()];
@@ -339,6 +368,7 @@ async function linksFrom(page: Page) {
         ? [...owner.attributes].filter((attribute) => attribute.name.startsWith("data-")).map((attribute) => `${attribute.name}=${attribute.value}`)
         : [];
       return {
+        inHeaderOrFooter: Boolean(anchor.closest("header, footer, [class*='header'], [class*='footer']")),
         inCatalogueNavigation: Boolean(anchor.closest("aside, .menu, .navigation, [class*='catalogue'], [class*='category'], [class*='categorie']")),
         inBreadcrumb: Boolean(anchor.closest(".content-ariane, #div_ariane_content, [class*='breadcrumb']")),
         inProductCard: Boolean(anchor.closest("article, .product, .produit, [class*='product-card'], [class*='produit-card']")),
@@ -365,21 +395,22 @@ async function commercialRows(page: Page): Promise<StockmanCommercialRowSnapshot
       );
       const reference = (referenceElement?.textContent ?? "").replace(/\u00a0/g, " ").trim();
       const text = (element.textContent ?? "").replace(/\u00a0/g, " ").replace(/\s+/g, " ").trim();
-      if (!reference || !text) continue;
+      if (!reference || !text || referenceElement?.closest("tr") !== element) continue;
       if (!/(?:Poids\s*:|Weight\s*:|Catalogue\b|€\s*HT|Prix\s+Unitaire\s+HT|Unit price|Code[- ]?barres?|Bar code|Stock\b)/i.test(text)) continue;
       const key = `${reference}::${text}`;
       if (seen.has(key)) continue;
       seen.add(key);
       const table = element.closest("table");
       const section = element.closest("section, article, fieldset, .bloc, .block, [class*='option'], [class*='accessoir'], [class*='piece']");
-      const precedingHeadings = section
-        ? [...section.querySelectorAll("h1, h2, h3, h4, legend")]
+      const headingScope = section ?? table?.parentElement;
+      const precedingHeadings = headingScope
+        ? [...headingScope.querySelectorAll("h1, h2, h3, h4, legend")]
           .filter((heading) => Boolean(heading.compareDocumentPosition(element) & Node.DOCUMENT_POSITION_FOLLOWING))
-          .map((heading) => heading.textContent ?? "")
+          .slice(-1).map((heading) => heading.textContent ?? "")
         : [];
-      const badgeTexts = [...element.querySelectorAll(".badge, .label, .tag, [class*='badge'], [class*='accessoir'], [class*='option']")]
+      const badgeTexts = [...element.querySelectorAll(".badge, .label, .tag, [class*='badge'], [class*='accessoir'], [class*='option'], span, strong")]
         .map((badge) => (badge.textContent ?? "").replace(/\s+/g, " ").trim())
-        .filter(Boolean);
+        .filter((label) => /^(?:accessoires?|options?|pi[eè]ces? d[eé]tach[eé]es?)$/i.test(label));
       const owner = section ?? table ?? element;
       const dataAttributes = [...owner.attributes]
         .filter((attribute) => attribute.name.startsWith("data-"))
@@ -391,6 +422,8 @@ async function commercialRows(page: Page): Promise<StockmanCommercialRowSnapshot
         sectionLabels: precedingHeadings,
         ancestorClass: owner.getAttribute("class") ?? "",
         dataAttributes,
+        // A generic commercial table is insufficient evidence of main variants.
+        isPrimaryFamilyTable: Boolean(table?.matches("[data-relation=primary], [data-relation=primary-variant]") || precedingHeadings.some((label) => /^(?:variantes? principales?|primary variants?)$/i.test(label.trim()))),
         isCommercialTable: Boolean(table),
         rowIndex,
       });
@@ -794,6 +827,7 @@ export type StockmanDiscoveryBatchResult = {
   references: StockmanDiscoveredReference[];
   pageTrace?: StockmanProductPageTrace;
   linkTraces: StockmanProductLinkTrace[];
+  counters: Record<string, number>;
 };
 
 /**
@@ -818,19 +852,38 @@ export async function scanStockmanDiscoveryBatch(
         children: [],
         references: [],
         linkTraces: [],
+        counters: {},
       };
       try {
-        await gotoStockmanPage(page, node.url, 12_000, 2);
-        const finalUrl = canonicalizeStockmanUrl(page.url(), node.url) ?? page.url();
+        await gotoStockmanPage(page, node.url, 12_000, 1);
+        const responseText = await page.locator("body").innerText();
+        if (/(?:se connecter|identifiez-vous|mot de passe)/i.test(responseText)
+          && !/Déconnexion/i.test(responseText) && !COMMERCIAL_MARKER_RE.test(responseText)) {
+          throw new Error("Session revendeur inactive : catalogue non vérifiable.");
+        }
+        const finalUrl = canonicalizeStockmanUrl(page.url(), node.url);
+        if (!finalUrl) throw new Error("Redirection hors du domaine catalogue STOCKMAN.");
         result.finalUrl = finalUrl;
 
         if (node.nodeType === "BROWSE") {
           const links = await linksFrom(page);
           for (const link of links) {
+            const count = (key: string) => { result.counters[key] = (result.counters[key] ?? 0) + 1; };
+            count("linksEncountered");
+            if (link.context.inHeaderOrFooter) count("origin:header-footer");
+            if (link.context.inBreadcrumb) count("origin:breadcrumb");
+            if (link.context.inCatalogueNavigation) count("origin:catalogue-navigation");
+            if (link.context.inProductCard) count("origin:product-card");
+            try { count(`links:${stockmanUrlLanguage(link.href)}`); } catch { count("links:other"); }
             const canonical = canonicalizeStockmanUrl(link.href, finalUrl);
-            if (!canonical) continue;
+            if (!canonical) { count("rejected:outside-host-or-protocol"); continue; }
+            if (canonical !== link.href) count("canonicalized:context-host-fragment-tracking");
             const navigationKind = classifyStockmanNavigationLink(canonical, link.context);
-            if (!navigationKind) continue;
+            if (!navigationKind) { count("rejected:non-catalogue-route"); continue; }
+            count(`accepted:${navigationKind}`);
+            const query = new URL(canonical).searchParams;
+            if ([...query.keys()].some((key) => /page|offset/i.test(key))) count("functional:pagination");
+            if ([...query.keys()].some((key) => /filter|search/i.test(key))) count("functional:filter-search");
             const acceptedAsProduct = navigationKind === "FAMILY_PAGE" && looksLikeProductUrl(canonical);
             const acceptedAsBrowse = navigationKind !== "FAMILY_PAGE";
             const legacyReference = legacyReferenceFromProductUrl(canonical);
@@ -838,7 +891,7 @@ export async function scanStockmanDiscoveryBatch(
             const looksProductish = /\.aspx$/i.test(parsed.pathname)
               && (acceptedAsProduct || legacyReference !== null || /(?:produit|palan|chariot|gerbeur|tendeur|pince|cerclage|transpalette|pont|table|cric|verin|vérin)/i.test(parsed.pathname));
             if (looksProductish) {
-              result.linkTraces.push({
+              if (result.linkTraces.length < 30) result.linkTraces.push({
                 sourcePageUrl: finalUrl,
                 rawHref: link.rawHref,
                 normalizedUrl: canonical,
@@ -886,6 +939,12 @@ export async function scanStockmanDiscoveryBatch(
           result.references = deduplicatePageReferences(
             extractReferencesFromStructuredRows(rawCommercialRows, familyContext),
           ).filter((item) => !isKnownFalseStockmanReference(item.reference));
+          for (const related of structure.relatedProducts) {
+            const url = canonicalizeStockmanUrl(related.url, finalUrl);
+            if (url && classifyStockmanNavigationLink(url, { inCatalogueNavigation: false, inBreadcrumb: false, inProductCard: true, ancestorText: "", ancestorClass: "", dataAttributes: [] }) === "FAMILY_PAGE") {
+              result.children.push({ url, nodeType: "PRODUCT", label: related.label, depth: node.depth + 1, navigationKind: "FAMILY_PAGE" });
+            }
+          }
           result.pageTrace = {
             requestedUrl: node.url,
             finalUrl,

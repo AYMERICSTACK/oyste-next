@@ -117,6 +117,19 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
           const response = await fetch(`/api/admin/suppliers/stockman/discovery?latest=1&_attempt=${attempt}`, { cache: "no-store" });
           const payload = await response.json().catch(() => ({}));
           if (cancelled) return;
+          if (response.ok && payload.source === "durable" && payload.job) {
+            const job = payload.job as StockmanDiscoveryJobStatus;
+            setProgress(job.progress);
+            setPersistentAuditDate(job.finishedAt);
+            setMessage(`Scan durable ${job.jobId} : ${(job.status === "completed" ? "COMPLETE" : job.status.toUpperCase())}.`);
+            if (!job.result) {
+              if (["queued", "running", "cancel_requested"].includes(job.status)) {
+                activeJobRef.current = job.jobId;
+                void runScan(job.jobId);
+              }
+              return;
+            }
+          }
           if (response.ok && payload.restored && payload.scan) {
             setScan(payload.scan as StockmanCatalogDiscovery);
             setUnresolvedAudit((payload.unresolvedAudit || null) as StockmanUnresolvedAudit | null);
@@ -124,7 +137,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             setPersistentAuditDate(payload.snapshotFinishedAt || null);
             setSelected(new Set(payload.scan.matches.filter((item: StockmanCatalogMatch) => item.status === "matched").map((item: StockmanCatalogMatch) => item.reference)));
             const purged = Array.isArray(payload.ghostReferencesRemoved) ? payload.ghostReferencesRemoved.length : 0;
-            setMessage(`Audit STOCKMAN restauré depuis PostgreSQL : ${payload.scan.totals.discovered} référence(s).${purged ? ` ${purged} référence(s) fantôme(s) purgée(s).` : ""} Aucun rescan intranet nécessaire.`);
+            setMessage(payload.source === "durable" ? `Scan durable ${payload.job.jobId} : ${payload.job.status === "completed" ? "COMPLETE" : payload.job.status.toUpperCase()} · ${payload.scan.totals.discovered} référence(s).` : `Audit historique PostgreSQL : ${payload.scan.totals.discovered} référence(s).${purged ? ` ${purged} référence(s) fantôme(s) purgée(s).` : ""}`);
             return;
           }
           lastError = payload.message || (payload.restored === false ? "Aucun snapshot persistant trouvé." : `HTTP ${response.status}`);
@@ -137,7 +150,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
         if (!cancelled) setRestoringPersistentAudit(false);
       }
     })();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; activeJobRef.current = null; };
   }, [effectiveEnabled]);
 
   const visible = useMemo(() => {
@@ -751,22 +764,23 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
     }
   }
 
-  async function runScan() {
+  async function runScan(resumeJobId?: string) {
     setLoading(true);
     setMessage(null);
+    setPersistentAuditDate(null);
     setScan(null);
     setProgress(null);
     setSelected(new Set());
     setSelectedImports(new Set());
     setUnresolvedAudit(null);
     try {
-      const response = await fetch("/api/admin/suppliers/stockman/discovery", {
+      const response = resumeJobId ? null : await fetch("/api/admin/suppliers/stockman/discovery", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "scan", seedUrl }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Le scan Stockman n’a pas pu démarrer.");
+      const payload = response ? await response.json().catch(() => ({})) : { jobId: resumeJobId };
+      if (response && !response.ok) throw new Error(payload.message || "Le scan Stockman n’a pas pu démarrer.");
 
       const jobId = typeof payload.jobId === "string" ? payload.jobId : null;
       if (!jobId) throw new Error("Le serveur n’a pas retourné d’identifiant de scan.");
@@ -778,9 +792,16 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
         const statusResponse = await fetch(`/api/admin/suppliers/stockman/discovery?jobId=${encodeURIComponent(jobId)}`, {
           method: "GET",
           cache: "no-store",
-        });
+        }).catch(() => null);
+        if (!statusResponse) {
+          setMessage("Connexion interrompue ; le scan durable continue. Reconnexion en cours.");
+          continue;
+        }
         const statusPayload = await statusResponse.json().catch(() => ({}));
-        if (!statusResponse.ok) throw new Error(statusPayload.message || "Impossible de récupérer l’avancement du scan.");
+        if (!statusResponse.ok) {
+          setMessage("Avancement temporairement indisponible ; le scan durable continue. Nouvelle tentative en cours.");
+          continue;
+        }
 
         const job = statusPayload as StockmanDiscoveryJobStatus;
         setProgress(job.progress);

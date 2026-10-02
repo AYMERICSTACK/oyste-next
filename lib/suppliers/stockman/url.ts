@@ -5,6 +5,7 @@ const CONTEXT_ONLY_PARAMS = new Set([
   "language",
   "lang",
   "src",
+  "gclid", "fbclid", "msclkid",
 ]);
 
 /**
@@ -35,12 +36,14 @@ export function canonicalizeStockmanUrl(value: string, base = "https://www.stock
       const key = rawKey.trim();
       const value = rawValue.trim();
       if (!key) continue;
-      if (CONTEXT_ONLY_PARAMS.has(key.toLowerCase())) continue;
+      if (CONTEXT_ONLY_PARAMS.has(key.toLowerCase()) && (!/^(langue|language|lang)$/i.test(key) || !/^\/en(?:\/|$)/i.test(url.pathname) && /^(fr|fr-fr|french|francais)$/i.test(value))) continue;
+      if (/^utm_/i.test(key)) continue;
       retained.push([key, value]);
     }
     retained.sort(([leftKey, leftValue], [rightKey, rightValue]) =>
       leftKey.localeCompare(rightKey, "en", { sensitivity: "base" })
-      || leftValue.localeCompare(rightValue, "en", { sensitivity: "base" }),
+      || leftValue.localeCompare(rightValue, "en", { sensitivity: "base" })
+      || leftKey.localeCompare(rightKey, "en") || leftValue.localeCompare(rightValue, "en"),
     );
     url.search = "";
     for (const [key, value] of retained) url.searchParams.append(key, value);
@@ -58,4 +61,30 @@ export function stockmanTaxonomyBranch(value: string) {
   } catch {
     return "root";
   }
+}
+
+/** Candidate identity for diagnostics only: an id is not proof that two paths
+ * expose identical catalogue contents. Queue dedupe uses the full canonical URL.
+ */
+export function stockmanTaxonomyIdentity(value: string) {
+  const canonical = canonicalizeStockmanUrl(value);
+  if (!canonical) return null;
+  const url = new URL(canonical);
+  const id = url.pathname.match(/--(\d+)\.aspx$/i)?.[1];
+  if (!id) return canonical;
+  const language = stockmanUrlLanguage(canonical);
+  return `taxonomy:${language}:${id}${url.search}`;
+}
+
+export function stockmanUrlLanguage(value: string) {
+  const url = new URL(value);
+  const parameter = [...url.searchParams].find(([key]) => /^(langue|lang|language)$/i.test(key))?.[1];
+  if (parameter && /^(en|en-gb|en-us|english)$/i.test(parameter)) return "en";
+  if (parameter && /^(fr|fr-fr|french|francais)$/i.test(parameter)) return "fr";
+  if (parameter) return "other";
+  return /^\/en(?:\/|$)/i.test(url.pathname) ? "en" : "fr";
+}
+
+export function stockmanQueueIdentity(value: string) {
+  return canonicalizeStockmanUrl(value);
 }

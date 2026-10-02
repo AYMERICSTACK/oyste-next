@@ -9,7 +9,12 @@ function changed(previous: { designation: string; category: string | null; sourc
     || previous.sourceUrl !== current.sourceUrl;
 }
 
-export async function persistStockmanLivingReference(discovery: StockmanCatalogDiscovery): Promise<StockmanLivingReferenceStats> {
+export async function persistStockmanLivingReference(
+  discovery: StockmanCatalogDiscovery,
+  options: { offset?: number; take?: number; finalize?: boolean; db?: typeof prisma } = {},
+): Promise<StockmanLivingReferenceStats> {
+  const db = options.db ?? prisma;
+  const finalize = options.finalize !== false;
   const observedAt = new Date(discovery.finishedAt);
   const references = discovery.matches
     .filter((match) => !isKnownFalseStockmanReference(match.reference))
@@ -21,22 +26,26 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
       match,
     }));
 
+  const start = options.offset ?? 0;
+  const end = Math.min(references.length, start + (options.take ?? references.length));
+
   // V2.8.1 : purge également les anciennes caractéristiques techniques
   // prises pour des références (24V, 20AH, 1665X1170X1900, 1T, etc.).
-  const staleCandidates = await prisma.stockmanCatalogReference.findMany({
+  const staleCandidates = finalize ? await db.stockmanCatalogReference.findMany({
     select: { reference: true },
-  });
+  }) : [];
   const falseReferences = [...new Set([
     ...knownFalseStockmanReferences(),
     ...staleCandidates.map((item) => item.reference).filter(isKnownFalseStockmanReference),
   ])];
-  if (falseReferences.length) {
-    await prisma.stockmanCatalogReference.deleteMany({
+  if (finalize && falseReferences.length) {
+    await db.stockmanCatalogReference.deleteMany({
       where: { reference: { in: falseReferences } },
     });
   }
 
-  const existing = await prisma.stockmanCatalogReference.findMany({
+  const existing = await db.stockmanCatalogReference.findMany({
+    ...(!finalize ? { where: { reference: { in: references.slice(start, end).map((item) => item.reference) } } } : {}),
     select: { reference: true, designation: true, category: true, sourceUrl: true, isActive: true, lastSeenAt: true },
   });
   const byReference = new Map(existing.map((item) => [item.reference, item]));
@@ -45,7 +54,7 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
   let newThisScan = 0;
   let changedThisScan = 0;
 
-  const attempts = discovery.diagnostics.productPageAttempts;
+  const attempts = discovery.diagnostics.uniqueProductUrls;
   const failures = discovery.diagnostics.productPageFailures;
   const opened = discovery.diagnostics.productPagesOpened;
   const coverage = attempts > 0 ? opened / attempts : 0;
@@ -62,33 +71,35 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
     || browseLimitReached
     || productLimitReached
     || failures > 0
-    || coverage < 0.995;
+    || !Number.isFinite(coverage)
+    || coverage !== 1;
 
   const incompleteReasons = [
     !scanExplicitlyComplete ? "complétude non confirmée" : null,
     browseLimitReached ? "plafond de navigation atteint" : null,
     productLimitReached ? "plafond de fiches atteint" : null,
     failures > 0 ? `${failures} échec(s) de fiche` : null,
-    coverage < 0.995 ? `${opened}/${attempts} fiches ouvertes` : null,
+    coverage !== 1 ? `${opened}/${attempts} fiches ouvertes` : null,
   ].filter((reason): reason is string => Boolean(reason));
 
   const disappearanceCheckReason = disappearanceCheckSkipped
     ? `Disparitions non évaluées : scan non prouvé complet (${incompleteReasons.join(", ")}).`
     : undefined;
 
-  const disappeared = disappearanceCheckSkipped
+  const disappeared = !finalize || disappearanceCheckSkipped
     ? []
-    : existing.filter((item) => item.isActive && !currentReferences.has(item.reference));
+    : existing.filter((item) => item.isActive && item.lastSeenAt <= observedAt && !currentReferences.has(item.reference));
 
-  for (let offset = 0; offset < references.length; offset += 25) {
-    const batch = references.slice(offset, offset + 25);
+  for (let offset = start; offset < end; offset += 25) {
+    const batch = references.slice(offset, Math.min(offset + 25, end));
     await Promise.all(batch.map(async (item) => {
       const previous = byReference.get(item.reference);
+      if (previous && previous.lastSeenAt > observedAt) return;
       const hasChanged = previous ? changed(previous, item) : false;
       if (!previous) newThisScan += 1;
       else if (hasChanged || !previous.isActive) changedThisScan += 1;
 
-      await prisma.stockmanCatalogReference.upsert({
+      await db.stockmanCatalogReference.upsert({
         where: { reference: item.reference },
         create: {
           reference: item.reference,
@@ -115,7 +126,7 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
           sourceUrl: item.sourceUrl,
           lastSeenAt: observedAt,
           lastChangedAt: hasChanged || !previous?.isActive ? observedAt : undefined,
-          seenCount: { increment: 1 },
+          seenCount: previous?.lastSeenAt.getTime() === observedAt.getTime() ? undefined : { increment: 1 },
           isActive: true,
           lastMatchStatus: item.match.status,
           lastMatchMethod: item.match.matchMethod,
@@ -131,13 +142,13 @@ export async function persistStockmanLivingReference(discovery: StockmanCatalogD
   }
 
   if (disappeared.length) {
-    await prisma.stockmanCatalogReference.updateMany({
-      where: { reference: { in: disappeared.map((item) => item.reference) } },
+    await db.stockmanCatalogReference.updateMany({
+      where: { reference: { in: disappeared.map((item) => item.reference) }, lastSeenAt: { lte: observedAt } },
       data: { isActive: false, lastChangedAt: observedAt },
     });
   }
 
-  await prisma.stockmanCatalogSnapshot.create({
+  if (finalize) await db.stockmanCatalogSnapshot.create({
     data: {
       startedAt: new Date(discovery.startedAt),
       finishedAt: observedAt,

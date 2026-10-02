@@ -3,7 +3,7 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { prisma } from "@/lib/db/prisma";
-import { getStockmanDiscoveryJob, runNextStockmanDiscoveryBatch, startStockmanDiscoveryJob } from "@/lib/suppliers/stockman/discovery-jobs";
+import { getStockmanDiscoveryJob, startStockmanDiscoveryJob } from "@/lib/suppliers/stockman/discovery-jobs";
 import { getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import { auditStockmanUnresolved } from "@/lib/suppliers/stockman/unresolved-audit";
 import { auditStockmanDuplicateStructure } from "@/lib/suppliers/stockman/duplicate-structure-audit";
@@ -16,8 +16,8 @@ export const maxDuration = 60;
 const scanSchema = z.object({
   action: z.literal("scan"),
   seedUrl: z.string().url().optional(),
-  maxBrowsePages: z.number().int().min(1).max(500).optional(),
-  maxProductPages: z.number().int().min(1).max(2_000).optional(),
+  maxBrowsePages: z.number().int().min(1).max(5_000).optional(),
+  maxProductPages: z.number().int().min(1).max(10_000).optional(),
 });
 
 
@@ -106,6 +106,12 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   if (url.searchParams.get("latest") === "1") {
+    const active = await prisma.stockmanDiscoveryJob.findFirst({ where: { status: { in: ["QUEUED", "RUNNING", "CANCEL_REQUESTED"] } }, orderBy: { createdAt: "desc" } });
+    const durable = active ?? await prisma.stockmanDiscoveryJob.findFirst({ orderBy: { createdAt: "desc" } });
+    if (durable) {
+      const job = await getStockmanDiscoveryJob(durable.id);
+      return NextResponse.json({ restored: Boolean(job?.result), source: "durable", job, scan: job?.result, snapshotFinishedAt: job?.finishedAt }, { headers: { "Cache-Control": "no-store" } });
+    }
     const snapshot = await prisma.stockmanCatalogSnapshot.findFirst({ orderBy: { finishedAt: "desc" } });
     if (!snapshot) return NextResponse.json({ restored: false }, { headers: { "Cache-Control": "no-store" } });
 
@@ -119,19 +125,14 @@ export async function GET(request: Request) {
     const ghostReferences = persistedCandidates
       .map((item) => item.reference)
       .filter(isKnownFalseStockmanReference);
-    if (ghostReferences.length) {
-      await prisma.$transaction([
-        prisma.stockmanCatalogReference.deleteMany({ where: { reference: { in: ghostReferences } } }),
-        prisma.stockmanImportDraft.deleteMany({ where: { reference: { in: ghostReferences } } }),
-      ]);
-    }
+    // Historical restoration is read-only: ghost tokens are hidden, not deleted.
 
     const [references, importDrafts] = await Promise.all([
       prisma.stockmanCatalogReference.findMany({ where: { isActive: true }, orderBy: { reference: "asc" } }),
       prisma.stockmanImportDraft.findMany({ where: { status: "PREPARED" }, select: { reference: true } }),
     ]);
     const prepared = new Set(importDrafts.map((item) => item.reference.trim().toUpperCase()));
-    const matches = references.map((item) => {
+    const matches = references.filter((item) => !isKnownFalseStockmanReference(item.reference)).map((item) => {
       const status = (item.lastMatchStatus || "missing") as "matched" | "missing" | "ambiguous" | "already_linked" | "suggested";
       const matchMethod = (item.lastMatchMethod || "none") as "exact" | "normalized" | "excel" | "suggestion" | "none";
       const missingKind = item.lastMissingKind as "excel_unmapped" | "reference_close" | "designation_close" | "family_probable" | "confirmed_missing" | null;
@@ -164,7 +165,7 @@ export async function GET(request: Request) {
       matches, warnings: [`V2.12.8.2 : audit restauré depuis PostgreSQL/Neon sans rescanner l’intranet STOCKMAN. La complétude du scan historique n’étant pas persistée, ce résultat restauré est volontairement marqué incomplet. ${ghostReferences.length} référence(s) fantôme(s) purgée(s).`],
       differential: { presentInOyste: matches.filter(i => i.catalogueState === "present").length, toImport: matches.filter(i => i.catalogueState === "to_import").length, toReview: matches.filter(i => i.catalogueState === "to_review").length, disappearedFromStockman: snapshot.disappearedCount, preparedForImport: matches.filter(i => i.importPrepared).length },
     };
-    return NextResponse.json({ restored: true, restoredAt: new Date().toISOString(), snapshotFinishedAt: snapshot.finishedAt.toISOString(), ghostReferencesRemoved: ghostReferences, scan, unresolvedAudit, duplicateStructureAudit }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ restored: true, restoredAt: new Date().toISOString(), snapshotFinishedAt: snapshot.finishedAt.toISOString(), ghostReferencesHidden: ghostReferences, scan, unresolvedAudit, duplicateStructureAudit }, { headers: { "Cache-Control": "no-store" } });
   }
 
   const jobId = url.searchParams.get("jobId")?.trim();
@@ -172,7 +173,7 @@ export async function GET(request: Request) {
 
   // Chaque poll fait avancer au plus un lot borné. L'état reste en base et un
   // cron reprend le même travail si le navigateur BO est fermé.
-  await runNextStockmanDiscoveryBatch(jobId);
+  // Status reads stay fast and read-only; the durable cron owns execution.
   const job = await getStockmanDiscoveryJob(jobId);
   if (!job) return NextResponse.json({ message: "Ce scan n’existe plus ou a expiré." }, { status: 404 });
   return NextResponse.json(job, { headers: { "Cache-Control": "no-store" } });
@@ -192,8 +193,8 @@ export async function POST(request: Request) {
       ...parsed.data,
       // V2.12.3 : le bouton d'audit doit parcourir l'intranet, pas seulement
       // l'échantillon historique limité à 120 pages.
-      maxBrowsePages: parsed.data.maxBrowsePages ?? 500,
-      maxProductPages: parsed.data.maxProductPages ?? 2_000,
+      maxBrowsePages: parsed.data.maxBrowsePages ?? 5_000,
+      maxProductPages: parsed.data.maxProductPages ?? 10_000,
     });
     return NextResponse.json(
       { jobId: job!.jobId, status: job!.status, progress: job!.progress },

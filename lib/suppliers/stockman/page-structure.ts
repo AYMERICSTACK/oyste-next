@@ -12,6 +12,7 @@ export type StockmanNavigationKind = "CATEGORY" | "SUBCATEGORY" | "FAMILY_PAGE" 
 
 export type StockmanLinkDomContext = {
   inCatalogueNavigation: boolean;
+  inHeaderOrFooter?: boolean;
   inBreadcrumb: boolean;
   inProductCard: boolean;
   ancestorText: string;
@@ -28,6 +29,7 @@ export type StockmanCommercialRowSnapshot = {
   dataAttributes: string[];
   isCommercialTable: boolean;
   rowIndex: number;
+  isPrimaryFamilyTable?: boolean;
 };
 
 export type StockmanClassification = {
@@ -53,34 +55,28 @@ export function classifyCommercialRow(
   row: StockmanCommercialRowSnapshot,
   context: { familyReference: string | null; breadcrumb: string[] },
 ): StockmanClassification {
-  const accessoryBadge = containsExplicit(row.badgeTexts, /\baccessoires?\b/);
-  if (accessoryBadge) {
-    return { relationType: "ACCESSORY", confidence: "EXPLICIT", evidence: [`badge:${accessoryBadge}`] };
+  const markers: Array<{ pattern: RegExp; relationType: StockmanRelationType }> = [
+    { pattern: /\baccessoires?\b/, relationType: "ACCESSORY" },
+    { pattern: /\boptions?\b/, relationType: "OPTION" },
+    { pattern: /\bpieces? detachees?\b/, relationType: "SPARE_PART" },
+    { pattern: /consultez\s+egalement|recommended products?/, relationType: "RECOMMENDED_PRODUCT" },
+  ];
+  // All row-local badges outrank any enclosing section or breadcrumb.
+  for (const [origin, values] of [["badge", row.badgeTexts], ["section", row.sectionLabels]] as const) {
+    for (const marker of markers) {
+      const label = containsExplicit([...values], marker.pattern);
+      if (label) return { relationType: marker.relationType, confidence: "EXPLICIT", evidence: [`${origin}:${label}`] };
+    }
   }
-
-  const optionBadge = containsExplicit(row.badgeTexts, /\boptions?\b/);
-  const optionSection = containsExplicit(row.sectionLabels, /\boptions?\b/);
-  if (optionBadge || optionSection) {
-    return {
-      relationType: "OPTION",
-      confidence: "EXPLICIT",
-      evidence: [optionBadge ? `badge:${optionBadge}` : `section:${optionSection}`],
-    };
-  }
-
-  const sparePartBadge = containsExplicit(row.badgeTexts, /\bpieces? detachees?\b/);
-  const sparePartSection = containsExplicit(row.sectionLabels, /\bpieces? detachees?\b/);
   const sparePartBreadcrumb = containsExplicit(context.breadcrumb, /\bpieces? detachees?\b/);
-  if (sparePartBadge || sparePartSection || sparePartBreadcrumb) {
-    const marker = sparePartBadge ?? sparePartSection ?? sparePartBreadcrumb;
-    return { relationType: "SPARE_PART", confidence: "EXPLICIT", evidence: [`label:${marker}`] };
-  }
+  if (sparePartBreadcrumb) return { relationType: "SPARE_PART", confidence: "STRUCTURAL", evidence: [`breadcrumb:${sparePartBreadcrumb}`] };
 
   if (row.isCommercialTable) {
     const sameAsFamily = Boolean(
       context.familyReference
       && row.reference.trim().toUpperCase() === context.familyReference.trim().toUpperCase(),
     );
+    if (!sameAsFamily && !row.isPrimaryFamilyTable) return { relationType: "UNKNOWN", confidence: "UNKNOWN", evidence: ["commercial-table-without-family-scope"] };
     return {
       relationType: sameAsFamily ? "PRIMARY" : "PRIMARY_VARIANT",
       confidence: "STRUCTURAL",
@@ -114,8 +110,13 @@ export function classifyStockmanNavigationLink(
     return "SUBCATEGORY";
   }
 
-  if (context.inCatalogueNavigation || context.inBreadcrumb || context.inProductCard) return "BROWSE";
-  if (url.pathname === "/" || /\/products\.aspx$/i.test(url.pathname)) return "BROWSE";
+  // Explicit taxonomy routes above remain discoverable even in a global menu.
+  if (/\/(?:login|connexion|contact|mentions-legales|conditions-generales|account|panier)\.aspx$/i.test(url.pathname)) return null;
+  if (url.pathname === "/" || /^\/en\/?$/i.test(url.pathname) || /\/products\.aspx$/i.test(url.pathname)) return "BROWSE";
+  // Keep structurally scoped nonstandard catalogue routes: dropping unknown
+  // catalogue navigation would create false proof of exhaustiveness.
+  if (!context.inHeaderOrFooter && /\.aspx$/i.test(url.pathname)
+    && (context.inCatalogueNavigation || context.inProductCard || context.inBreadcrumb)) return "BROWSE";
   return null;
 }
 

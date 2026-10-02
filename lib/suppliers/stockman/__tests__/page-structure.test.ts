@@ -16,6 +16,7 @@ function row(reference: string, overrides: Partial<StockmanCommercialRowSnapshot
     ancestorClass: "commercial-table",
     dataAttributes: [],
     isCommercialTable: true,
+    isPrimaryFamilyTable: true,
     rowIndex: 0,
     ...overrides,
   };
@@ -105,4 +106,40 @@ test("la structure taxonomique classe les liens sans vocabulaire métier", () =>
   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/emballage--7.aspx", context), "CATEGORY");
   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/transpalettes-electriques--19/transpalettes-electriques-tout-terrain--162.aspx", context), "SUBCATEGORY");
   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/palans-et-accessoires-de-levage--15/pinces-de-levage--67/--1/pince-de-levage--CL.aspx", context), "FAMILY_PAGE");
+});
+
+ test("une table commerciale ambiguë ne devient pas une table de variantes", () => {
+   const context = { familyReference: "FAMILY", breadcrumb: [] };
+   for (const reference of ["BATTERIE", "SUPPORT", "X01"]) {
+     assert.equal(classifyCommercialRow(row(reference, { isPrimaryFamilyTable: false }), context).relationType, "UNKNOWN");
+   }
+ });
+ test("sections accessoires et recommandations prévalent sur une table principale", () => {
+   const context = { familyReference: "FAMILY", breadcrumb: [] };
+   assert.equal(classifyCommercialRow(row("X01", { sectionLabels: ["Accessoires"] }), context).relationType, "ACCESSORY");
+   assert.equal(classifyCommercialRow(row("X01", { sectionLabels: ["Consultez également"] }), context).relationType, "RECOMMENDED_PRODUCT");
+ });
+ test("liens de navigation générique ne suffisent pas à inclure les routes utilitaires", () => {
+   const context = { inCatalogueNavigation: true, inBreadcrumb: true, inProductCard: false, ancestorText: "", ancestorClass: "menu", dataAttributes: [] };
+   assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/login.aspx", context), null);
+ });
+
+test("badge local prévaut sur une section contradictoire", () => {
+  assert.equal(classifyCommercialRow(row("X01", { badgeTexts: ["Pièces détachées"], sectionLabels: ["Options"] }), { familyReference: "FAM", breadcrumb: [] }).relationType, "SPARE_PART");
+});
+test("PTE15NPRO conserve ses variantes prouvées, options et accessoires séparément", () => {
+  const context = { familyReference: "PTE15NPRO", breadcrumb: [] };
+  for (const reference of ["PTE15NPRO800", "PTE15NPRO1500", "PTE15NPRO1800", "PTE15NPRO-20AH"]) {
+    assert.equal(classifyCommercialRow(row(reference), context).relationType, "PRIMARY_VARIANT");
+    assert.equal(classifyCommercialRow(row(reference, { isPrimaryFamilyTable: false }), context).relationType, "UNKNOWN");
+  }
+  assert.equal(classifyCommercialRow(row("SUPPORT01", { badgeTexts: ["ACCESSOIRE"] }), context).relationType, "ACCESSORY");
+  assert.equal(classifyCommercialRow(row("OPTION01", { sectionLabels: ["Options"] }), context).relationType, "OPTION");
+});
+
+test("les routes catalogue non standard restent explorées hors header/footer", () => {
+  const context = { inCatalogueNavigation: true, inBreadcrumb: false, inProductCard: false, ancestorText: "", ancestorClass: "", dataAttributes: [] };
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/catalogue-navigation.aspx?page=2", context), "BROWSE");
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/catalogue-navigation.aspx", { ...context, inHeaderOrFooter: true }), null);
+  assert.equal(classifyStockmanNavigationLink("https://www.stockman.fr/en", context), "BROWSE");
 });

@@ -11,6 +11,8 @@ const complete = {
   unvisitedUrls: 0,
   navigationErrors: 0,
   productErrors: 0,
+  productPageFailures: 0,
+  browseQueueRemaining: 0,
 };
 
 test("autorise la réconciliation destructive uniquement après preuve complète", () => {
@@ -21,4 +23,14 @@ test("autorise la réconciliation destructive uniquement après preuve complète
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, unvisitedUrls: 1 }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, navigationErrors: 1 }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, productErrors: 1 }), false);
+});
+
+test("une preuve incomplète ou un échec produit bloque les disparitions", () => {
+  assert.equal(hasProvenCompleteStockmanScan({ scanComplete: true }), false);
+  for (const key of ["browseLimitReached", "productLimitReached", "queueLimitReached", "unvisitedUrls", "navigationErrors", "productErrors", "discardedUrls", "productPageFailures", "browseQueueRemaining"] as const) {
+    const incomplete = { ...complete, [key]: undefined };
+    assert.equal(hasProvenCompleteStockmanScan(incomplete), false, key);
+  }
+  assert.equal(hasProvenCompleteStockmanScan({ ...complete, productPageFailures: 1 }), false);
+  assert.equal(hasProvenCompleteStockmanScan({ ...complete, browseQueueRemaining: 1 }), false);
 });

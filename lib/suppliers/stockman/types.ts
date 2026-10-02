@@ -128,6 +128,8 @@ export type StockmanMatchSuggestion = {
 };
 
 export type StockmanCatalogMatch = {
+  commercialText?: string;
+  supplierData?: { purchasePriceExVat: number | null; stock: number | null; weightKg: number | null; barcode: string | null };
   reference: string;
   designation: string;
   sourceUrl: string;
@@ -389,7 +391,7 @@ export type StockmanDiscoveryJobProgress = {
 
 export type StockmanDiscoveryJobStatus = {
   jobId: string;
-  status: "queued" | "running" | "completed" | "partial" | "failed" | "cancelled";
+  status: "queued" | "running" | "cancel_requested" | "completed" | "partial" | "failed" | "cancelled";
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
