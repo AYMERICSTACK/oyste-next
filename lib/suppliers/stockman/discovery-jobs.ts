@@ -5,10 +5,17 @@ import { scanStockmanDiscoveryBatch, type StockmanCatalogScanDiagnostics, type S
 import { createStockmanEquivalenceMatcher, type StockmanMatchCandidate } from "./equivalence-engine";
 import { persistStockmanLivingReference } from "./living-reference";
 import { canonicalizeStockmanUrl } from "./url";
-import type { StockmanCatalogDiscovery, StockmanDiscoveryJobProgress, StockmanDiscoveryJobStatus } from "./types";
+import type { StockmanCatalogDiscovery, StockmanCatalogMatch, StockmanDiscoveryJobProgress, StockmanDiscoveryJobStatus } from "./types";
 
 type ScanOptions = { seedUrl?: string; maxBrowsePages?: number; maxProductPages?: number };
 type Limits = Required<Pick<ScanOptions, "maxBrowsePages" | "maxProductPages">> & ScanOptions;
+type MatchingState = {
+  version: 1;
+  nextIndex: number;
+  total: number;
+  matches: StockmanCatalogMatch[];
+};
+
 type DurableDiagnostics = {
   discardedUrls: number;
   browseLimitReached: boolean;
@@ -17,9 +24,11 @@ type DurableDiagnostics = {
   duplicateUrlsAvoided: number;
   categoriesDiscovered: number;
   subcategoriesDiscovered: number;
+  matching?: MatchingState;
 };
 const LEASE_MS = 70_000;
 const MAX_ATTEMPTS = 3;
+const MATCH_BATCH_SIZE = 50;
 
 const nowIso = () => new Date().toISOString();
 const hashUrl = (url: string) => createHash("sha256").update(url).digest("hex");
@@ -32,6 +41,25 @@ const baseDiagnostics = (): DurableDiagnostics => ({
   discardedUrls: 0, browseLimitReached: false, productLimitReached: false,
   canonicalizedUrls: 0, duplicateUrlsAvoided: 0, categoriesDiscovered: 0, subcategoriesDiscovered: 0,
 });
+
+function matchingState(value: unknown): MatchingState | null {
+  const state = json<Partial<MatchingState>>(value, {});
+  if (state.version !== 1 || !Array.isArray(state.matches)) return null;
+  return {
+    version: 1,
+    nextIndex: Math.max(0, typeof state.nextIndex === "number" && Number.isFinite(state.nextIndex) ? state.nextIndex : 0),
+    total: Math.max(0, typeof state.total === "number" && Number.isFinite(state.total) ? state.total : 0),
+    matches: state.matches as StockmanCatalogMatch[],
+  };
+}
+
+function catalogueStateForMatch(match: StockmanCatalogMatch) {
+  return match.status === "matched" || match.status === "already_linked"
+    ? "present" as const
+    : match.status === "missing" && match.missingKind === "confirmed_missing"
+      ? "to_import" as const
+      : "to_review" as const;
+}
 const baseProgress = (): StockmanDiscoveryJobProgress => ({ phase: "queued", percent: 0, message: "Scan en attente…", pagesVisited: 0, productUrlsFound: 0, productPagesProcessed: 0, referencesFound: 0, failures: 0, updatedAt: nowIso() });
 
 async function counts(jobId: string) {
@@ -45,12 +73,29 @@ async function counts(jobId: string) {
 }
 
 async function updateProgress(jobId: string, phase: string) {
-  const [c, referencesFound] = await Promise.all([counts(jobId), prisma.stockmanDiscoveryResult.count({ where: { jobId } })]);
+  const [c, referencesFound, job] = await Promise.all([
+    counts(jobId),
+    prisma.stockmanDiscoveryResult.count({ where: { jobId } }),
+    phase === "MATCHING" ? prisma.stockmanDiscoveryJob.findUnique({ where: { id: jobId }, select: { diagnostics: true } }) : Promise.resolve(null),
+  ]);
   const productTotal = Math.max(c.productsFound, 1);
+  const durable = job ? { ...baseDiagnostics(), ...json(job.diagnostics, baseDiagnostics()) } : baseDiagnostics();
+  const matching = matchingState(durable.matching);
+  const matchingDone = matching?.nextIndex ?? 0;
+  const matchingTotal = matching?.total ?? 0;
+  const matchingPercent = matchingTotal > 0 ? Math.min(98, 90 + Math.round((matchingDone / matchingTotal) * 8)) : 90;
   const progress: StockmanDiscoveryJobProgress = {
     phase: phase === "DISCOVERING" ? "catalogue" : phase === "PARSING_PRODUCTS" ? "products" : phase === "FINISHED" ? "completed" : "matching",
-    percent: phase === "DISCOVERING" ? Math.min(35, 2 + c.browseDone) : phase === "PARSING_PRODUCTS" ? Math.min(90, 35 + Math.round(c.productsDone / productTotal * 55)) : phase === "FINISHED" ? 100 : 95,
-    message: phase === "DISCOVERING" ? `Exploration durable : ${c.browseDone} page(s), ${c.productsFound} fiche(s) détectée(s).` : phase === "PARSING_PRODUCTS" ? `Lecture durable : ${c.productsDone}/${c.productsFound} · ${referencesFound} référence(s).` : phase === "FINISHED" ? `Scan terminé : ${referencesFound} référence(s) analysée(s).` : "Rapprochement avec le catalogue OYSTE…",
+    percent: phase === "DISCOVERING" ? Math.min(35, 2 + c.browseDone) : phase === "PARSING_PRODUCTS" ? Math.min(90, 35 + Math.round(c.productsDone / productTotal * 55)) : phase === "FINISHED" ? 100 : matchingPercent,
+    message: phase === "DISCOVERING"
+      ? `Exploration durable : ${c.browseDone} page(s), ${c.productsFound} fiche(s) détectée(s).`
+      : phase === "PARSING_PRODUCTS"
+        ? `Lecture durable : ${c.productsDone}/${c.productsFound} · ${referencesFound} référence(s).`
+        : phase === "FINISHED"
+          ? `Scan terminé : ${referencesFound} référence(s) analysée(s).`
+          : matchingTotal > 0
+            ? `Rapprochement durable : ${matchingDone}/${matchingTotal} référence(s).`
+            : "Préparation du rapprochement avec le catalogue OYSTE…",
     pagesVisited: c.browseDone, productUrlsFound: c.productsFound, productPagesProcessed: c.productsDone, referencesFound,
     failures: c.browseFailed + c.productsFailed, updatedAt: nowIso(),
   };
@@ -228,23 +273,102 @@ async function crawlBatch(jobId: string, owner: string, leaseVersion: number, ph
   return true;
 }
 
+async function uniqueReferencesForMatching(jobId: string) {
+  const stored = await prisma.stockmanDiscoveryResult.findMany({
+    where: { jobId },
+    orderBy: [{ reference: "asc" }, { createdAt: "asc" }, { id: "asc" }],
+    select: { payload: true },
+  });
+  const byReference = new Map<string, StockmanDiscoveredReference>();
+  for (const item of stored) {
+    const occurrence = item.payload as unknown as StockmanDiscoveredReference;
+    if (!byReference.has(occurrence.reference)) byReference.set(occurrence.reference, occurrence);
+  }
+  return [...byReference.values()];
+}
+
+async function runMatchingBatch(jobId: string, owner: string, leaseVersion: number) {
+  await fenceLease(jobId, owner, leaseVersion);
+  const [job, references, products, variants, drafts] = await Promise.all([
+    prisma.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId }, select: { diagnostics: true } }),
+    uniqueReferencesForMatching(jobId),
+    prisma.product.findMany({ select: { id: true, name: true, supplierCode: true, sourceData: true } }),
+    prisma.productVariant.findMany({ select: { id: true, productId: true, name: true, supplierCode: true, sourceData: true } }),
+    prisma.stockmanImportDraft.findMany({ where: { status: "PREPARED" }, select: { reference: true } }),
+  ]);
+
+  const durable = { ...baseDiagnostics(), ...json(job.diagnostics, baseDiagnostics()) };
+  const previous = matchingState(durable.matching);
+  const total = references.length;
+  const state: MatchingState = previous && previous.total === total
+    ? previous
+    : { version: 1, nextIndex: 0, total, matches: [] };
+
+  if (state.nextIndex >= total) {
+    const progress = {
+      ...(json<StockmanDiscoveryJobProgress>((await prisma.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId }, select: { progress: true } })).progress, baseProgress())),
+      phase: "matching", percent: 98, message: `Rapprochement durable terminé : ${total}/${total} référence(s).`, updatedAt: nowIso(),
+    };
+    const transitioned = await prisma.stockmanDiscoveryJob.updateMany({
+      where: { id: jobId, leaseOwner: owner, leaseVersion, leaseExpiresAt: { gt: new Date() }, status: { in: ["QUEUED", "RUNNING"] } },
+      data: { phase: "RECONCILING", progress: progress as Prisma.InputJsonValue, checkpointVersion: { increment: 1 }, leaseExpiresAt: new Date(Date.now() + LEASE_MS) },
+    });
+    if (transitioned.count !== 1) throw new Error("Lease Stockman perdu : transition matching abandonnée.");
+    return true;
+  }
+
+  const candidates: StockmanMatchCandidate[] = [];
+  for (const product of products) if (product.supplierCode?.trim()) candidates.push({ targetType: "product", targetId: product.id, productId: product.id, targetName: product.name, supplierCode: product.supplierCode.trim(), sourceData: product.sourceData });
+  for (const variant of variants) if (variant.supplierCode?.trim()) candidates.push({ targetType: "variant", targetId: variant.id, productId: variant.productId, targetName: variant.name, supplierCode: variant.supplierCode.trim(), sourceData: variant.sourceData });
+  const matcher = createStockmanEquivalenceMatcher(candidates);
+  const prepared = new Set(drafts.map((item) => item.reference.trim().toUpperCase()));
+  const end = Math.min(total, state.nextIndex + MATCH_BATCH_SIZE);
+  const matched = references.slice(state.nextIndex, end).map(matcher.match).map((match) => ({
+    ...match,
+    catalogueState: catalogueStateForMatch(match),
+    importPrepared: prepared.has(match.reference.trim().toUpperCase()),
+  }));
+  const nextState: MatchingState = { version: 1, nextIndex: end, total, matches: [...state.matches, ...matched] };
+  const nextDiagnostics: DurableDiagnostics = { ...durable, matching: nextState };
+  const c = await counts(jobId);
+  const referencesFound = await prisma.stockmanDiscoveryResult.count({ where: { jobId } });
+  const progress: StockmanDiscoveryJobProgress = {
+    phase: "matching",
+    percent: total > 0 ? Math.min(98, 90 + Math.round((end / total) * 8)) : 98,
+    message: `Rapprochement durable : ${end}/${total} référence(s).`,
+    pagesVisited: c.browseDone, productUrlsFound: c.productsFound, productPagesProcessed: c.productsDone, referencesFound,
+    failures: c.browseFailed + c.productsFailed, updatedAt: nowIso(),
+  };
+  const updated = await prisma.stockmanDiscoveryJob.updateMany({
+    where: { id: jobId, leaseOwner: owner, leaseVersion, leaseExpiresAt: { gt: new Date() }, status: { in: ["QUEUED", "RUNNING"] } },
+    data: {
+      diagnostics: nextDiagnostics as unknown as Prisma.InputJsonValue,
+      progress: progress as Prisma.InputJsonValue,
+      checkpointVersion: { increment: 1 },
+      leaseExpiresAt: new Date(Date.now() + LEASE_MS),
+    },
+  });
+  if (updated.count !== 1) throw new Error("Lease Stockman perdu : batch de matching abandonné avant écriture.");
+  return true;
+}
+
 async function buildDiscovery(jobId: string): Promise<StockmanCatalogDiscovery> {
-  const [job, stored, queue, products, variants, drafts] = await Promise.all([
-    prisma.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId } }), prisma.stockmanDiscoveryResult.findMany({ where: { jobId }, orderBy: { reference: "asc" } }),
-    prisma.stockmanDiscoveryQueueItem.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } }), prisma.product.findMany({ select: { id: true, name: true, supplierCode: true, sourceData: true } }),
-    prisma.productVariant.findMany({ select: { id: true, productId: true, name: true, supplierCode: true, sourceData: true } }), prisma.stockmanImportDraft.findMany({ where: { status: "PREPARED" }, select: { reference: true } }),
+  const [job, stored, queue] = await Promise.all([
+    prisma.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId } }),
+    prisma.stockmanDiscoveryResult.findMany({ where: { jobId }, orderBy: [{ reference: "asc" }, { createdAt: "asc" }, { id: "asc" }] }),
+    prisma.stockmanDiscoveryQueueItem.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } }),
   ]);
   const occurrences = stored.map((item) => item.payload as unknown as StockmanDiscoveredReference);
   const byReference = new Map<string, StockmanDiscoveredReference>();
   for (const occurrence of occurrences) if (!byReference.has(occurrence.reference)) byReference.set(occurrence.reference, occurrence);
   const references = [...byReference.values()];
-  const candidates: StockmanMatchCandidate[] = [];
-  for (const p of products) if (p.supplierCode?.trim()) candidates.push({ targetType: "product", targetId: p.id, productId: p.id, targetName: p.name, supplierCode: p.supplierCode.trim(), sourceData: p.sourceData });
-  for (const v of variants) if (v.supplierCode?.trim()) candidates.push({ targetType: "variant", targetId: v.id, productId: v.productId, targetName: v.name, supplierCode: v.supplierCode.trim(), sourceData: v.sourceData });
-  const matcher = createStockmanEquivalenceMatcher(candidates), prepared = new Set(drafts.map((item) => item.reference.trim().toUpperCase()));
-  const matches = references.map(matcher.match).map((match) => ({ ...match, catalogueState: match.status === "matched" || match.status === "already_linked" ? "present" as const : match.status === "missing" && match.missingKind === "confirmed_missing" ? "to_import" as const : "to_review" as const, importPrepared: prepared.has(match.reference.trim().toUpperCase()) }));
-  const browse = queue.filter((item) => item.nodeType === "BROWSE"), productsQ = queue.filter((item) => item.nodeType === "PRODUCT"), failed = queue.filter((item) => item.state === "FAILED");
   const durable = { ...baseDiagnostics(), ...json(job.diagnostics, baseDiagnostics()) };
+  const matching = matchingState(durable.matching);
+  if (!matching || matching.nextIndex !== references.length || matching.total !== references.length || matching.matches.length !== references.length) {
+    throw new Error(`Rapprochement Stockman incomplet : ${matching?.nextIndex ?? 0}/${references.length}.`);
+  }
+  const matches = matching.matches;
+  const browse = queue.filter((item) => item.nodeType === "BROWSE"), productsQ = queue.filter((item) => item.nodeType === "PRODUCT"), failed = queue.filter((item) => item.state === "FAILED");
   const pageTraces = productsQ.flatMap((item) => item.trace && typeof item.trace === "object" ? [item.trace as unknown as NonNullable<StockmanCatalogDiscovery["pageTraces"]>[number]] : []);
   const relationCounts = occurrences.reduce((out, item) => ({ ...out, [item.relationType]: (out[item.relationType] ?? 0) + 1 }), {} as Record<string, number>);
   const diagnostics: StockmanCatalogScanDiagnostics = {
@@ -263,17 +387,17 @@ async function buildDiscovery(jobId: string): Promise<StockmanCatalogDiscovery> 
     matches, pageTraces, productLinkTraces: browse.flatMap((item) => json<{ linkTraces?: NonNullable<StockmanCatalogDiscovery["productLinkTraces"]> }>(item.trace, {}).linkTraces ?? []), warnings: failed.map((item) => `${item.canonicalUrl} · ${item.lastError ?? "Lecture impossible"}`).slice(0, 100) };
 }
 
-async function finalize(jobId: string, owner: string, leaseVersion: number) {
+async function reconcile(jobId: string, owner: string, leaseVersion: number) {
   await fenceLease(jobId, owner, leaseVersion);
-  await prisma.stockmanDiscoveryJob.update({ where: { id: jobId }, data: { phase: "MATCHING" } });
-  await updateProgress(jobId, "MATCHING");
   const discovery = await buildDiscovery(jobId);
-  await fenceLease(jobId, owner, leaseVersion);
-  await prisma.stockmanDiscoveryJob.update({ where: { id: jobId }, data: { phase: "RECONCILING" } });
   discovery.livingReference = await persistStockmanLivingReference(discovery);
   discovery.differential = { presentInOyste: discovery.matches.filter((x) => x.catalogueState === "present").length, toImport: discovery.matches.filter((x) => x.catalogueState === "to_import").length, toReview: discovery.matches.filter((x) => x.catalogueState === "to_review").length, disappearedFromStockman: discovery.livingReference.disappearedSincePreviousScan, preparedForImport: discovery.matches.filter((x) => x.importPrepared).length };
   await fenceLease(jobId, owner, leaseVersion, true);
-  await prisma.stockmanDiscoveryJob.updateMany({ where: { id: jobId, leaseOwner: owner, leaseVersion }, data: { status: discovery.diagnostics.scanComplete ? "COMPLETE" : "PARTIAL", phase: "FINISHED", result: discovery as unknown as Prisma.InputJsonValue, diagnostics: discovery.diagnostics as unknown as Prisma.InputJsonValue, finishedAt: new Date(), leaseOwner: null, leaseExpiresAt: null } });
+  const finished = await prisma.stockmanDiscoveryJob.updateMany({
+    where: { id: jobId, leaseOwner: owner, leaseVersion, leaseExpiresAt: { gt: new Date() } },
+    data: { status: discovery.diagnostics.scanComplete ? "COMPLETE" : "PARTIAL", phase: "FINISHED", result: discovery as unknown as Prisma.InputJsonValue, diagnostics: discovery.diagnostics as unknown as Prisma.InputJsonValue, finishedAt: new Date(), leaseOwner: null, leaseExpiresAt: null },
+  });
+  if (finished.count !== 1) throw new Error("Lease Stockman perdu : réconciliation abandonnée avant écriture.");
   await updateProgress(jobId, "FINISHED");
 }
 
@@ -289,20 +413,45 @@ export async function runNextStockmanDiscoveryBatch(jobId?: string) {
       await prisma.stockmanDiscoveryJob.updateMany({ where: { id: job.id, leaseOwner: owner, leaseVersion, status: "QUEUED" }, data: { status: "RUNNING" } });
       job = await prisma.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: selected.id } });
     }
-    const cap = limits(job.options), c = await counts(job.id);
+    const cap = limits(job.options);
     if (job.status === "CANCEL_REQUESTED") {
       await prisma.stockmanDiscoveryQueueItem.updateMany({ where: { jobId: job.id, state: { in: ["PENDING", "PROCESSING"] } }, data: { state: "CANCELLED", leaseOwner: null, leaseExpiresAt: null, claimVersion: null } });
       await prisma.stockmanDiscoveryJob.updateMany({ where: { id: job.id, leaseOwner: owner, leaseVersion }, data: { status: "CANCELLED", phase: "FINISHED", finishedAt: new Date(), leaseOwner: null, leaseExpiresAt: null } });
       return true;
     }
-    if (job.phase === "DISCOVERING" && c.browsePending) return await crawlBatch(job.id, owner, leaseVersion, "DISCOVERING", cap);
+
     if (job.phase === "DISCOVERING") {
+      const c = await counts(job.id);
+      if (c.browsePending) return await crawlBatch(job.id, owner, leaseVersion, "DISCOVERING", cap);
       await fenceLease(job.id, owner, leaseVersion, true);
-      await prisma.stockmanDiscoveryJob.updateMany({ where: { id: job.id, leaseOwner: owner, leaseVersion }, data: { phase: "PARSING_PRODUCTS" } });
+      const transitioned = await prisma.stockmanDiscoveryJob.updateMany({
+        where: { id: job.id, leaseOwner: owner, leaseVersion },
+        data: { phase: "PARSING_PRODUCTS" },
+      });
+      if (transitioned.count !== 1) throw new Error("Lease Stockman perdu : transition vers les fiches abandonnée.");
+      await updateProgress(job.id, "PARSING_PRODUCTS");
+      return true;
     }
-    if ((await counts(job.id)).productsPending) return await crawlBatch(job.id, owner, leaseVersion, "PARSING_PRODUCTS", cap);
-    await finalize(job.id, owner, leaseVersion);
-    return true;
+
+    if (job.phase === "PARSING_PRODUCTS") {
+      const c = await counts(job.id);
+      if (c.productsPending) return await crawlBatch(job.id, owner, leaseVersion, "PARSING_PRODUCTS", cap);
+      await fenceLease(job.id, owner, leaseVersion, true);
+      const transitioned = await prisma.stockmanDiscoveryJob.updateMany({
+        where: { id: job.id, leaseOwner: owner, leaseVersion },
+        data: { phase: "MATCHING" },
+      });
+      if (transitioned.count !== 1) throw new Error("Lease Stockman perdu : transition vers le matching abandonnée.");
+      await updateProgress(job.id, "MATCHING");
+      return true;
+    }
+
+    if (job.phase === "MATCHING") return await runMatchingBatch(job.id, owner, leaseVersion);
+    if (job.phase === "RECONCILING") {
+      await reconcile(job.id, owner, leaseVersion);
+      return true;
+    }
+    return false;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Le scan Stockman a échoué.";
     await prisma.stockmanDiscoveryJob.updateMany({ where: { id: selected.id, leaseOwner: owner, leaseVersion }, data: { status: "FAILED", phase: "FINISHED", error: message, finishedAt: new Date(), leaseOwner: null, leaseExpiresAt: null } });
