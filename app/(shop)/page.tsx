@@ -4,6 +4,7 @@ import Button from "@/components/ui/Button";
 import Container from "@/components/ui/Container";
 import HomeHeroCarousel, { type HomeHeroSlide } from "@/components/home/HomeHeroCarousel";
 import HomeCategoryRows, { type HomeCategoryRow } from "@/components/home/HomeCategoryRows";
+import HomeSupplierMarquee from "@/components/home/HomeSupplierMarquee";
 import { getCmsContent } from "@/lib/cms";
 import { getProductImageUrl } from "@/lib/product-images";
 import { catalogueSubFamilies, getProductMediaImages, getProductsByCategoryAndFamily } from "@/lib/catalogue/repository";
@@ -71,6 +72,16 @@ export default async function HomePage() {
         <Container>
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Nos catégories</p><h2 className="mt-2 text-3xl font-black">L’essentiel de l’équipement industriel</h2></div><Link href="/catalogue" className="text-sm font-black text-[#007f8f]">Voir tout le catalogue →</Link></div>
           <HomeCategoryRows rows={categoryRows} />
+        </Container>
+      </section>
+
+      <section className="pb-10 sm:pb-12">
+        <Container>
+          <div className="mb-5">
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Nos fournisseurs</p>
+            <h2 className="mt-2 text-3xl font-black">Des marques de référence pour vos équipements</h2>
+          </div>
+          <HomeSupplierMarquee />
         </Container>
       </section>
     </main>
