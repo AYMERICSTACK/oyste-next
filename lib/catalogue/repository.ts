@@ -163,7 +163,7 @@ const virtualPotenceProducts: CatalogueProduct[] = [
     maxPriceHT: null,
     delay: "Délai sur étude",
     stock: null,
-    imageRef: "PFI5003000",
+    imageRef: "PMI10002000",
     features: [
       { label: "Famille", value: "Potence murale" },
       { label: "Configuration", value: "Charge, portée, support, HSF et options" },

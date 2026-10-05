@@ -25,6 +25,11 @@ const homeCategories = [
   ["acces-hauteur", "Accès hauteur", "/catalogue/acces-hauteur", "ES2M"],
 ] as const;
 
+const homeFamilyImageRefs: Record<string, string> = {
+  "levage:palan": "CB010",
+  "levage:potence-murale": "PMI10002000",
+};
+
 function familyTarget(href: string) {
   const match = href.match(/^\/catalogue\/([^?]+).*?[?&]famille=([^&]+)/);
   return match ? { categorySlug: match[1], familySlug: match[2] } : null;
@@ -45,7 +50,16 @@ export default async function HomePage() {
     children: (catalogueSubFamilies[slug] || []).map((family) => {
       const target = familyTarget(family.href);
       const representative = target ? getProductsByCategoryAndFamily(target.categorySlug, target.familySlug)[0] : undefined;
-      return { title: family.title, href: family.href, imageUrl: representative ? getProductMediaImages(representative)[0] || getProductImageUrl(representative.imageRef, representative.code, representative.parentCode) : undefined };
+      const imageOverride = target ? homeFamilyImageRefs[`${target.categorySlug}:${target.familySlug}`] : undefined;
+      return {
+        title: family.title,
+        href: family.href,
+        imageUrl: imageOverride
+          ? getProductImageUrl(imageOverride)
+          : representative
+            ? getProductMediaImages(representative)[0] || getProductImageUrl(representative.imageRef, representative.code, representative.parentCode)
+            : undefined,
+      };
     }),
   }));
 
