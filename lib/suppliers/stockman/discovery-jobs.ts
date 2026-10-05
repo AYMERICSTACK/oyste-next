@@ -416,7 +416,7 @@ async function reconcile(jobId: string, owner: string, leaseVersion: number) {
   const discovery = await buildDiscovery(jobId);
   await prisma.$transaction(async (tx) => {
     const db = tx as unknown as typeof prisma;
-    await db.$queryRaw`SELECT pg_advisory_xact_lock(193701, 2)`;
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(193701, 2)`;
     await fenceLease(jobId, owner, leaseVersion, true, db);
     const job = await db.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId } });
     const diagnostics = { ...baseDiagnostics(), ...json(job.diagnostics, baseDiagnostics()) };
@@ -524,7 +524,7 @@ export async function startStockmanDiscoveryJob(options: ScanOptions) {
   const normalizedOptions = { ...limits(options), seedUrl, coveragePolicyVersion: 1 };
   const job = await prisma.$transaction(async (tx) => {
     // Serialize scan creation across processes; no migration or in-memory lock.
-    await tx.$queryRaw`SELECT pg_advisory_xact_lock(193701, 1)`;
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(193701, 1)`;
     const active = await tx.stockmanDiscoveryJob.findMany({
       where: { status: { in: ["QUEUED", "RUNNING"] } }, orderBy: { createdAt: "desc" },
     });

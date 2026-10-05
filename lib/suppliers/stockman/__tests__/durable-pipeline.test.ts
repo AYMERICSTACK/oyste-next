@@ -60,7 +60,7 @@ test("création atomique réutilise un job compatible, matching et réconciliati
   const references: StockmanDiscoveredReference[] = Array.from({ length: 105 }, (_, index) => ({ reference: `ZZTEST${String(index).padStart(3, "0")}`, designation: "Fixture commerciale", sourceUrl: "https://www.stockman.fr/test--FAM.aspx", category: null, subcategory: null, familyReference: "FAM", familyTitle: "Famille", relationType: "UNKNOWN", classificationConfidence: "UNKNOWN", classificationEvidence: [] }));
   const apply = (data: any) => { for (const [key, value] of Object.entries(data)) job[key] = value && typeof value === "object" && "increment" in value ? (job[key] ?? 0) + (value as any).increment : value; };
   replace(prisma, "$transaction", async (fn: any) => fn(prisma));
-  replace(prisma, "$queryRaw", async () => []);
+  replace(prisma, "$executeRaw", async () => 0);
   replace(prisma.stockmanDiscoveryJob, "findMany", async () => job && ["QUEUED", "RUNNING"].includes(job.status) ? [job] : []);
   replace(prisma.stockmanDiscoveryJob, "create", async ({ data }: any) => { job = { ...data, id: "test-job", status: "QUEUED", phase: "DISCOVERING", createdAt: new Date(), leaseVersion: 0, checkpointVersion: 0 }; return job; });
   replace(prisma.stockmanDiscoveryJob, "findUnique", async () => ({ ...job }));
