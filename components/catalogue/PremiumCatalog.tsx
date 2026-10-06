@@ -22,6 +22,9 @@ import ProductMediaFrame from "./ProductMediaFrame";
 
 export type PremiumCatalogItem = {
   id: string;
+  featured?: boolean;
+  sortOrder?: number;
+  presentationPriority?: boolean;
   code: string;
   name: string;
   family: string;
@@ -324,6 +327,7 @@ export default function PremiumCatalog({
 
     return [...result].sort((a, b) => {
       if (sort === "recommended") {
+        if(products.some(product=>product.presentationPriority)) return Number(Boolean(b.featured))-Number(Boolean(a.featured)) || (a.sortOrder??0)-(b.sortOrder??0) || (originalOrder.get(a.id)??0)-(originalOrder.get(b.id)??0);
         return (
           getRecommendationScore(b, originalOrder.get(b.id) ?? 0) -
           getRecommendationScore(a, originalOrder.get(a.id) ?? 0)
@@ -825,7 +829,7 @@ export default function PremiumCatalog({
                             interactive
                           />
                         </Link>
-                        <div className="absolute right-4 top-4 z-10 flex gap-2">
+                        <div className="absolute right-4 top-16 z-10 flex gap-2">
                           <button
                             type="button"
                             onClick={() => toggleFavorite(product.id)}

@@ -1,3 +1,5 @@
+import { publicUrlSchema } from "@/lib/cms-validation";
+import { CommercialText } from "@/components/layout/CommercialTextProvider";
 import { CheckCircle2 } from "lucide-react";
 import type { CatalogueProduct } from "@/lib/catalogue/repository";
 import { buildSmartDescription } from "@/lib/catalogue/smart-description";
@@ -8,6 +10,7 @@ function inlineMarkup(value: string) {
     const bold = part.match(/^\*\*([^*]+)\*\*$/);
     if (bold) return <strong key={`${part}-${index}`} className="font-black text-slate-950">{bold[1]}</strong>;
     const link = part.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+    if(link && !publicUrlSchema.safeParse(link[2]).success) return <span key={index}>{link[1]}</span>;
     if (link) return <a key={`${part}-${index}`} href={link[2]} target="_blank" rel="noreferrer" className="font-black text-[#007f8f] underline underline-offset-4">{link[1]}</a>;
     return <span key={`${part}-${index}`}>{part}</span>;
   });
@@ -29,11 +32,11 @@ export default function SmartProductDescription({ product }: { product: Catalogu
   );
   const blocks = structuredSupplierText
     ? structuredSupplierText.split(/\n+|(?<=[.;])\s+(?=[A-ZÀ-ÖØ-Ý])/).map((value) => value.trim()).filter(Boolean)
-    : fallback;
+    : product.presentationManagedKeys?.includes("detailedDescription") ? [] : fallback;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <h2 className="text-2xl font-black text-slate-950">Description du produit</h2>
+      <h2 className="text-2xl font-black text-slate-950"><CommercialText field="smartDescriptionTitle"/></h2>
       <div className="mt-5 grid max-w-5xl gap-3 text-sm font-medium leading-7 text-slate-600">
         {blocks.map(renderBlock)}
       </div>

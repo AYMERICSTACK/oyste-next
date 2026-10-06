@@ -1,3 +1,6 @@
+import { getProductCardTitle } from "@/lib/catalogue/repository";
+import { resolvePresentedVariants } from "@/lib/catalogue/product-presentation";
+import { getEditorialPage, editorialIcon } from "@/lib/editorial";
 import { ArrowLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
@@ -20,6 +23,7 @@ import {
   getProductConfiguratorHref,
 } from "@/lib/catalogue/repository";
 import {
+  getDatabaseProductsByCodes,
   getDatabaseProductBySlug,
   getDatabaseProductsByCategory,
   getDatabaseStockmanFamilyVariants,
@@ -44,7 +48,7 @@ export async function generateMetadata({
     title,
     description,
     alternates: {
-      canonical: `/catalogue/${slug}/${productSlug}`,
+      canonical: product.href,
     },
     openGraph: {
       title,
@@ -62,6 +66,8 @@ export default async function CatalogProductPage({
   params: Promise<{ slug: string; productSlug: string }>;
   searchParams: Promise<{ variant?: string | string[] }>;
 }) {
+ const page=await getEditorialPage("product");
+
   const { slug, productSlug } = await params;
   const resolvedSearchParams = await searchParams;
   const initialVariantCode = Array.isArray(resolvedSearchParams.variant)
@@ -71,35 +77,15 @@ export default async function CatalogProductPage({
 
   if (!product) return notFound();
 
-  if (slug === "produit" && product.categorySlug && product.categorySlug !== "produit") {
+  if (product.categorySlug && slug !== product.categorySlug) {
     redirect(`/catalogue/${product.categorySlug}/${product.slug}`);
   }
 
-  const stockmanFamily = product.variants?.length
+  const stockmanFamily = !product.includeSupplierFamilyVariants && (product.baseVariants?.length || product.variants?.length)
     ? { variants: [], optionSchema: [] }
     : await getDatabaseStockmanFamilyVariants(product.id);
 
-  const variants = product.variants?.length
-    ? product.variants
-    : stockmanFamily.variants.length > 1
-      ? stockmanFamily.variants
-      : [
-          {
-            id: product.id,
-            code: product.code,
-            supplierCode: product.supplierCode,
-            name: product.name,
-            label: product.name,
-            priceHT: product.priceHT,
-            delay: product.delay,
-            stock: product.stock,
-            weightKg: product.weightKg,
-            shippingMode: product.shippingMode,
-            imageRef: product.imageRef,
-            features: product.features,
-            options: {},
-          },
-        ];
+  const variants = resolvePresentedVariants(product,stockmanFamily.variants);
 
   const effectiveOptionSchema = product.optionSchema?.length
     ? product.optionSchema
@@ -121,13 +107,16 @@ export default async function CatalogProductPage({
   const configuratorHref = getProductConfiguratorHref(resolvedProduct);
   const categoryProducts = await getDatabaseProductsByCategory(product.categorySlug);
   const isHoistProduct = /palan/i.test(`${product.categoryPath} ${product.name}`);
-  const relatedProducts = isHoistProduct ? [] : getRelatedProductsFrom(categoryProducts, resolvedProduct, 4);
+  const relatedProducts = resolvedProduct.presentationManagedKeys?.includes("relatedProductCodes")
+    ? await getDatabaseProductsByCodes(resolvedProduct.relatedProductCodes || [])
+    : isHoistProduct ? [] : getRelatedProductsFrom(categoryProducts, resolvedProduct, 4);
   const explicitCompatibilityCodes = new Set(
     [...(resolvedProduct.relatedProductCodes || []), ...(resolvedProduct.accessoryProductCodes || [])]
       .map((code) => code.trim().toLocaleUpperCase("fr")),
   );
+  const compatibleCandidates = explicitCompatibilityCodes.size ? await getDatabaseProductsByCodes([...explicitCompatibilityCodes]) : [];
   const compatibleProducts = explicitCompatibilityCodes.size
-    ? categoryProducts.filter((candidate) => [candidate.code, candidate.supplierCode, candidate.parentCode]
+    ? compatibleCandidates.filter((candidate) => [candidate.code, candidate.supplierCode, candidate.parentCode]
         .some((code) => explicitCompatibilityCodes.has(String(code || "").trim().toLocaleUpperCase("fr"))))
         .slice(0, 4)
     : [];
@@ -154,6 +143,7 @@ export default async function CatalogProductPage({
   const mediaImages = getProductMediaImages(resolvedProduct);
   const variantGalleryImages = Object.fromEntries(
     variants.map((variant) => {
+      if (product.presentationManagedKeys?.includes("media")) return [variant.code, mediaImages];
       const exactImages = getImportedProductImagesExact(variant.imageRef, variant.code);
       const isPalfix = variant.code.trim().toUpperCase().startsWith("PALFIX");
 
@@ -179,11 +169,10 @@ export default async function CatalogProductPage({
             href={`/catalogue/${slug}`}
             className="inline-flex items-center gap-2 text-sm font-black text-[#007f8f] transition hover:text-orange-600"
           >
-            <ArrowLeft size={17} /> Retour à la catégorie
-          </a>
+            <ArrowLeft size={17} /> {page.fields.content001}</a>
 
           <div className="mt-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
-            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">{familyLabel} · Réf. {product.parentCode || product.code}</p><h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">{product.name}</h1></div>
+            <div><p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">{familyLabel} {page.fields.content002}{product.parentCode || product.code}</p><h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">{product.name}</h1></div>
             <p className="text-lg font-black text-orange-600">{isConfigurable ? "Configuration sur mesure" : formatPriceRange(product)}</p>
           </div>
         </Container>
@@ -203,6 +192,7 @@ export default async function CatalogProductPage({
           isConfiguratorProduct={isConfigurable}
           configuratorHref={configuratorHref}
           galleryImages={mediaImages}
+          mediaManaged={product.presentationManagedKeys?.includes("media")}
           variantGalleryImages={variantGalleryImages}
           productHref={`/catalogue/${slug}/${productSlug}`}
           familyLabel={familyLabel}
@@ -213,6 +203,13 @@ export default async function CatalogProductPage({
         <div id="presentation-produit" className="mt-8 scroll-mt-28">
           <SmartProductDescription product={product} />
         </div>
+
+        {(["marketingBadges","features","faq","videoUrls"].some(key=>product.presentationManagedKeys?.includes(key)) && !!(product.marketingBadges?.length || product.features.length || product.faq?.length || product.videoUrls?.length)) && <section className="mt-8 grid gap-6 md:grid-cols-2">
+          {product.presentationManagedKeys?.includes("marketingBadges") && product.marketingBadges?.length ? <div className="flex flex-wrap gap-2">{product.marketingBadges.map(badge => <span key={badge} className="rounded-full bg-orange-50 px-3 py-2 text-sm font-bold text-orange-700">{badge}</span>)}</div> : null}
+          {product.presentationManagedKeys?.includes("features") && product.features.length ? <dl className="rounded-2xl border bg-white p-5">{product.features.map((feature, index) => <div key={index} className="grid grid-cols-2 gap-3 border-b py-2"><dt className="font-bold">{feature.label}</dt><dd>{feature.value}</dd></div>)}</dl> : null}
+          {product.presentationManagedKeys?.includes("faq") && product.faq?.length ? <div className="rounded-2xl border bg-white p-5">{product.faq.map((item, index) => <details key={index} className="py-2"><summary className="font-bold">{item.question}</summary><p className="mt-2 whitespace-pre-line">{item.answer}</p></details>)}</div> : null}
+          {product.presentationManagedKeys?.includes("videoUrls") && product.videoUrls?.length ? <div className="space-y-3">{product.videoUrls.map(url => /\.(mp4|webm)(?:[?#]|$)/i.test(url) ? <video key={url} src={url} controls className="w-full rounded-xl" /> : <a key={url} href={url} target="_blank" rel="noopener noreferrer" className="block font-bold text-[#007f8f]">{url}</a>)}</div> : null}
+        </section>}
 
         <div className="mt-8 scroll-mt-28">
           <ProductDocuments
@@ -231,26 +228,25 @@ export default async function CatalogProductPage({
           >
             <div className="mb-7 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
-                <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">Produits associés</p>
-                <h2 className="mt-2 text-3xl font-black text-slate-950">Produits similaires</h2>
+                <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">{page.fields.content003}</p>
+                <h2 className="mt-2 text-3xl font-black text-slate-950">{page.fields.content004}</h2>
               </div>
               <a href={`/catalogue/${slug}`} className="text-sm font-black text-[#007f8f]">
-                Voir la catégorie complète →
-              </a>
+                {page.fields.content005}</a>
             </div>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
               {relatedProducts.map((related) => (
                 <ProductCard
                   key={related.id}
                   code={related.code}
-                  name={related.name}
+                  name={getProductCardTitle(related)}
                   family={formatCategoryLabel(related.categoryPath)}
                   price={formatPriceRange(related)}
                   description={getCustomerProductDescription(related)}
                   href={related.href}
                   cta={getProductExperienceType(related) === "CONFIGURABLE" ? "Voir puis configurer" : "Voir la fiche"}
                   imageRef={related.imageRef}
-                  imageUrl={getProductMediaImages(related)[0]}
+                  imageUrl={getProductMediaImages(related)[0] ?? (related.presentationManagedKeys?.includes("media") ? "" : undefined)} badges={related.presentationManagedKeys?.includes("marketingBadges") ? related.marketingBadges : undefined}
                   badge={related.code}
                   documentCount={getProductAvailableDocumentCount(related)}
                 />

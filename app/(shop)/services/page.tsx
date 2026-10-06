@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+import { getEditorialPage, editorialIcon } from "@/lib/editorial";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -12,63 +14,29 @@ import {
 import Container from "@/components/ui/Container";
 import SectionHeader from "@/components/ui/SectionHeader";
 
-const platformServices = [
-  {
-    icon: Search,
-    title: "Recherche simplifiée",
-    text: "Trouvez rapidement les références adaptées grâce à un catalogue structuré, des filtres précis et une recherche pensée pour les professionnels.",
-  },
-  {
-    icon: SlidersHorizontal,
-    title: "Configuration guidée",
-    text: "Configurez certains équipements étape par étape et visualisez une solution cohérente avec les caractéristiques de votre besoin.",
-  },
-  {
-    icon: ShoppingCart,
-    title: "Commande professionnelle",
-    text: "Regroupez vos équipements, choisissez votre solution de livraison et validez votre commande depuis un parcours clair et sécurisé.",
-  },
-  {
-    icon: UserRound,
-    title: "Espace client B2B",
-    text: "Retrouvez vos informations d’entreprise, vos commandes et leur avancement dans un espace réservé aux professionnels.",
-  },
-  {
-    icon: FileText,
-    title: "Informations techniques",
-    text: "Consultez les caractéristiques, variantes et documents disponibles pour comparer les produits et préparer votre achat.",
-  },
-  {
-    icon: Headphones,
-    title: "Équipe commerciale disponible",
-    text: "Une question avant de commander ? Notre équipe reste joignable pour vous renseigner sur les produits proposés sur OYSTE.",
-  },
-];
 
-const journeySteps = [
-  "Rechercher votre équipement",
-  "Configurer ou sélectionner la bonne référence",
-  "Commander et suivre votre demande",
-];
 
-export default function ServicesPage() {
+
+
+export default async function ServicesPage() {
+ const page = await getEditorialPage("services");
+const platformServices=page.collections.platformServices.filter(item=>item.enabled).sort((a,b)=>a.order-b.order).map(item=>({...item,icon:editorialIcon(item.icon)}));
+const journeySteps=page.collections.journeySteps.filter(item=>item.enabled).sort((a,b)=>a.order-b.order).map(item=>item.text);
   return (
-    <main className="bg-slate-50 text-slate-950">
-      <section className="relative overflow-hidden border-b border-slate-100 bg-white py-16 lg:py-20">
+    <main className="bg-slate-50 text-slate-950">{page.collections.pageSections.filter(block=>block.enabled).sort((a,b)=>a.order-b.order).map(block=><Fragment key={block.id}>{({"section1":(<section className="relative overflow-hidden border-b border-slate-100 bg-white py-16 lg:py-20">
         <div className="pointer-events-none absolute -right-24 -top-24 h-80 w-80 rounded-full bg-[#007f8f]/5 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-orange-500/5 blur-3xl" />
 
         <Container className="relative grid gap-10 lg:grid-cols-[1.02fr_0.98fr] lg:items-center">
           <SectionHeader
-            eyebrow="Pourquoi OYSTE ?"
-            title="Une plateforme pensée pour simplifier vos achats professionnels."
-            text="OYSTE réunit catalogue technique, configuration guidée, commande en ligne et espace client dans une expérience conçue pour les besoins des professionnels."
+            eyebrow={page.fields.content001}
+            title={page.fields.content002}
+            text={page.fields.content003}
           />
 
           <div className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm sm:p-8">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-orange-600">
-              Votre parcours sur OYSTE
-            </p>
+              {page.fields.content004}</p>
             <div className="mt-5 grid gap-3">
               {journeySteps.map((step, index) => (
                 <div
@@ -85,20 +53,16 @@ export default function ServicesPage() {
             </div>
           </div>
         </Container>
-      </section>
-
-      <section className="py-16 lg:py-20">
+      </section>),
+"section2":(<section className="py-16 lg:py-20">
         <Container>
           <div className="mx-auto max-w-3xl text-center">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[#007f8f]">
-              Les services de la plateforme
-            </p>
+              {page.fields.content005}</p>
             <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] text-slate-950 sm:text-4xl">
-              Tout ce qu’il faut pour acheter plus simplement
-            </h2>
+              {page.fields.content006}</h2>
             <p className="mt-4 text-base leading-7 text-slate-600">
-              Chaque fonctionnalité d’OYSTE a été conçue pour accélérer la recherche, sécuriser le choix et faciliter le suivi de vos commandes.
-            </p>
+              {page.fields.content007}</p>
           </div>
 
           <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -121,42 +85,35 @@ export default function ServicesPage() {
             })}
           </div>
         </Container>
-      </section>
-
-      <section className="bg-white py-16 lg:py-20">
+      </section>),
+"section3":(<section className="bg-white py-16 lg:py-20">
         <Container>
           <div className="overflow-hidden rounded-[2rem] bg-[#061722] p-8 text-white shadow-2xl shadow-slate-300/40 md:p-10 lg:flex lg:items-center lg:justify-between lg:gap-10">
             <div className="max-w-3xl">
               <p className="text-xs font-black uppercase tracking-[0.24em] text-[#67c7d1]">
-                Commencer sur OYSTE
-              </p>
+                {page.fields.content008}</p>
               <h2 className="mt-3 text-3xl font-black tracking-[-0.03em] sm:text-4xl">
-                Trouvez dès maintenant l’équipement adapté à votre activité.
-              </h2>
+                {page.fields.content009}</h2>
               <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300">
-                Parcourez le catalogue ou utilisez le configurateur pour avancer étape par étape sur les équipements compatibles.
-              </p>
+                {page.fields.content010}</p>
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row lg:mt-0 lg:shrink-0 lg:flex-col xl:flex-row">
               <Link
-                href="/catalogue/levage"
+                href={page.fields.content011}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-3.5 text-sm font-black uppercase tracking-wide text-slate-950 transition hover:-translate-y-0.5 hover:bg-slate-100"
               >
-                Voir le catalogue
-                <ArrowRight size={17} />
+                {page.fields.content012}<ArrowRight size={17} />
               </Link>
               <Link
-                href="/configurateur"
+                href={page.fields.content013}
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-600 px-5 py-3.5 text-sm font-black uppercase tracking-wide text-white transition hover:-translate-y-0.5 hover:bg-orange-500"
               >
-                Configurer
-                <ArrowRight size={17} />
+                {page.fields.content014}<ArrowRight size={17} />
               </Link>
             </div>
           </div>
         </Container>
-      </section>
-    </main>
+      </section>)} as Record<string,React.ReactNode>)[block.id]}</Fragment>)}</main>
   );
 }

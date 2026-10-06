@@ -1,3 +1,4 @@
+import { applyProductPresentation, productPresentationSchema } from "./product-presentation";
 import "server-only";
 
 import { Prisma } from "@/generated/prisma/client";
@@ -15,6 +16,7 @@ import {
 } from "@/lib/catalogue/repository";
 
 const catalogueProductInclude = {
+  presentation: true,
   supplier: true,
   category: true,
   features: { orderBy: { sortOrder: "asc" as const } },
@@ -33,6 +35,8 @@ type DatabaseProduct = Prisma.ProductGetPayload<{
 }>;
 
 type SourceProductData = Partial<{
+  virtualPresentation: boolean;
+  adminCreated: boolean;
   categoryPath: string;
   categories: string[];
   manufacturer: string;
@@ -113,7 +117,38 @@ function mapVariant(
   };
 }
 
-function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
+type PresentationCategory = { id: string; slug: string; homeParentId: string | null; presentationConfigured: boolean; isActive: boolean; catalogueVisible: boolean };
+async function categoryMapForPresentation() {
+  const rows = await prisma.category.findMany({ select: { id: true, slug: true, homeParentId: true, presentationConfigured: true, isActive: true, catalogueVisible: true } });
+  return new Map(rows.map(item => [item.id, item]));
+}
+function resolvedPublicSlug(id: string | null, categories?: Map<string, PresentationCategory>): string | undefined {
+  const visited = new Set<string>();
+  let current = id ? categories?.get(id) : undefined;
+  if (!current || !current.presentationConfigured) return undefined;
+  while (current.homeParentId && !visited.has(current.id)) {
+    visited.add(current.id);
+    const parent: PresentationCategory | undefined = categories?.get(current.homeParentId);
+    if (!parent) break;
+    current = parent;
+  }
+  return current.slug;
+}
+function publicProduct(product: DatabaseProduct, categories: Map<string, PresentationCategory>): boolean {
+  if (product.supplier?.presentationConfigured && !product.supplier.isActive) return false;
+  const visited = new Set<string>();
+  const override=productPresentationSchema.safeParse(product.presentation?.value).data;
+  const categoryId=override?.categoryId === undefined ? product.categoryId : override.categoryId;
+  let current = categoryId ? categories.get(categoryId) : undefined;
+  while (current && !visited.has(current.id)) {
+    if (current.presentationConfigured && (!current.isActive || !current.catalogueVisible)) return false;
+    visited.add(current.id);
+    current = current.homeParentId ? categories.get(current.homeParentId) : undefined;
+  }
+  return true;
+}
+
+function mapDatabaseProduct(product: DatabaseProduct, categoryMap?: Map<string, PresentationCategory>): CatalogueProduct {
   const source = asRecord(product.sourceData) as SourceProductData;
 
   const categoryPath =
@@ -134,6 +169,13 @@ function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
   const variants = product.variants.map(mapVariant);
 
   const mapped: CatalogueProduct = {
+    categoryId: product.categoryId || undefined,
+    featured: product.featured, sortOrder: product.sortOrder,
+    marketingBadges: Array.isArray(product.marketingBadges) ? product.marketingBadges.filter((item): item is string => typeof item === "string") : [],
+    faq: Array.isArray(product.faq) ? product.faq.flatMap(item => item && typeof item === "object" && !Array.isArray(item) && typeof item.question === "string" && typeof item.answer === "string" ? [{ question: item.question, answer: item.answer }] : []) : [],
+    videoUrls: Array.isArray(product.videoUrls) ? product.videoUrls.filter((item): item is string => typeof item === "string") : [],
+    relatedProductCodes: Array.isArray(product.relatedProductCodes) ? product.relatedProductCodes.filter((item): item is string => typeof item === "string") : [],
+    accessoryProductCodes: Array.isArray(product.accessoryProductCodes) ? product.accessoryProductCodes.filter((item): item is string => typeof item === "string") : [],
     id: product.id,
     code: product.code,
     supplierCode: product.supplierCode || "",
@@ -162,11 +204,11 @@ function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
       isPublic: document.isPublic,
       sortOrder: document.sortOrder,
     })),
-    priceHT: Number(product.priceHt),
+    priceHT: source.virtualPresentation && Number(product.priceHt) === 0 ? null : Number(product.priceHt),
     minPriceHT: product.minPriceHt === null ? null : Number(product.minPriceHt),
     maxPriceHT: product.maxPriceHt === null ? null : Number(product.maxPriceHt),
     delay: product.leadTime || "",
-    stock: product.stock,
+    stock: source.virtualPresentation && product.stock === 0 ? null : product.stock,
     weightKg: product.weightKg === null ? null : Number(product.weightKg),
     packageLengthCm: product.packageLengthCm === null ? null : Number(product.packageLengthCm),
     packageWidthCm: product.packageWidthCm === null ? null : Number(product.packageWidthCm),
@@ -177,16 +219,15 @@ function mapDatabaseProduct(product: DatabaseProduct): CatalogueProduct {
     variantCount: variants.length || 1,
     optionSchema: asOptionSchema(product.optionSchema),
     variants,
+    includeSupplierFamilyVariants: variants.length>0 && source.adminCreated!==true && product.variants.every(item=>asRecord(item.sourceData).adminCreated===true),
     href: source.href || "",
   };
 
-  const categorySlug = getNormalizedCategorySlug(mapped);
+  const override=productPresentationSchema.safeParse(product.presentation?.value).data;
+  const publicCategoryId=override?.categoryId === undefined ? product.categoryId : override.categoryId;
+  const categorySlug = override?.categoryId === null ? "produit" : resolvedPublicSlug(publicCategoryId, categoryMap) || getNormalizedCategorySlug(mapped);
 
-  return {
-    ...mapped,
-    categorySlug,
-    href: `/catalogue/${categorySlug}/${product.slug}`,
-  };
+  return applyProductPresentation({ ...mapped, categorySlug, href: `/catalogue/${categorySlug}/${product.slug}` }, product.presentation?.value);
 }
 
 
@@ -509,13 +550,17 @@ export async function getDatabaseProductsByCategory(
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
-  const databaseProducts = products
-    .map(mapDatabaseProduct)
+  const presentationCategories = await categoryMapForPresentation();
+  let databaseProducts = products
+    .filter(product => publicProduct(product, presentationCategories))
+    .map(product => mapDatabaseProduct(product, presentationCategories))
     .filter((product) => product.categorySlug === normalizedSlug);
+  if(databaseProducts.some(product=>product.presentationManagedKeys?.some(key=>["featured","sortOrder"].includes(key)))) databaseProducts=databaseProducts.sort((a,b)=>Number(Boolean(b.featured))-Number(Boolean(a.featured)) || (a.sortOrder??0)-(b.sortOrder??0));
 
   // Les potences configurables sont volontairement exclues de l'import ERP.
   // Leurs fiches virtuelles doivent néanmoins rester visibles dans le catalogue.
-  const virtualProducts = getProductsByCategory(normalizedSlug).filter((product) =>
+  const presentationReady=await prisma.siteSetting.findUnique({where:{key:"cms.catalogue.ready"}});
+  const virtualProducts = (presentationReady?.value===true ? [] : getProductsByCategory(normalizedSlug)).filter((product) =>
     product.id.startsWith("virtual-"),
   );
   const knownSlugs = new Set(databaseProducts.map((product) => product.slug));
@@ -538,12 +583,17 @@ export async function getDatabaseProductBySlug(
     include: catalogueProductInclude,
   });
 
-  if (!product || product.publicationStatus !== "PUBLISHED") {
+  if (product && product.publicationStatus !== "PUBLISHED") return undefined;
+  if (!product) {
+    const presentationReady=await prisma.siteSetting.findUnique({where:{key:"cms.catalogue.ready"}});
+    if(presentationReady?.value===true)return undefined;
     const virtualProduct = getProductBySlug(categorySlug, productSlug);
     return virtualProduct?.id.startsWith("virtual-") ? virtualProduct : undefined;
   }
 
-  const mapped = mapDatabaseProduct(product);
+  const presentationCategories = await categoryMapForPresentation();
+  if (!publicProduct(product, presentationCategories)) return undefined;
+  const mapped = mapDatabaseProduct(product, presentationCategories);
   const requestedCategory = normalizeCategoryQuery(categorySlug);
 
   // Compatibilité avec les liens d'aperçu générés avant que la catégorie
@@ -554,7 +604,8 @@ export async function getDatabaseProductBySlug(
     return mapped;
   }
 
-  return mapped.categorySlug === requestedCategory ? mapped : undefined;
+  // A public product slug is unique. Old category URLs remain readable and the page redirects to the current commercial category.
+  return mapped;
 }
 
 export async function getDatabaseFeaturedProducts(
@@ -568,7 +619,8 @@ export async function getDatabaseFeaturedProducts(
     orderBy: [{ featured: "desc" }, { sortOrder: "asc" }, { name: "asc" }],
   });
 
-  const mapped = products.map(mapDatabaseProduct);
+  const presentationCategories = await categoryMapForPresentation();
+  const mapped = products.filter(product => publicProduct(product, presentationCategories)).map(product => mapDatabaseProduct(product, presentationCategories)).sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
   const priority = [
     "levage",
@@ -578,6 +630,7 @@ export async function getDatabaseFeaturedProducts(
     "acces-hauteur",
   ];
 
+  if(mapped.some(product=>product.presentationManagedKeys?.includes("featured") || product.presentationManagedKeys?.includes("sortOrder"))) return mapped.slice(0,limit);
   const selected = priority.flatMap((slug) =>
     mapped
       .filter((product: CatalogueProduct) => product.categorySlug === slug)
@@ -585,4 +638,20 @@ export async function getDatabaseFeaturedProducts(
   );
 
   return selected.slice(0, limit);
+}
+
+export async function getDatabaseProductsByCodes(codes: string[]) {
+  if (!codes.length) return [];
+  const [products, categories] = await Promise.all([
+    prisma.product.findMany({ where: { publicationStatus: "PUBLISHED", OR:codes.map(code=>({code:{equals:code,mode:"insensitive" as const}})) }, include: catalogueProductInclude }),
+    categoryMapForPresentation(),
+  ]);
+  const byCode=new Map(products.filter(product => publicProduct(product,categories)).map(product=>[product.code.toLowerCase(),mapDatabaseProduct(product,categories)]));
+  return codes.flatMap(code=>byCode.has(code.toLowerCase())?[byCode.get(code.toLowerCase())!]:[]);
+}
+export async function getDatabaseProductsBySupplier(slug: string) {
+  const [products, categories] = await Promise.all([
+    prisma.product.findMany({ where: { publicationStatus: "PUBLISHED", supplier: { slug, isActive: true } }, include: catalogueProductInclude }), categoryMapForPresentation(),
+  ]);
+  return products.filter(product => publicProduct(product, categories)).map(product => mapDatabaseProduct(product, categories));
 }

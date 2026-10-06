@@ -1,3 +1,4 @@
+import { canWriteCatalogue } from "@/lib/admin/catalogue-permissions";
 import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { NextResponse } from "next/server";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
@@ -14,7 +15,7 @@ export async function POST(
   if (!admin) {
     return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
   }
-  if (admin.role === "READ_ONLY") {
+  if (!canWriteCatalogue(admin)) {
     return NextResponse.json(
       { error: "Votre rôle ne permet pas d’ajouter des médias." },
       { status: 403 },

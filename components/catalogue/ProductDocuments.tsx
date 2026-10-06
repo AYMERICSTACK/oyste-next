@@ -1,3 +1,4 @@
+import { CommercialText } from "@/components/layout/CommercialTextProvider";
 import { ArrowRight, Download, FileText, ShieldCheck } from "lucide-react";
 import type { ProductDocument } from "@/lib/catalogue/repository";
 
@@ -42,24 +43,22 @@ export default function ProductDocuments({
               <FileText size={23} />
             </span>
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.22em] text-slate-500">Documents techniques</p>
-              <h2 className="mt-1 text-2xl font-black text-slate-950">Documentation du produit</h2>
+              <p className="text-sm font-black uppercase tracking-[0.22em] text-slate-500"><CommercialText field="content031"/></p>
+              <h2 className="mt-1 text-2xl font-black text-slate-950"><CommercialText field="content032"/></h2>
             </div>
           </div>
           <p className="mt-4 max-w-3xl text-sm font-bold leading-7 text-slate-600">
-            Retrouvez au même endroit les fiches techniques, notices, plans et documents de conformité disponibles pour ce produit.
-          </p>
+            <CommercialText field="content033"/></p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {availableDocumentCount > 0 ? (
             <span className="rounded-full bg-[#007f8f]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-[#005466]">
-              {availableDocumentCount} document{availableDocumentCount > 1 ? "s" : ""} disponible{availableDocumentCount > 1 ? "s" : ""}
+              {availableDocumentCount} <CommercialText field="content034"/>{availableDocumentCount > 1 ? "s" : ""} <CommercialText field="content035"/>{availableDocumentCount > 1 ? "s" : ""}
             </span>
           ) : (
             <span className="rounded-full bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-slate-500">
-              Sur demande
-            </span>
+              <CommercialText field="content036"/></span>
           )}
         </div>
       </div>
@@ -82,12 +81,12 @@ export default function ProductDocuments({
                 <p className="mt-2 text-sm font-black leading-6 text-slate-700">{primaryIdentity.displayName}</p>
               ) : null}
               {primaryIdentity?.reference ? (
-                <p className="mt-2 text-sm font-bold leading-6 text-slate-600">Réf. : {primaryIdentity.reference}</p>
+                <p className="mt-2 text-sm font-bold leading-6 text-slate-600"><CommercialText field="content037"/>{primaryIdentity.reference}</p>
               ) : null}
             </div>
           </div>
           <span className="inline-flex items-center gap-2 text-sm font-black text-[#007f8f]">
-            Télécharger <ArrowRight size={17} />
+            <CommercialText field="content038"/><ArrowRight size={17} />
           </span>
         </a>
       ) : (
@@ -95,10 +94,9 @@ export default function ProductDocuments({
           <div className="flex items-start gap-4">
             <ShieldCheck className="mt-1 shrink-0 text-slate-500" size={22} />
             <div>
-              <p className="text-sm font-black text-slate-950">Fiche technique disponible sur demande</p>
+              <p className="text-sm font-black text-slate-950"><CommercialText field="content039"/></p>
               <p className="mt-2 text-sm font-bold leading-6 text-slate-600">
-                La documentation technique de {productName} peut être transmise avec l'offre ou sur demande.
-              </p>
+                <CommercialText field="content040"/>{productName} <CommercialText field="content041"/></p>
             </div>
           </div>
         </div>
@@ -126,7 +124,7 @@ export default function ProductDocuments({
                         <span className="mt-1 block text-xs font-black leading-5 text-slate-600">{identity.displayName}</span>
                       ) : null}
                       {identity.reference ? (
-                        <span className="mt-1 block text-xs font-bold leading-5 text-slate-500">Réf. : {identity.reference}</span>
+                        <span className="mt-1 block text-xs font-bold leading-5 text-slate-500"><CommercialText field="content042"/>{identity.reference}</span>
                       ) : null}
                     </div>
                   </div>

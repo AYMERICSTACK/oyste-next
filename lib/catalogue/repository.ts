@@ -41,6 +41,13 @@ export type CatalogueFaqItem = {
 };
 
 export type CatalogueProduct = {
+  categoryId?: string;
+  presentationManagedKeys?: string[];
+  baseVariants?: CatalogueVariant[];
+  includeSupplierFamilyVariants?: boolean;
+  variantPresentation?: Array<{id:string;label:string;enabled:boolean;sortOrder:number}>;
+  featured?: boolean;
+  sortOrder?: number;
   id: string;
   code: string;
   supplierCode: string;
@@ -74,6 +81,7 @@ export type CatalogueProduct = {
   href: string;
   experienceType?: ProductExperienceType;
   configuratorFamily?: string | null;
+  configuratorHref?: string;
   marketingBadges?: string[];
   faq?: CatalogueFaqItem[];
   videoUrls?: string[];
@@ -356,6 +364,7 @@ export function getProductConfiguratorFamily(product: CatalogueProduct) {
 }
 
 export function getProductConfiguratorHref(product: CatalogueProduct) {
+  if(product.configuratorHref) return product.configuratorHref;
   const family = getProductConfiguratorFamily(product);
   const params = new URLSearchParams({ produit: product.slug });
   if (family) {
@@ -366,6 +375,7 @@ export function getProductConfiguratorHref(product: CatalogueProduct) {
 }
 
 export function getProductMarketingBadges(product: CatalogueProduct) {
+  if (product.presentationManagedKeys?.includes("marketingBadges")) return product.marketingBadges || [];
   const configured = product.marketingBadges?.filter(Boolean) || [];
   if (configured.length) return configured.slice(0, 4);
   if (getProductExperienceType(product) === "CONFIGURABLE") {
@@ -375,6 +385,7 @@ export function getProductMarketingBadges(product: CatalogueProduct) {
 }
 
 export function getProductFaq(product: CatalogueProduct): CatalogueFaqItem[] {
+  if (product.presentationManagedKeys?.includes("faq")) return product.faq || [];
   if (product.faq?.length) return product.faq;
   if (getProductExperienceType(product) === "CONFIGURABLE") {
     const family = getProductConfiguratorFamily(product);
@@ -396,6 +407,7 @@ export function isSupplierPlaceholder(value: string | null | undefined) {
 }
 
 export function getCustomerProductDescription(product: CatalogueProduct) {
+  if(product.presentationManagedKeys?.includes("description")) return product.description;
   if (product.description && !isSupplierPlaceholder(product.description)) {
     return product.description;
   }
@@ -897,20 +909,64 @@ function getProductMediaReferences(product: CatalogueProduct, variantLimit = 24)
   ];
 }
 
+function normalizeMediaIdentity(value?: string | null) {
+  return (value || "")
+    .toUpperCase()
+    .replace(/%20/g, "")
+    .replace(/[^A-Z0-9]/g, "");
+}
+
+function isLocalMediaImageOwnedByProduct(product: CatalogueProduct, url: string) {
+  if (!url.startsWith("/media/photos/")) return true;
+
+  const filename = decodeURIComponent(url.split(/[?#]/)[0].split("/").pop() || "")
+    .replace(/\.[a-z0-9]+$/i, "");
+  const imageIdentity = normalizeMediaIdentity(filename);
+  if (!imageIdentity) return false;
+
+  const productIdentities = [product.imageRef, product.code, product.supplierCode]
+    .map(normalizeMediaIdentity)
+    .filter(Boolean);
+
+  return productIdentities.some((identity) =>
+    imageIdentity === identity ||
+    imageIdentity.startsWith(`${identity}1`) ||
+    imageIdentity.startsWith(`${identity}2`) ||
+    imageIdentity.startsWith(`${identity}3`) ||
+    imageIdentity.startsWith(`${identity}4`) ||
+    imageIdentity.startsWith(`${identity}5`) ||
+    imageIdentity.startsWith(`${identity}6`) ||
+    imageIdentity.startsWith(`${identity}7`) ||
+    imageIdentity.startsWith(`${identity}8`) ||
+    imageIdentity.startsWith(`${identity}9`)
+  );
+}
+
+export function getProductCardImages(product: CatalogueProduct) {
+  if (product.presentationManagedKeys?.includes("media")) return getProductMediaImages(product);
+  const databaseImages = (product.media || [])
+    .filter((media) => Boolean(media.url) && isLocalMediaImageOwnedByProduct(product, media.url))
+    .sort((a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary)) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+    .map((media) => media.url);
+
+  if (databaseImages.length) return Array.from(new Set(databaseImages));
+  return getImportedProductImagesExact(product.imageRef, product.code, product.supplierCode);
+}
+
 export function getProductMediaImages(product: CatalogueProduct) {
   const databaseImages = (product.media || [])
     .filter((media) => Boolean(media.url))
     .sort((a, b) => Number(Boolean(b.isPrimary)) - Number(Boolean(a.isPrimary)) || (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
     .map((media) => media.url);
 
-  if (databaseImages.length) return Array.from(new Set(databaseImages));
+  if (databaseImages.length || product.presentationManagedKeys?.includes("media")) return Array.from(new Set(databaseImages));
   return getImportedProductImagesExact(...getProductMediaReferences(product));
 }
 
 
 export function getProductAvailableDocumentCount(product: CatalogueProduct) {
   const databaseDocuments = (product.documents || []).filter((document) => document.isPublic !== false && Boolean(document.url));
-  if (databaseDocuments.length) return databaseDocuments.length;
+  if (databaseDocuments.length || product.presentationManagedKeys?.includes("documents")) return databaseDocuments.length;
   return getImportedProductDocumentsExact(...getProductMediaReferences(product)).length;
 }
 
@@ -955,7 +1011,7 @@ export function getProductDocuments(product: CatalogueProduct): ProductDocument[
       isVisible: true,
     }));
 
-  if (databaseDocuments.length) return databaseDocuments;
+  if (databaseDocuments.length || product.presentationManagedKeys?.includes("documents")) return databaseDocuments;
 
   const importedDocuments = getImportedProductDocumentsExact(...getProductMediaReferences(product));
   const technicalSheets: ProductDocument[] = importedDocuments.map((document) => {
@@ -1081,3 +1137,5 @@ export function getCategoryFacets(products: CatalogueProduct[]) {
 
   return { configurableProducts, totalVariants };
 }
+
+export function getProductCardTitle(product:CatalogueProduct){return product.presentationManagedKeys?.includes("shortName") && product.shortName ? product.shortName : product.name;}

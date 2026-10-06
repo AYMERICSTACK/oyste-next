@@ -1,3 +1,4 @@
+import { getProductCardTitle } from "@/lib/catalogue/repository";
 import {
   formatCategoryLabel,
   formatPriceRange,
@@ -33,14 +34,14 @@ export default function ProductGrid({ products }: { products: CatalogueProduct[]
           <ProductCard
             key={product.id}
             code={product.code}
-            name={product.name}
+            name={getProductCardTitle(product)}
             family={formatCategoryLabel(product.categoryPath)}
             price={formatPriceRange(product)}
             description={product.description}
             href={product.href}
             cta="Voir la fiche"
             imageRef={product.imageRef || product.code}
-            imageUrl={getProductMediaImages(product)[0]}
+            imageUrl={getProductMediaImages(product)[0] ?? (product.presentationManagedKeys?.includes("media") ? "" : undefined)} badges={product.presentationManagedKeys?.includes("marketingBadges") ? product.marketingBadges : undefined}
             badge={
               product.variantCount && product.variantCount > 1
                 ? `${product.variantCount} variantes`

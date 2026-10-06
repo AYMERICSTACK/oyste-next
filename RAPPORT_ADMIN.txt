@@ -1,0 +1,88 @@
+1. CE QUI RESTAIT DANS RAPPORT_ADMIN.txt
+
+Lot 1 : activation globale du hero ; catégories/familles home depuis la base ; visibilité, ordre, images et produits représentatifs ; bandeau Supplier avec logo, visibilité, ordre et lien.
+Lot 2 : raccordement effectif des référentiels au rendu public et nouveaux univers accessibles sans route codée.
+Lot 3 : overrides des imports ; références/relations manuelles ; featured/ordre, badges, FAQ, vidéos, produits liés/accessoires, caractéristiques, documents, variantes, médias ordonnés et image principale.
+Lot 4 : À propos, Services, blocs Livraison/Contact, coordonnées, textes/CTA commerciaux Catalogue et autres composants publics.
+Validation : migration, tests BO/front, PostgreSQL, contrôle visuel desktop/mobile et build standard réussi.
+
+2. CE QUI A ÉTÉ TERMINÉ
+
+Les implémentations ci-dessous sont réalisées dans le code et couvertes par les vérifications décrites en section 5. La mission n’est pas clôturée : le build standard reste en échec.
+
+Lot 1 :
+- Hero activable ; slides, liens rapides, titres, CTA et destination du lien catalogue administrables.
+- Home alimentée par Category : univers/familles, parent de présentation distinct du parent technique, libellés, visibilité, ordre, images et produit représentatif.
+- Image principale personnalisée du produit représentatif prise en compte.
+- Images historiques regroupées dans le snapshot d’initialisation ; overrides retirés des composants home/navigation des familles.
+- Bandeau Supplier : logo, visibilité, ordre et lien administrables.
+- Initialisation explicite, transactionnelle et idempotente ; repli historique avant initialisation.
+
+Lot 2 :
+- Catalogue, univers/familles et fiches produit raccordés aux données administrées ; nouveaux univers utilisables sans nouvelle route codée.
+- Libellés, description, images, visibilité, ordre et SEO Category raccordés au public.
+- Pages Supplier alimentées par la fiche et ses produits : logo, nom, site web et délai moyen.
+- Désactivation prise en compte ; anciens liens produit redirigés vers la catégorie commerciale courante.
+- Rendu public dynamique pour relire les changements sur une nouvelle requête.
+
+Lot 3 :
+- Présentation : nom, nom court des cartes, descriptions, SEO, classement public, parcours standard/configurateur, lien configurateur, featured et ordre.
+- Badges, FAQ, vidéos, produits liés/accessoires, caractéristiques et documents éditables ; listes volontairement vides respectées.
+- Médias : ajout, masquage, retrait de la présentation, ordre et principale ; aucune image fournisseur réintroduite lorsque l’override est vide.
+- Documents : URL ou import PDF, nom, type, visibilité, ordre, modification et retrait de la présentation.
+- Variantes BO : création/modification/suppression, prix, stock, dimensions, transport, options structurées ; variantes commandées protégées.
+- Variantes importées : libellé, visibilité et ordre personnalisables ; données techniques conservées. Ajouter une variante BO à un import plat conserve sa famille fournisseur.
+- Produits BO : références/adresses modifiables avant première publication ; relations Category/Supplier modifiables. Identifiants publiés/commandés et identifiants fournisseur protégés.
+- Stratégie : ProductPresentationOverride séparé des données source. Chaque champ suit la source ou utilise son override ; désactiver celui-ci retrouve la dernière source. Les synchronisations existantes ne modifient pas cette table.
+- Initialisation des deux fiches configurateur auparavant virtuelles pour les rendre administrables.
+
+Lot 4 :
+- À propos, Services, Livraison et Contact : textes, liens, métadonnées, listes et blocs dans SiteSetting.
+- Listes ajoutables, retirables, modifiables, réordonnables et masquables ; sections principales réordonnables/masquables.
+- Coordonnées et libellés du formulaire de contact éditables ; codes de traitement conservés.
+- Blocs Catalogue/Levage/familles, textes et CTA des fiches/composants commerciaux raccordés au CMS.
+- Logos, sous-menus, liens/blocs footer administrables ; navigation/topbar/footer existants conservés.
+- Les anciennes corrections de navigation/zone géographique ne réécrivent plus les nouveaux choix après sauvegarde CMS version 2.
+- Import BO d’images/PDF via Vercel Blob existant : contrôle des rôles, scopes, chemins, formats et tailles. Publication des contenus lors de l’enregistrement du formulaire.
+
+Préservation : snapshot des textes affichés, espaces JSX et entités HTML ; HTML par défaut À propos/Services/Livraison/Contact identique à la base dans les tests de rendu ; champs Category déjà saisis et contenus personnalisés conservés par l’initialisation. Les 70 fichiers identifiés Stockman/Kito/crawler/matching/jobs sont identiques à la base. Aucun déploiement et aucune écriture de production.
+
+3. CE QUI RESTE IMPOSSIBLE ICI ET POURQUOI
+
+La mission n’est pas terminée : npm run build standard échoue avant compilation sur ENOENT / uv_resident_set_memory. L’appel process.memoryUsage() échoue également indépendamment de Next dans cet environnement. Aucun shim, préchargement de diagnostic ni modification de Next pour masquer cet échec n’a été utilisé dans cette seconde mission.
+
+Migration et initialisation sur PostgreSQL, parcours BO/front dans un navigateur avec données réelles, contrôle visuel desktop/mobile de la home et uploads Blob réels restent non validés. Aucune base de staging ni fixture de commande/facture isolée fournie ; paramètres de production non utilisés. Prisma simulé et comparaisons HTML ne remplacent pas ces validations.
+
+Les scripts manuels de facturation exigent une référence/identifiant isolé ; leurs assertions n’ont pas pu être exécutées. scripts/test-stockman.mjs exige un navigateur graphique et une session fournisseur sur un domaine hors accès réseau autorisé ; non exécuté. Les 28 tests automatisés Stockman ont été exécutés.
+
+Identifiants techniques fournisseur et adresses déjà publiées volontairement protégés pour conserver synchronisations, liens et historiques. Présentation commerciale et classement public restent personnalisables sans les changer.
+
+4. MIGRATIONS
+
+prisma/migrations/20261006060000_admin_presentation/migration.sql :
+- Supplier : configuration de présentation, visibilité/ordre home et lien.
+- Category : configuration, visibilité catalogue/home, ordre/image home, libellés, sous-titre, tags, lien, filtre famille, parent de présentation, produit représentatif.
+- ProductPresentationOverride : JSON commercial séparé, relation Product, dates ; cascade uniquement lors de suppression du produit.
+- Index et clés étrangères ; migration additive, sans suppression de données/colonnes.
+
+Migration non appliquée ici. Après application sur une base isolée : initialisation via bouton BO super administrateur ou scripts/initialize-presentation.ts ; simulation sans --apply, écriture explicite avec --apply. Ne pas relancer le seed général. cms.catalogue.ready est posé en fin de transaction ; valeurs historiques disponibles avant cette étape. Aucune nouvelle variable : SiteSetting et Vercel Blob existants réutilisés.
+
+5. RÉSULTATS EXACTS DES TESTS / BUILD
+
+npm run test:admin : sortie 0 ; 103 tests, 103 réussis, 0 échec, 0 ignoré.
+npm run test:stockman : sortie 0 ; 28 tests, 28 réussis, 0 échec, 0 ignoré.
+npx tsc --noEmit : sortie 0 ; aucune erreur TypeScript.
+npx prisma validate : sortie 0 ; schéma valide.
+npm run build : sortie 1 ; Prisma generate en prebuild réussi ; arrêt avant compilation sur ENOENT, syscall uv_resident_set_memory. Aucun build standard réussi.
+
+Scripts existants exécutés avec node --import tsx :
+- test-pfi-freight.ts : sortie 0, PFI freight calculations: OK.
+- test-pft-freight.ts : sortie 0, PFT freight calculations: OK.
+- test-wall-potence-freight.ts : sortie 0, Wall potence freight calculations: OK.
+- test-kito-chain-weight.ts : sortie 0, Tous les tests sont OK.
+- test-create-invoice.ts sans référence : sortie 1, Reference commande manquante ; assertions non exécutées.
+- test-issue-invoice.ts sans identifiant : sortie 1, Usage: npx tsx scripts/test-issue-invoice.ts <invoiceId> ; assertions non exécutées.
+- test-generate-invoice-pdf.ts sans identifiant : sortie 1, Usage : npx tsx scripts/test-generate-invoice-pdf.ts <invoiceId> ; assertions non exécutées.
+- test-stockman.mjs : non exécuté, contraintes en section 3.
+
+Les 103 tests admin incluent les 37 précédents et 66 nouveaux : permissions, validation, handlers, persistance/relecture, initialisation idempotente, raccordement public, overrides et mises à jour source simulées, variantes, médias/documents, uploads, sections et rendus HTML. Pas de campagne PostgreSQL/navigateur avec données réelles. Journaux exacts dans validation/ ; aucun ancien build de diagnostic présenté comme résultat de cette mission.

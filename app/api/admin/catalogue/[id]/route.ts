@@ -1,3 +1,5 @@
+import { manualProductSchema, isAdminCreated } from "@/lib/admin/product-validation";
+import { canWriteCatalogue } from "@/lib/admin/catalogue-permissions";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db/prisma";
@@ -6,6 +8,7 @@ import { getCurrentAdmin } from "@/lib/auth/admin-session";
 const shippingModeSchema = z.enum(["INCLUDED", "MESSAGERIE", "AFFRETEMENT", "QUOTE"]);
 
 const updateShippingSchema = z.object({
+  manual: manualProductSchema.optional(),
   weightKg: z.number().finite().nonnegative().nullable(),
   packageLengthCm: z.number().finite().nonnegative().nullable(),
   packageWidthCm: z.number().finite().nonnegative().nullable(),
@@ -24,14 +27,19 @@ const updateShippingSchema = z.object({
 });
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const admin = await getCurrentAdmin();
+  if (!admin) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
+  if (!["SUPER_ADMIN", "CATALOG_MANAGER"].includes(admin.role)) {
+    return NextResponse.json({ error: "Votre rôle ne permet pas de modifier le catalogue." }, { status: 403 });
+  }
   const { id } = await params;
-  const parsed = updateShippingSchema.safeParse(await request.json());
+  const parsed = updateShippingSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
     return NextResponse.json({ error: "Données de livraison invalides." }, { status: 400 });
   }
 
-  const { weightKg, packageLengthCm, packageWidthCm, packageHeightCm, shippingMode, leadTime, publicationStatus, variants } = parsed.data;
+  const { manual, weightKg, packageLengthCm, packageWidthCm, packageHeightCm, shippingMode, leadTime, publicationStatus, variants } = parsed.data;
   const normalizedWeightKg = weightKg !== null && weightKg > 0 ? weightKg : null;
   const normalizeDimension = (value: number | null) => value !== null && value > 0 ? value : null;
   const normalizedPackageLengthCm = normalizeDimension(packageLengthCm);
@@ -70,10 +78,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const existing = await prisma.product.findUnique({
     where: { id },
-    select: { id: true, variants: { select: { id: true } } },
+    select: { id: true, sourceData: true, publishedAt: true, variants: { select: { id: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
 
+  if (manual && !isAdminCreated(existing.sourceData)) return NextResponse.json({ error: "Les champs gérés par import ne peuvent pas être remplacés par cet éditeur." }, { status: 409 });
   const validVariantIds = new Set(existing.variants.map((variant) => variant.id));
   if (normalizedVariants.some((variant) => !validVariantIds.has(variant.id))) {
     return NextResponse.json({ error: "Une variante ne correspond pas à ce produit." }, { status: 400 });
@@ -83,6 +92,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const updatedProduct = await tx.product.update({
       where: { id },
       data: {
+        ...(manual ?? {}),
         weightKg: normalizedWeightKg,
         packageLengthCm: normalizedPackageLengthCm,
         packageWidthCm: normalizedPackageWidthCm,
@@ -90,7 +100,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         shippingMode,
         leadTime: leadTime?.trim() || null,
         publicationStatus,
-        publishedAt: publicationStatus === "PUBLISHED" ? new Date() : null,
+        publishedAt: publicationStatus === "PUBLISHED" ? (existing.publishedAt ?? new Date()) : null,
       },
       select: { id: true, weightKg: true, shippingMode: true, publicationStatus: true, updatedAt: true },
     });
@@ -108,6 +118,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       });
     }
 
+    await tx.auditLog.create({ data: {
+      action: "PRODUCT_UPDATE", entityType: "Product", entityId: id, userId: admin.id,
+      metadata: { publicationStatus, variantCount: normalizedVariants.length },
+    } });
     return updatedProduct;
   });
 
@@ -120,7 +134,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const admin = await getCurrentAdmin();
   if (!admin) return NextResponse.json({ error: "Non autorisé." }, { status: 401 });
-  if (admin.role === "READ_ONLY") {
+  if (!canWriteCatalogue(admin)) {
     return NextResponse.json({ error: "Votre rôle ne permet pas de supprimer un produit." }, { status: 403 });
   }
 
@@ -131,11 +145,16 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
       id: true,
       code: true,
       name: true,
+      sourceData: true,
       _count: { select: { orderItems: true } },
     },
   });
 
   if (!product) return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
+
+  if (product.sourceData && !isAdminCreated(product.sourceData)) {
+    return NextResponse.json({ error: "Ce produit provient d’un import fournisseur. Masquez-le pour préserver les intégrations et l’historique." }, { status: 409 });
+  }
 
   if (product._count.orderItems > 0) {
     return NextResponse.json(
@@ -147,7 +166,14 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
     );
   }
 
-  await prisma.product.delete({ where: { id: product.id } });
+  try {
+    await prisma.$transaction(async tx => {
+      await tx.product.delete({ where: { id: product.id } });
+      await tx.auditLog.create({ data: { action: "PRODUCT_DELETE", entityType: "Product", entityId: product.id, userId: admin.id, metadata: { code: product.code } } });
+    });
+  } catch {
+    return NextResponse.json({ error: "Suppression impossible : des données liées ont pu changer. Rechargez la fiche." }, { status: 409 });
+  }
 
   return NextResponse.json({
     deleted: true,

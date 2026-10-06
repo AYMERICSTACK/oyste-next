@@ -9,17 +9,20 @@ export type HomeHeroSlide = {
   href: string;
   image: string;
   label: string;
+  ctaLabel?: string;
 };
 
 export default function HomeHeroCarousel({ slides }: { slides: HomeHeroSlide[] }) {
   const [active, setActive] = useState(0);
 
   useEffect(() => {
+    if (slides.length < 2) return;
     const timer = window.setInterval(() => setActive((value) => (value + 1) % slides.length), 6500);
     return () => window.clearInterval(timer);
   }, [slides.length]);
 
-  const slide = slides[active];
+  const slide = slides[active % slides.length];
+  if (!slide) return null;
 
   return (
     <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-300/35">
@@ -39,7 +42,7 @@ export default function HomeHeroCarousel({ slides }: { slides: HomeHeroSlide[] }
           <div className="mt-2 flex items-end justify-between gap-5">
             <p className="max-w-lg text-xs leading-5 text-slate-200 sm:text-sm">{slide.text}</p>
             <a href={slide.href} className="inline-flex shrink-0 items-center gap-2 text-sm font-black text-white">
-              Découvrir <ArrowRight size={17} />
+              {slide.ctaLabel ?? "Découvrir"} <ArrowRight size={17} />
             </a>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import PresentationInitialization from "@/components/admin/PresentationInitialization";
+import ReferenceManager from "@/components/admin/ReferenceManager";
 import { AlertTriangle, Building2, CheckCircle2, Package } from "lucide-react";
 import SuppliersWorkspace from "@/components/admin/SuppliersWorkspace";
 import { getAdminSuppliersFromDatabase, getSupplierStats } from "@/lib/admin/suppliers-data";
@@ -19,7 +21,7 @@ export default async function SuppliersPage() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-[1600px] p-4 md:p-7 xl:p-9">
+    <main className="mx-auto w-full max-w-[1600px] p-4 md:p-7 xl:p-9"><PresentationInitialization/>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">
@@ -45,6 +47,7 @@ export default async function SuppliersPage() {
         ))}
       </section>
 
+      <ReferenceManager kind="suppliers" />
       <SuppliersWorkspace suppliers={adminSuppliers} stockmanStatus={stockmanStatus} />
     </main>
   );

@@ -47,7 +47,7 @@ const subjects = [
 const inputClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#007f8f] focus:ring-4 focus:ring-[#007f8f]/10";
 
-export default function ContactForm() {
+export default function ContactForm({content}: {content: Record<string,string>}) {
   const [form, setForm] = useState<ContactFormState>(initialState);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [feedback, setFeedback] = useState("");
@@ -93,10 +93,9 @@ export default function ContactForm() {
         <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xl shadow-emerald-600/20">
           <CheckCircle2 size={40} />
         </div>
-        <p className="mt-8 text-sm font-black uppercase tracking-[0.28em] text-emerald-700">Demande transmise</p>
+        <p className="mt-8 text-sm font-black uppercase tracking-[0.28em] text-emerald-700">{content.form001}</p>
         <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-          Merci, notre équipe revient vers vous rapidement.
-        </h2>
+          {content.form002}</h2>
         <p className="mt-5 max-w-xl text-base leading-7 text-slate-600">{feedback}</p>
         <button
           type="button"
@@ -106,8 +105,7 @@ export default function ContactForm() {
           }}
           className="mt-8 inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-6 py-3.5 text-sm font-black text-white transition hover:bg-slate-800"
         >
-          Envoyer une autre demande
-          <ArrowRight size={18} />
+          {content.form003}<ArrowRight size={18} />
         </button>
       </div>
     );
@@ -117,15 +115,15 @@ export default function ContactForm() {
     <form onSubmit={handleSubmit} className="rounded-[2rem] border border-slate-200 bg-white p-6 shadow-2xl shadow-slate-950/5 sm:p-8 lg:p-10">
       <div className="flex flex-col gap-3 border-b border-slate-100 pb-7 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-600">Votre demande</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">Parlez-nous de votre projet.</h2>
+          <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-600">{content.form004}</p>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-slate-950">{content.form005}</h2>
         </div>
-        <p className="text-sm font-semibold text-slate-500">Réponse sous 1 jour ouvré</p>
+        <p className="text-sm font-semibold text-slate-500">{content.form006}</p>
       </div>
 
       <div className="mt-7 grid gap-5 sm:grid-cols-2">
         <label className="text-sm font-bold text-slate-700">
-          Prénom <span className="text-orange-600">*</span>
+          {content.form007}<span className="text-orange-600">{content.form008}</span>
           <span className="relative block">
             <UserRound className="pointer-events-none absolute left-4 top-1/2 mt-1 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -134,13 +132,13 @@ export default function ContactForm() {
               value={form.firstName}
               onChange={(event) => updateField("firstName", event.target.value)}
               className={`${inputClass} pl-11`}
-              placeholder="Votre prénom"
+              placeholder={content.form009}
             />
           </span>
         </label>
 
         <label className="text-sm font-bold text-slate-700">
-          Nom <span className="text-orange-600">*</span>
+          {content.form010}<span className="text-orange-600">{content.form011}</span>
           <span className="relative block">
             <UserRound className="pointer-events-none absolute left-4 top-1/2 mt-1 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -149,13 +147,13 @@ export default function ContactForm() {
               value={form.lastName}
               onChange={(event) => updateField("lastName", event.target.value)}
               className={`${inputClass} pl-11`}
-              placeholder="Votre nom"
+              placeholder={content.form012}
             />
           </span>
         </label>
 
         <label className="text-sm font-bold text-slate-700 sm:col-span-2">
-          Société <span className="text-orange-600">*</span>
+          {content.form013}<span className="text-orange-600">{content.form014}</span>
           <span className="relative block">
             <Building2 className="pointer-events-none absolute left-4 top-1/2 mt-1 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -166,16 +164,15 @@ export default function ContactForm() {
               value={form.company}
               onChange={(event) => updateField("company", event.target.value)}
               className={`${inputClass} pl-11`}
-              placeholder="Nom de votre entreprise"
+              placeholder={content.form015}
             />
           </span>
           <span className="mt-2 block text-xs font-semibold leading-5 text-slate-500">
-            OYSTE est exclusivement réservé aux professionnels.
-          </span>
+            {content.form016}</span>
         </label>
 
         <label className="text-sm font-bold text-slate-700">
-          E-mail professionnel <span className="text-orange-600">*</span>
+          {content.form017}<span className="text-orange-600">{content.form018}</span>
           <span className="relative block">
             <Mail className="pointer-events-none absolute left-4 top-1/2 mt-1 -translate-y-1/2 text-slate-400" size={18} />
             <input
@@ -185,14 +182,13 @@ export default function ContactForm() {
               value={form.email}
               onChange={(event) => updateField("email", event.target.value)}
               className={`${inputClass} pl-11`}
-              placeholder="nom@entreprise.fr"
+              placeholder={content.form019}
             />
           </span>
         </label>
 
         <label className="text-sm font-bold text-slate-700">
-          Téléphone
-          <span className="relative block">
+          {content.form020}<span className="relative block">
             <Phone className="pointer-events-none absolute left-4 top-1/2 mt-1 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="tel"
@@ -200,13 +196,13 @@ export default function ContactForm() {
               value={form.phone}
               onChange={(event) => updateField("phone", event.target.value)}
               className={`${inputClass} pl-11`}
-              placeholder="06 00 00 00 00"
+              placeholder={content.form021}
             />
           </span>
         </label>
 
         <label className="text-sm font-bold text-slate-700 sm:col-span-2">
-          Motif de la demande <span className="text-orange-600">*</span>
+          {content.form022}<span className="text-orange-600">{content.form023}</span>
           <select
             required
             value={form.subject}
@@ -215,14 +211,14 @@ export default function ContactForm() {
           >
             {subjects.map((subject) => (
               <option key={subject.value} value={subject.value}>
-                {subject.label}
+                {content["subject"+subject.value] || subject.label}
               </option>
             ))}
           </select>
         </label>
 
         <label className="text-sm font-bold text-slate-700 sm:col-span-2">
-          Votre message <span className="text-orange-600">*</span>
+          {content.form024}<span className="text-orange-600">{content.form025}</span>
           <span className="relative block">
             <MessageSquareText className="pointer-events-none absolute left-4 top-6 text-slate-400" size={18} />
             <textarea
@@ -233,10 +229,10 @@ export default function ContactForm() {
               value={form.message}
               onChange={(event) => updateField("message", event.target.value)}
               className={`${inputClass} resize-y pl-11`}
-              placeholder="Décrivez votre besoin, les dimensions, la capacité souhaitée ou toute information utile…"
+              placeholder={content.form026}
             />
           </span>
-          <span className="mt-2 block text-right text-xs font-semibold text-slate-400">{form.message.length} / 3000</span>
+          <span className="mt-2 block text-right text-xs font-semibold text-slate-400">{form.message.length} {content.form027}</span>
         </label>
       </div>
 
@@ -249,7 +245,7 @@ export default function ContactForm() {
           className="mt-1 h-4 w-4 accent-[#007f8f]"
         />
         <span>
-          J’accepte que les informations saisies soient utilisées pour répondre à ma demande. <span className="font-black text-slate-950">*</span>
+          {content.form028}<span className="font-black text-slate-950">{content.form029}</span>
         </span>
       </label>
 
@@ -267,12 +263,10 @@ export default function ContactForm() {
         {status === "loading" ? (
           <>
             <LoaderCircle className="animate-spin" size={20} />
-            Envoi en cours
-          </>
+            {content.form030}</>
         ) : (
           <>
-            Envoyer ma demande
-            <ArrowRight size={20} />
+            {content.form031}<ArrowRight size={20} />
           </>
         )}
       </button>

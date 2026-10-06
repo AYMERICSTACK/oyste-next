@@ -1,3 +1,4 @@
+import { CommercialText } from "@/components/layout/CommercialTextProvider";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { CatalogueUniverse } from "@/data/catalogue";
@@ -15,9 +16,10 @@ export default function CategoryCard({
   href = "#",
   mode,
   tags,
-}: CatalogueUniverse) {
+  imageUrl: presentationImage,
+}: CatalogueUniverse & { imageUrl?: string | null }) {
   const representativeProduct = getProductsByCategory(slug)[0];
-  const imageUrl = representativeProduct
+  const imageUrl = presentationImage !== undefined ? presentationImage : representativeProduct
     ? getProductMediaImages(representativeProduct)[0] || getProductImageUrl(representativeProduct.imageRef, representativeProduct.code)
     : getProductImageUrl(slug);
 
@@ -29,19 +31,18 @@ export default function CategoryCard({
       <div className={cn("absolute right-5 top-5 h-3 w-16 rounded-full", accent)} />
 
       <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-slate-50">
-        <img
-          src={imageUrl}
+        {imageUrl ? <img
+          src={imageUrl || undefined}
           alt={title}
           className="h-full w-full object-contain p-5 transition duration-300 group-hover:scale-105"
-        />
+        /> : <span className="flex h-full items-center justify-center text-sm text-slate-400"><CommercialText field="content007"/></span>}
       </div>
 
       <div className="pt-4">
         <div className="flex flex-wrap items-center gap-2">
           {mode === "assistant" && (
             <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-[11px] font-black uppercase text-orange-700">
-              <Sparkles size={12} /> Guidé
-            </span>
+              <Sparkles size={12} /> <CommercialText field="content008"/></span>
           )}
         </div>
         <h2 className="mt-2 text-xl font-black text-slate-950">{title}</h2>

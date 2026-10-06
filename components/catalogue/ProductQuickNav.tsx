@@ -1,4 +1,5 @@
 "use client";
+import { useCommercialTexts } from "@/components/layout/CommercialTextProvider";
 
 import {
   FileText,
@@ -25,6 +26,8 @@ export default function ProductQuickNav({
   showFaq?: boolean;
   showProducts?: boolean;
 }) {
+ const commerce=useCommercialTexts();
+
   const visibleItems = items.filter((item) => {
     if (item.href === "#faq-produit") return showFaq;
     if (item.href === "#produits-associes") return showProducts;
@@ -65,8 +68,7 @@ export default function ProductQuickNav({
       >
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-2xl backdrop-blur">
           <p className="px-3 pb-2 pt-1 text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-            Accès rapide
-          </p>
+            {commerce.content046}</p>
           <div className="grid gap-1">
             {visibleItems.map(({ href, label, icon: Icon }) => (
               <button

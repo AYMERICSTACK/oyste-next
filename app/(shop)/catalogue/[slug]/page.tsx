@@ -1,3 +1,8 @@
+import { getProductCardTitle } from "@/lib/catalogue/repository";
+import { getPublicCategory } from "@/lib/catalogue/public-presentation";
+import { getEditorialPage, editorialIcon } from "@/lib/editorial";
+import { Boxes } from "lucide-react";
+import { getPublicPresentation, publicFamilies, familyProducts } from "@/lib/catalogue/public-presentation";
 import { type LucideIcon } from "lucide-react";
 import Container from "@/components/ui/Container";
 import SectionHeader from "@/components/ui/SectionHeader";
@@ -14,7 +19,7 @@ import {
   getProductAvailableDocumentCount,
   getProductExperienceType,
   getProductMarketingBadges,
-  getProductMediaImages,
+  getProductCardImages,
   getSubFamilyBySlug,
   filterProductsByFamily,
   isPotenceProduct,
@@ -60,44 +65,46 @@ export default async function CatalogueUniversePage({
   params: Promise<{ slug: string }>;
   searchParams?: Promise<{ famille?: string }>;
 }) {
+ const page=await getEditorialPage("families");
+
   const { slug } = await params;
   const resolvedSearchParams = await searchParams;
   const selectedFamilySlug = resolvedSearchParams?.famille;
-  const universe = catalogueUniverses.find(
+  const legacyUniverse = catalogueUniverses.find(
     (item) => item.slug === slug || item.href.endsWith(slug),
   );
-  const category = getCatalogCategory(slug);
+  const { categories } = await getPublicPresentation();
+  const category = categories.find(item => item.slug === slug && item.isActive && item.catalogueVisible);
+  const universe = category ? { ...legacyUniverse, title: category.publicLabel || category.name, icon: legacyUniverse?.icon || Boxes } : undefined;
 
   if (!universe || !category) notFound();
 
   const Icon: LucideIcon = universe.icon as LucideIcon;
-  const content = catalogueCategoryContent[slug];
-  const subFamilies = catalogueSubFamilies[slug] || [];
+  const content = { title: category.publicLabel || category.name, description: category.description || "" };
+  const subFamilies = publicFamilies(categories, category);
   const selectedFamily = selectedFamilySlug
-    ? getSubFamilyBySlug(slug, selectedFamilySlug)
+    ? subFamilies.find(item => item.publicFamilySlug === selectedFamilySlug || item.slug === selectedFamilySlug)
     : undefined;
   const categoryProducts = await getDatabaseProductsByCategory(slug);
-  const products = selectedFamilySlug
-    ? filterProductsByFamily(categoryProducts, selectedFamilySlug)
-    : [];
+  const products = selectedFamily ? familyProducts(categoryProducts, selectedFamily, filterProductsByFamily) : subFamilies.length ? [] : categoryProducts;
   const familyCounts = Object.fromEntries(
     subFamilies.map((family) => {
-      const familySlug = family.href.split("famille=")[1] || "";
-      return [familySlug, familySlug ? filterProductsByFamily(categoryProducts, familySlug).length : 0];
+      const familySlug = family.publicFamilySlug || family.slug;
+      return [familySlug, familySlug ? familyProducts(categoryProducts, family, filterProductsByFamily).length : 0];
     }),
   );
   const premiumProducts: PremiumCatalogItem[] = products.map((product) => {
-    const isConfigurable = getProductExperienceType(product) === "CONFIGURABLE" || isPotenceProduct(product);
+    const isConfigurable = getProductExperienceType(product) === "CONFIGURABLE" || (!product.presentationManagedKeys?.includes("experienceType") && isPotenceProduct(product));
     const capacity = extractCapacity(product);
     const marketingBadges = getProductMarketingBadges(product);
     return {
-      id: product.id,
+      id: product.id,featured:product.featured,sortOrder:product.sortOrder,presentationPriority:product.presentationManagedKeys?.some(key=>["featured","sortOrder"].includes(key)),
       code: product.code,
-      name: product.name,
+      name: getProductCardTitle(product),
       family: formatCategoryLabel(product.categoryPath),
       description: getCustomerProductDescription(product),
       href: product.href,
-      imageUrl: getProductMediaImages(product)[0] || "",
+      imageUrl: getProductCardImages(product)[0] || "",
       priceLabel: isConfigurable ? "Configuration sur mesure" : formatPriceRange(product),
       minPriceHT: product.minPriceHT ?? product.priceHT ?? null,
       badge: marketingBadges[0] || "Catalogue OYSTE",
@@ -113,18 +120,18 @@ export default async function CatalogueUniversePage({
       productType: getProductTypeLabel(product, isConfigurable),
     };
   });
-  const isFamilyView = Boolean(selectedFamilySlug);
+  const isFamilyView = Boolean(selectedFamilySlug) || subFamilies.length === 0;
 
   return (
     <main className="bg-slate-50 text-slate-950">
       <section className="border-b border-slate-200 bg-white py-9 sm:py-11">
         <Container className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <SectionHeader
-            eyebrow="Équipements professionnels"
+            eyebrow={page.fields.content001}
             title={selectedFamily?.title || content?.title || universe.title}
             text={
               selectedFamily
-                ? `Découvrez les équipements ${selectedFamily.title.toLowerCase()} disponibles.`
+                ? selectedFamily.description || `Découvrez les équipements ${selectedFamily.title.toLowerCase()} disponibles.`
                 : content?.description ||
                   category.description ||
                   universe.description
@@ -154,29 +161,25 @@ export default async function CatalogueUniversePage({
             <div className="mb-8 flex flex-col justify-between gap-4 md:flex-row md:items-end">
               <div>
                 <p className="text-sm font-black uppercase tracking-[0.25em] text-orange-600">
-                  Produits de la catégorie
-                </p>
+                  {page.fields.content002}</p>
                 <h2 className="mt-2 text-3xl font-black text-slate-950">
                   {selectedFamily?.title || "Catégorie"}
                 </h2>
                 <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">
-                  Sélectionnez un produit pour consulter ses caractéristiques et ses options.
-                </p>
+                  {page.fields.content003}</p>
               </div>
               <a
                 href={`/catalogue/${slug}`}
                 className="text-sm font-black text-[#007f8f]"
               >
-                ← Voir toutes les catégories
-              </a>
+                {page.fields.content004}</a>
             </div>
 
             {premiumProducts.length > 0 ? (
               <PremiumCatalog products={premiumProducts} />
             ) : (
               <div className="rounded-[2rem] border border-orange-200 bg-orange-50 p-8 text-sm font-bold text-orange-800">
-                Aucun produit disponible dans cette catégorie pour le moment.
-              </div>
+                {page.fields.content005}</div>
             )}
 
           </Container>
@@ -185,3 +188,5 @@ export default async function CatalogueUniversePage({
     </main>
   );
 }
+
+export async function generateMetadata({params}:{params:Promise<{slug:string}>}){const {slug}=await params;const category=await getPublicCategory(slug);return {title:category?.seoTitle || category?.publicLabel || category?.name,description:category?.seoDescription || category?.description || undefined};}

@@ -1,71 +1,34 @@
+import { getPublicPresentation, visibleHome } from "@/lib/catalogue/public-presentation";
 import { ArrowRight, SlidersHorizontal } from "lucide-react";
 import Link from "next/link";
 import Button from "@/components/ui/Button";
 import Container from "@/components/ui/Container";
-import HomeHeroCarousel, { type HomeHeroSlide } from "@/components/home/HomeHeroCarousel";
+import HomeHeroCarousel from "@/components/home/HomeHeroCarousel";
 import HomeCategoryRows, { type HomeCategoryRow } from "@/components/home/HomeCategoryRows";
 import HomeSupplierMarquee from "@/components/home/HomeSupplierMarquee";
+import { orderedVisible } from "@/lib/cms-content";
 import { getCmsContent } from "@/lib/cms";
 import { getProductImageUrl } from "@/lib/product-images";
-import { catalogueSubFamilies, getProductMediaImages, getProductsByCategoryAndFamily } from "@/lib/catalogue/repository";
-
-const heroCategoryLinks = [
-  { label: "Potences", href: "/configurateur" },
-  { label: "Palans", href: "/catalogue/levage?famille=palan" },
-  { label: "Portiques", href: "/catalogue/levage?famille=portique" },
-  { label: "Motorisation SEW", href: "/catalogue/motorisation-sew" },
-  { label: "Manutention", href: "/catalogue/manutention-au-sol" },
-];
-
-const homeCategories = [
-  ["levage", "Levage", "/catalogue/levage", "PFI2502000"],
-  ["manutention-au-sol", "Manutention", "/catalogue/manutention-au-sol", "ACPREMIUM"],
-  ["motorisation-sew", "Motorisation SEW", "/catalogue/motorisation-sew", "MOTEUR"],
-  ["stockage-emballage", "Stockage", "/catalogue/stockage-emballage", "KITTE"],
-  ["acces-hauteur", "Accès hauteur", "/catalogue/acces-hauteur", "ES2M"],
-] as const;
-
-const homeFamilyImageRefs: Record<string, string> = {
-  "levage:palan": "CB010",
-  "levage:potence-murale": "PMI10002000",
-};
-
-function familyTarget(href: string) {
-  const match = href.match(/^\/catalogue\/([^?]+).*?[?&]famille=([^&]+)/);
-  return match ? { categorySlug: match[1], familySlug: match[2] } : null;
-}
+import { catalogueSubFamilies, filterProductsByFamily, getProductCardImages, getProductsByCategoryAndFamily } from "@/lib/catalogue/repository";
+import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-repository";
 
 export default async function HomePage() {
   const { home } = await getCmsContent();
-  const slides: HomeHeroSlide[] = [
-    { label: "Levage", title: "Potences configurées pour votre atelier", text: "Définissez la charge, la portée, la fixation et les options adaptées à votre besoin.", href: "/configurateur", image: getProductImageUrl("PFI2502000") },
-    { label: "Palans", title: "Levage manuel ou électrique", text: "Choisissez votre technologie, votre capacité et les paramètres utiles à l’installation.", href: "/catalogue/levage?famille=palan", image: getProductImageUrl("CB010") },
-    { label: "Manutention", title: "Équipez vos flux et vos postes", text: "Transpalettes, gerbeurs, tables élévatrices et équipements d’atelier.", href: "/catalogue/manutention-au-sol", image: getProductImageUrl("ACPREMIUM") },
-  ];
-  const categoryRows: HomeCategoryRow[] = homeCategories.map(([slug, title, href, imageRef]) => ({
-    slug,
-    title,
-    href,
-    imageUrl: getProductImageUrl(imageRef),
-    children: (catalogueSubFamilies[slug] || []).map((family) => {
-      const target = familyTarget(family.href);
-      const representative = target ? getProductsByCategoryAndFamily(target.categorySlug, target.familySlug)[0] : undefined;
-      const imageOverride = target ? homeFamilyImageRefs[`${target.categorySlug}:${target.familySlug}`] : undefined;
-      return {
-        title: family.title,
-        href: family.href,
-        imageUrl: imageOverride
-          ? getProductImageUrl(imageOverride)
-          : representative
-            ? getProductMediaImages(representative)[0] || getProductImageUrl(representative.imageRef, representative.code, representative.parentCode)
-            : undefined,
-      };
-    }),
+  const heroCategoryLinks = orderedVisible(home.quickLinks);
+  const slides = orderedVisible(home.slides);
+  const { categories, suppliers } = await getPublicPresentation();
+  const categoryRows = visibleHome(categories.filter(item => !item.homeParentId)).map(category => ({
+    slug: category.slug, title: category.homeLabel || category.publicLabel || category.name,
+    href: category.publicHref || `/catalogue/${category.slug}`,
+    imageUrl: category.homeImageUrl || category.imageUrl || "",
+    children: visibleHome(categories.filter(item => item.homeParentId === category.id)).map(family => ({
+      title: family.homeLabel || family.publicLabel || family.name, href: family.publicHref || `/catalogue/${category.slug}?famille=${family.publicFamilySlug || family.slug}`, imageUrl: family.homeImageUrl || family.imageUrl || undefined,
+    })),
   }));
 
   return (
     <main className="bg-white text-slate-950">
-      <section className="overflow-hidden bg-gradient-to-br from-white via-slate-50 to-slate-100">
+      {home.heroEnabled && <section className="overflow-hidden bg-gradient-to-br from-white via-slate-50 to-slate-100">
         <Container className="grid min-h-[340px] items-center gap-7 py-5 lg:grid-cols-[0.88fr_1.12fr]">
           <div className="max-w-3xl">
             <h1 className="text-4xl font-black leading-[1.01] tracking-tight md:text-[2.85rem] xl:text-[3.35rem]">{home.heroTitle}<span className="block text-[#007f8f]">{home.heroAccent}</span></h1>
@@ -75,16 +38,16 @@ export default async function HomePage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-3">
               <Button href={home.primaryHref} className="px-5 py-3 text-sm">{home.primaryLabel} <ArrowRight size={17} /></Button>
-              <Button href="/configurateur" variant="secondary" className="px-5 py-3 text-sm">Configurer ma potence <SlidersHorizontal size={17} /></Button>
+              <Button href={home.secondaryHref} variant="secondary" className="px-5 py-3 text-sm">{home.secondaryLabel} <SlidersHorizontal size={17} /></Button>
             </div>
           </div>
           <HomeHeroCarousel slides={slides} />
         </Container>
-      </section>
+      </section>}
 
       <section className="py-8 sm:py-10">
         <Container>
-          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Nos catégories</p><h2 className="mt-2 text-3xl font-black">L’essentiel de l’équipement industriel</h2></div><Link href="/catalogue" className="text-sm font-black text-[#007f8f]">Voir tout le catalogue →</Link></div>
+          <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{home.categoryEyebrow}</p><h2 className="mt-2 text-3xl font-black">{home.categoryTitle}</h2></div><Link href={home.catalogueHref} className="text-sm font-black text-[#007f8f]">{home.catalogueLabel}</Link></div>
           <HomeCategoryRows rows={categoryRows} />
         </Container>
       </section>
@@ -92,10 +55,10 @@ export default async function HomePage() {
       <section className="pb-10 sm:pb-12">
         <Container>
           <div className="mb-5">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">Nos fournisseurs</p>
-            <h2 className="mt-2 text-3xl font-black">Des marques de référence pour vos équipements</h2>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{home.supplierEyebrow}</p>
+            <h2 className="mt-2 text-3xl font-black">{home.supplierTitle}</h2>
           </div>
-          <HomeSupplierMarquee />
+          <HomeSupplierMarquee suppliers={visibleHome(suppliers)} />
         </Container>
       </section>
     </main>

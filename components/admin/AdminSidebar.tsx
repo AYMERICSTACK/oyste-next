@@ -13,6 +13,7 @@ const navigation = [
   { href: "/admin/production", label: "Production", icon: Factory },
   { href: "/admin/expeditions", label: "Expéditions", icon: Truck },
   { href: "/admin/catalogue", label: "Catalogue", icon: Boxes },
+  { href: "/admin/categories", label: "Catégories", icon: Boxes },
   { href: "/admin/erp", label: "ERP Catalogue", icon: DatabaseZap },
   { href: "/admin/fournisseurs", label: "Fournisseurs", icon: Building2 },
   { href: "/admin/clients", label: "Clients", icon: Users },

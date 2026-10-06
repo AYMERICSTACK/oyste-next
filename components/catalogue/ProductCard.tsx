@@ -14,6 +14,7 @@ export default function ProductCard({
   imageRef,
   imageUrl,
   badge,
+  badges,
   documentCount,
 }: {
   code: string;
@@ -26,9 +27,10 @@ export default function ProductCard({
   imageRef?: string;
   imageUrl?: string;
   badge?: string;
+  badges?: string[];
   documentCount?: number;
 }) {
-  const resolvedImageUrl = imageUrl || getProductImageUrl(imageRef, code);
+  const resolvedImageUrl = imageUrl !== undefined ? imageUrl : getProductImageUrl(imageRef, code);
   const availableDocumentCount = documentCount ?? getImportedProductDocuments(imageRef, code).length;
 
   return (
@@ -50,6 +52,7 @@ export default function ProductCard({
           {family}
         </p>
 
+        {badges?.length ? <div className="my-2 flex flex-wrap gap-2">{badges.map(item=><span key={item} className="rounded-full bg-orange-50 px-2 py-1 text-xs font-bold text-orange-700">{item}</span>)}</div> : null}
         <h3 className="mt-2 line-clamp-2 text-base font-black leading-snug text-slate-950">{name}</h3>
         <p className="mt-1 text-xs font-bold text-slate-500">Réf. {code}</p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">

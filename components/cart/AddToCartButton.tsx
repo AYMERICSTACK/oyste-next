@@ -1,4 +1,5 @@
 "use client";
+import { useCommercialTexts } from "@/components/layout/CommercialTextProvider";
 
 import { useState } from "react";
 import { CheckCircle2, ShoppingCart } from "lucide-react";

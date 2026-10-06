@@ -118,12 +118,7 @@ export default function SuppliersWorkspace({
               className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-slate-400"
             />
           </div>
-          <button
-            type="button"
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3 text-xs font-black text-white shadow-lg shadow-cyan-900/10"
-          >
-            <Building2 size={16} /> Nouveau fournisseur
-          </button>
+          <a href="#supplier-references" className="text-sm font-bold text-[#007f8f]">Gérer les fiches fournisseurs</a>
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 2xl:grid-cols-3">

@@ -114,6 +114,10 @@ enum ErpImportStatus {
 }
 
 model Supplier {
+  presentationConfigured Boolean @default(false)
+  homeVisible Boolean @default(false)
+  homeOrder Int @default(0)
+  homeHref String?
   id               String   @id @default(cuid())
   name             String   @unique
   slug             String   @unique
@@ -131,9 +135,26 @@ model Supplier {
   products         Product[]
 
   @@index([isActive])
+  @@index([homeVisible, homeOrder])
 }
 
 model Category {
+  presentationConfigured Boolean @default(false)
+  catalogueVisible Boolean @default(true)
+  homeVisible Boolean @default(false)
+  homeOrder Int @default(0)
+  homeImageUrl String?
+  homeLabel String?
+  publicLabel String?
+  publicSubtitle String?
+  publicTags Json?
+  publicHref String?
+  publicFamilySlug String?
+  homeParentId String?
+  homeParent Category? @relation("CategoryPresentationTree", fields: [homeParentId], references: [id], onDelete: SetNull)
+  homeChildren Category[] @relation("CategoryPresentationTree")
+  representativeProductId String?
+  representativeProduct Product? @relation("CategoryRepresentative", fields: [representativeProductId], references: [id], onDelete: SetNull)
   id              String     @id @default(cuid())
   name            String
   slug            String     @unique
@@ -151,11 +172,14 @@ model Category {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
+  @@index([homeParentId, homeOrder])
   @@index([parentId])
   @@index([sortOrder])
 }
 
 model Product {
+  presentation ProductPresentationOverride?
+  representativeCategories Category[] @relation("CategoryRepresentative")
   id                    String            @id
   code                  String
   supplierCode          String?
@@ -828,4 +852,13 @@ model StockmanDiscoveryResult {
   @@unique([jobId, occurrenceKey])
   @@index([jobId, reference])
   @@index([jobId, relationType])
+}
+
+// Commercial overrides survive supplier updates to canonical Product fields.
+model ProductPresentationOverride {
+  productId String @id
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  value Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

@@ -1,4 +1,7 @@
 "use client";
+import ProductIdentityEditor from "./ProductIdentityEditor";
+import ProductVariantsEditor from "./ProductVariantsEditor";
+import ProductPresentationEditor from "./ProductPresentationEditor";
 
 import Link from "next/link";
 import { useRef, useState } from "react";
@@ -129,7 +132,7 @@ function editorialMarkdownToHtml(value: string) {
 function StructuredDescriptionEditor({ value }: { value: string }) {
   return (
     <div
-      contentEditable
+      contentEditable={false}
       suppressContentEditableWarning
       dangerouslySetInnerHTML={{ __html: editorialMarkdownToHtml(value) }}
       className="min-h-[320px] max-h-[520px] overflow-y-auto rounded-b-xl border border-slate-200 bg-white px-4 py-4 text-sm font-medium leading-7 text-slate-700 outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-900/5 [&_h3]:mb-3 [&_h3]:mt-6 [&_h3]:text-base [&_h3]:font-black [&_h3]:text-slate-950 [&_h3:first-child]:mt-0 [&_p]:mb-4 [&_a]:font-bold [&_a]:text-[#007f8f] [&_a]:underline [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:space-y-1 [&_ul]:pl-6"
@@ -160,6 +163,11 @@ export default function ProductEditor({
   product?: AdminCatalogueProduct;
   mode?: "edit" | "create";
 }) {
+  const [manual, setManual] = useState({
+    name: product.name, description: product.description || "", detailedDescription: product.detailedDescription || "",
+    priceHt: product.priceHT ?? 0, stock: product.stock ?? 0,
+    seoTitle: product.seoTitle || "", seoDescription: product.seoDescription || "",
+  });
   const [active, setActive] = useState("Informations");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -187,7 +195,7 @@ export default function ProductEditor({
     product.shippingMode || "QUOTE",
   );
   const [leadTime, setLeadTime] = useState(product.delay || "");
-  const [experienceType, setExperienceType] = useState(
+  const [experienceType] = useState(
     product.experienceType || "STANDARD",
   );
   const [variants, setVariants] = useState(() =>
@@ -310,6 +318,7 @@ export default function ProductEditor({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            ...(product.adminCreated ? { manual } : {}),
             weightKg: normalizedWeight,
             packageLengthCm: normalizedPackageLengthCm,
             packageWidthCm: normalizedPackageWidthCm,
@@ -458,6 +467,7 @@ export default function ProductEditor({
 
   return (
     <main className="mx-auto w-full max-w-[1500px] p-4 md:p-7 xl:p-9">
+      {mode === "edit" && <><ProductPresentationEditor productId={product.id} /><ProductVariantsEditor productId={product.id} /><ProductIdentityEditor productId={product.id} /></>}
       <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
         <div>
           <Link
@@ -560,6 +570,7 @@ export default function ProductEditor({
           {active === "Informations" && (
             <div>
               <h2 className="text-xl font-black">Informations générales</h2>
+              <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm">{product.adminCreated ? "Nom, prix, stock, descriptions et SEO sont enregistrés avec la livraison et la publication. Les autres champs sont en consultation." : "Produit importé : les données techniques source sont en consultation ici. Utilisez Présentation commerciale ci-dessus pour personnaliser les contenus publics sans écraser la source fournisseur."}</p>
               <p className="mt-1 text-sm text-slate-500">
                 Les données principales visibles dans les listes et sur la fiche
                 produit.
@@ -568,13 +579,15 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600 md:col-span-2">
                   Nom du produit
                   <input
-                    defaultValue={product.name}
+                    readOnly={!product.adminCreated}
+                    value={manual.name} onChange={e => setManual({ ...manual, name: e.target.value })}
                     className={`${field} mt-2`}
                   />
                 </label>
                 <label className="text-xs font-black text-slate-600">
                   Référence
                   <input
+                    readOnly
                     defaultValue={product.code}
                     className={`${field} mt-2`}
                   />
@@ -582,6 +595,7 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600">
                   Fabricant
                   <input
+                    readOnly
                     defaultValue={product.manufacturer}
                     className={`${field} mt-2`}
                   />
@@ -594,7 +608,8 @@ export default function ProductEditor({
                       className="absolute left-4 top-3.5 text-slate-400"
                     />
                     <input
-                      defaultValue={product.categoryPath}
+                      readOnly
+                    defaultValue={product.categoryPath}
                       className={`${field} pl-11`}
                     />
                   </div>
@@ -602,7 +617,8 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600">
                   Prix HT
                   <input
-                    defaultValue={product.priceHT ?? ""}
+                    readOnly={!product.adminCreated}
+                    value={manual.priceHt} onChange={e => setManual({ ...manual, priceHt: Number(e.target.value) })}
                     type="number"
                     className={`${field} mt-2`}
                   />
@@ -618,7 +634,8 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600">
                   Stock
                   <input
-                    defaultValue={product.stock ?? ""}
+                    readOnly={!product.adminCreated}
+                    value={manual.stock} onChange={e => setManual({ ...manual, stock: Number(e.target.value) })}
                     type="number"
                     className={`${field} mt-2`}
                   />
@@ -698,11 +715,7 @@ export default function ProductEditor({
                 </label>
                 <label className="text-xs font-black text-slate-600">
                   Ordre d’affichage
-                  <input
-                    defaultValue="100"
-                    type="number"
-                    className={`${field} mt-2`}
-                  />
+                  <p className="mt-2 text-xs font-normal">Non administrable dans cette version.</p>
                 </label>
               </div>
               {variants.length ? (
@@ -925,7 +938,7 @@ export default function ProductEditor({
               <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => setExperienceType("STANDARD")}
+                  disabled
                   className={`rounded-2xl border p-5 text-left transition ${experienceType === "STANDARD" ? "border-[#007f8f] bg-cyan-50 ring-2 ring-cyan-100" : "border-slate-200"}`}
                 >
                   <p className="text-sm font-black text-slate-950">
@@ -938,7 +951,7 @@ export default function ProductEditor({
                 </button>
                 <button
                   type="button"
-                  onClick={() => setExperienceType("CONFIGURABLE")}
+                  disabled
                   className={`rounded-2xl border p-5 text-left transition ${experienceType === "CONFIGURABLE" ? "border-orange-500 bg-orange-50 ring-2 ring-orange-100" : "border-slate-200"}`}
                 >
                   <p className="text-sm font-black text-slate-950">
@@ -967,7 +980,7 @@ export default function ProductEditor({
                   Famille configurateur
                   <select
                     defaultValue={product.configuratorFamily || ""}
-                    disabled={experienceType !== "CONFIGURABLE"}
+                    disabled
                     className={`${field} mt-2 disabled:bg-slate-100 disabled:text-slate-400`}
                   >
                     <option value="">Sélectionner une famille</option>
@@ -981,6 +994,7 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600 md:col-span-2">
                   Badges marketing
                   <input
+                    readOnly
                     defaultValue={product.marketingBadges?.join(", ") || ""}
                     placeholder="Nouveau, Bestseller, Sur mesure…"
                     className={`${field} mt-2`}
@@ -989,6 +1003,7 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600 md:col-span-2">
                   Produits associés
                   <input
+                    readOnly
                     defaultValue={product.relatedProductCodes?.join(", ") || ""}
                     placeholder="Références séparées par des virgules"
                     className={`${field} mt-2`}
@@ -997,6 +1012,7 @@ export default function ProductEditor({
                 <label className="text-xs font-black text-slate-600 md:col-span-2">
                   Accessoires compatibles
                   <input
+                    readOnly
                     defaultValue={
                       product.accessoryProductCodes?.join(", ") || ""
                     }
@@ -1027,7 +1043,8 @@ export default function ProductEditor({
                 <label className="block text-xs font-black text-slate-600">
                   Description courte
                   <textarea
-                    defaultValue={product.seoDescription || product.description}
+                    readOnly={!product.adminCreated}
+                    value={manual.description} onChange={e => setManual({ ...manual, description: e.target.value })}
                     rows={4}
                     className={`${field} mt-2 resize-y`}
                   />
@@ -1037,11 +1054,9 @@ export default function ProductEditor({
                   <div className="mt-2 rounded-t-xl border border-b-0 border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-500">
                     B &nbsp; I &nbsp; U &nbsp; • Liste &nbsp; H2 &nbsp; Lien
                   </div>
-                  <StructuredDescriptionEditor
-                    value={product.detailedDescription}
-                  />
+                  {product.adminCreated ? <textarea value={manual.detailedDescription} onChange={e => setManual({ ...manual, detailedDescription: e.target.value })} rows={14} className={field} /> : <StructuredDescriptionEditor value={product.detailedDescription} />}
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black">
+                <button disabled title="Fonction non disponible" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black">
                   <Plus size={16} /> Ajouter un bloc éditorial
                 </button>
               </div>
@@ -1123,39 +1138,9 @@ export default function ProductEditor({
               <p className="mt-1 text-sm text-slate-500">
                 Fiches techniques, notices, certificats et plans d’encombrement.
               </p>
-              <button className="mt-6 inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white">
-                <FileText size={17} /> Ajouter un document
-              </button>
-              <div className="mt-5 space-y-3">
-                {[
-                  "Fiche technique",
-                  "Notice d’installation",
-                  "Plan d’encombrement",
-                ]
-                  .slice(0, Math.max(1, product.documentCount))
-                  .map((name, index) => (
-                    <article
-                      key={name}
-                      className="flex items-center gap-4 rounded-2xl border border-slate-200 p-4"
-                    >
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-red-50 text-red-600">
-                        <FileText size={20} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <input
-                          defaultValue={`${name} ${product.code || "nouveau produit"}`}
-                          className="w-full truncate bg-transparent text-sm font-black outline-none"
-                        />
-                        <p className="mt-1 text-[10px] font-bold text-slate-400">
-                          PDF · Visible sur la fiche produit
-                        </p>
-                      </div>
-                      <button className="text-slate-400">
-                        <Trash2 size={17} />
-                      </button>
-                    </article>
-                  ))}
-              </div>
+              <p className="mt-4 text-sm text-slate-500">Documents en consultation. Leur ajout et leur modification restent à implémenter.</p>
+              <ul className="mt-4 space-y-3">{(product.documents || []).map(document => <li key={document.url}><a href={document.url} target="_blank" rel="noopener noreferrer" className="font-bold text-[#007f8f]">{document.name}</a></li>)}</ul>
+              {!product.documents?.length && <p className="mt-3 text-sm">Aucun document enregistré.</p>}
             </div>
           )}
           {active === "Caractéristiques" && (
@@ -1180,22 +1165,24 @@ export default function ProductEditor({
                     className="grid gap-3 rounded-2xl border border-slate-200 p-3 sm:grid-cols-[1fr_1.5fr_auto]"
                   >
                     <input
-                      defaultValue={feature.label}
+                      readOnly
+                    defaultValue={feature.label}
                       placeholder="Libellé"
                       className={field}
                     />
                     <input
-                      defaultValue={feature.value}
+                      readOnly
+                    defaultValue={feature.value}
                       placeholder="Valeur"
                       className={field}
                     />
-                    <button className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600">
+                    <button disabled title="Fonction non disponible" className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600">
                       <Trash2 size={17} />
                     </button>
                   </div>
                 ))}
               </div>
-              <button className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black">
+              <button disabled title="Fonction non disponible" className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-black">
                 <Plus size={16} /> Ajouter une caractéristique
               </button>
             </div>
@@ -1214,7 +1201,8 @@ export default function ProductEditor({
                       /catalogue/…/
                     </span>
                     <input
-                      defaultValue={product.slug}
+                      readOnly
+                    defaultValue={product.slug}
                       className="min-w-0 flex-1 rounded-r-xl px-3 py-3 text-sm outline-none"
                     />
                   </div>
@@ -1222,7 +1210,8 @@ export default function ProductEditor({
                 <label className="block text-xs font-black text-slate-600">
                   Titre SEO
                   <input
-                    defaultValue={product.seoTitle || `${product.name} | OYSTE`}
+                    readOnly={!product.adminCreated}
+                    value={manual.seoTitle} onChange={e => setManual({ ...manual, seoTitle: e.target.value })}
                     className={`${field} mt-2`}
                   />
                   <span className="mt-1 block text-right text-[10px] text-slate-400">
@@ -1232,7 +1221,8 @@ export default function ProductEditor({
                 <label className="block text-xs font-black text-slate-600">
                   Meta description
                   <textarea
-                    defaultValue={product.description}
+                    readOnly={!product.adminCreated}
+                    value={manual.seoDescription} onChange={e => setManual({ ...manual, seoDescription: e.target.value })}
                     rows={4}
                     className={`${field} mt-2`}
                   />

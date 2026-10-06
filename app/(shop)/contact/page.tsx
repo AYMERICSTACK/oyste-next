@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+import { getEditorialPage, editorialIcon } from "@/lib/editorial";
 import type { Metadata } from "next";
 import {
   ArrowUpRight,
@@ -12,52 +14,19 @@ import ContactForm from "@/components/contact/ContactForm";
 import Container from "@/components/ui/Container";
 import { getCmsContent } from "@/lib/cms";
 
-export const metadata: Metadata = {
-  title: "Contact | OYSTE",
-  description:
-    "Contactez les experts OYSTE pour un devis, un conseil produit, un projet de levage sur mesure ou une demande de service après-vente.",
-};
+export async function generateMetadata(){const page=await getEditorialPage("contact");return {title: page.fields.content008,description: page.fields.content009};}
 
-const contactCards = [
-  {
-    icon: Headphones,
-    label: "Via le formulaire",
-    value: "Décrire mon besoin",
-    text: "Le moyen le plus efficace pour transmettre les informations utiles à notre équipe.",
-    href: "#contact-form",
-  },
-  {
-    icon: Mail,
-    label: "Par e-mail",
-    value: "contact@oyste.fr",
-    text: "Pour transmettre les premiers éléments de votre projet.",
-    href: "mailto:contact@oyste.fr",
-  },
-];
 
-const promises = [
-  {
-    icon: Headphones,
-    title: "Un interlocuteur expert",
-    text: "Votre demande est orientée vers la bonne compétence dès sa réception.",
-  },
-  {
-    icon: Clock3,
-    title: "Réponse rapide",
-    text: "Notre équipe revient vers vous sous un jour ouvré.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Projet confidentiel",
-    text: "Vos informations sont uniquement utilisées pour traiter votre demande.",
-  },
-];
+
+
 
 export default async function ContactPage() {
+ const page = await getEditorialPage("contact");
+const contactCards=page.collections.contactCards.filter(item=>item.enabled).sort((a,b)=>a.order-b.order).map(item=>({...item,icon:editorialIcon(item.icon)}));
+const promises=page.collections.promises.filter(item=>item.enabled).sort((a,b)=>a.order-b.order).map(item=>({...item,icon:editorialIcon(item.icon)}));
   const { editorial } = await getCmsContent();
   return (
-    <main className="overflow-hidden bg-slate-50 text-slate-950">
-      <section className="relative bg-[#071827] py-20 text-white sm:py-24 lg:py-28">
+    <main className="overflow-hidden bg-slate-50 text-slate-950">{page.collections.pageSections.filter(block=>block.enabled).sort((a,b)=>a.order-b.order).map(block=><Fragment key={block.id}>{({"section1":(<section className="relative bg-[#071827] py-20 text-white sm:py-24 lg:py-28">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(0,127,143,0.34),transparent_35%),radial-gradient(circle_at_10%_80%,rgba(242,90,29,0.15),transparent_30%)]" />
         <div className="absolute -right-28 top-12 h-72 w-72 rounded-full border border-white/10" />
         <div className="absolute -right-10 top-32 h-72 w-72 rounded-full border border-white/5" />
@@ -66,8 +35,7 @@ export default async function ContactPage() {
           <div className="max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-4 py-2 text-xs font-black uppercase tracking-[0.25em] text-[#8fd5dc] backdrop-blur">
               <Sparkles size={15} />
-              Contact OYSTE
-            </div>
+              {page.fields.content001}</div>
             <h1 className="mt-7 text-5xl font-black leading-[1.02] tracking-tight sm:text-6xl lg:text-7xl">
               {editorial.contactTitle}
             </h1>
@@ -96,21 +64,16 @@ export default async function ContactPage() {
             })}
           </div>
         </Container>
-      </section>
-
-      <section className="relative py-16 sm:py-20 lg:py-24">
+      </section>),
+"section2":(<section className="relative py-16 sm:py-20 lg:py-24">
         <Container className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
           <aside className="lg:sticky lg:top-28">
             <p className="text-sm font-black uppercase tracking-[0.3em] text-orange-600">
-              Besoin d’échanger ?
-            </p>
+              {page.fields.content002}</p>
             <h2 className="mt-4 text-4xl font-black leading-tight tracking-tight text-slate-950">
-              Choisissez le canal qui vous convient.
-            </h2>
+              {page.fields.content003}</h2>
             <p className="mt-5 text-base leading-7 text-slate-600">
-              Pour une demande complète, le formulaire nous permet de
-              transmettre immédiatement les bonnes informations à notre équipe.
-            </p>
+              {page.fields.content004}</p>
 
             <div className="mt-8 grid gap-4">
               {contactCards.map((item) => {
@@ -155,21 +118,18 @@ export default async function ContactPage() {
             <div className="mt-5 rounded-3xl bg-[#007f8f] p-6 text-white">
               <div className="flex items-center gap-3">
                 <Clock3 size={22} />
-                <p className="font-black">Horaires d’ouverture</p>
+                <p className="font-black">{page.fields.content005}</p>
               </div>
               <p className="mt-3 text-sm leading-6 text-white/80">
-                Du lundi au vendredi
-                <br />
-                8h00 – 12h00 · 13h30 – 17h30
-              </p>
+                {page.fields.content006}<br />
+                {page.fields.content007}</p>
             </div>
           </aside>
 
           <div id="formulaire" className="scroll-mt-32">
-            <ContactForm />
+            <ContactForm content={page.fields} />
           </div>
         </Container>
-      </section>
-    </main>
+      </section>)} as Record<string,React.ReactNode>)[block.id]}</Fragment>)}</main>
   );
 }

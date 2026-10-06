@@ -1,3 +1,4 @@
+import { isAdminCreated } from "./product-validation";
 import productsData from "@/data/catalogue/products.json";
 import {
   getImportedProductDocumentsExact,
@@ -12,6 +13,7 @@ import type { StockmanProductSyncTarget } from "@/lib/suppliers/stockman/types";
 import type { Prisma } from "@/generated/prisma/client";
 
 export type AdminCatalogueProduct = CatalogueProduct & {
+  adminCreated?: boolean;
   status: "Publié" | "Brouillon" | "Masqué";
   images: string[];
   documentCount: number;
@@ -191,7 +193,8 @@ export async function getAdminCatalogueProductsFromDatabase(): Promise<AdminCata
     ].filter((target): target is StockmanProductSyncTarget => target !== null);
 
     return {
-      id: product.id,
+      adminCreated: isAdminCreated(product.sourceData),
+    id: product.id,
       code: product.code,
       supplierCode: product.supplierCode || "",
       parentCode: product.parentCode || "",
@@ -246,7 +249,8 @@ export async function getAdminCatalogueProductsFromDatabase(): Promise<AdminCata
       href: `/catalogue/${categorySlug || "produit"}/${product.slug}`,
       status: statusMap[product.publicationStatus],
       images,
-      documentCount,
+      documents: product.documents.map(document => ({ name: document.name, type: document.type, url: document.url, isPublic: document.isPublic, sortOrder: document.sortOrder })),
+    documentCount,
       completeness: Math.round((filled / 6) * 100),
       stockmanSyncTargets,
     } satisfies AdminCatalogueProduct;
@@ -331,6 +335,7 @@ export async function getAdminCatalogueProductFromDatabase(
 
   return {
     ...(fallback || ({} as CatalogueProduct)),
+    adminCreated: isAdminCreated(product.sourceData),
     id: product.id,
     code: product.code,
     supplierCode: product.supplierCode || "",
@@ -415,6 +420,7 @@ export async function getAdminCatalogueProductFromDatabase(
       : [],
     status: statusMap[product.publicationStatus],
     images,
+    documents: product.documents.map(document => ({ name: document.name, type: document.type, url: document.url, isPublic: document.isPublic, sortOrder: document.sortOrder })),
     documentCount,
     completeness: Math.round((filled / 6) * 100),
     stockmanSyncTargets,

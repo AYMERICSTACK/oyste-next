@@ -1,0 +1,7 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAdmin } from "@/lib/auth/admin-session";
+import { initializePresentation } from "@/lib/admin/initialize-presentation";
+import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-repository";
+export async function GET(){const admin=await getCurrentAdmin();if(!admin)return NextResponse.json({error:'Non autorisé'},{status:401});const setting=await prisma.siteSetting.findUnique({where:{key:'cms.catalogue.ready'}});return NextResponse.json({ready:setting?.value===true,writable:admin.role==='SUPER_ADMIN'});}
+export async function POST(request:Request){const admin=await getCurrentAdmin();if(!admin)return NextResponse.json({error:'Non autorisé'},{status:401});if(admin.role!=='SUPER_ADMIN')return NextResponse.json({error:'Initialisation réservée à un super administrateur'},{status:403});const body=await request.json().catch(()=>null);if(body?.initialize!==true)return NextResponse.json({error:'Confirmation manquante'},{status:400});try{const products=await getDatabaseProductsByCategory('acces-hauteur');const result=await prisma.$transaction(tx=>initializePresentation(tx,products,admin.id),{timeout:60000,isolationLevel:'Serializable'});return NextResponse.json(result);}catch{return NextResponse.json({error:'Initialisation interrompue. Aucune initialisation partielle n’a été conservée.'},{status:409});}}

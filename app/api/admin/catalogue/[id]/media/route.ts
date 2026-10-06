@@ -1,3 +1,4 @@
+import { canWriteCatalogue } from "@/lib/admin/catalogue-permissions";
 import { del } from "@vercel/blob";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -25,10 +26,10 @@ function isVercelBlobUrl(value: string) {
   }
 }
 
-async function requireWritableAdmin() {
+async function requireWritableAdmin(): Promise<{ response: NextResponse } | { admin: NonNullable<Awaited<ReturnType<typeof getCurrentAdmin>>> }> {
   const admin = await getCurrentAdmin();
   if (!admin) return { response: NextResponse.json({ error: "Non autorisé." }, { status: 401 }) };
-  if (admin.role === "READ_ONLY") {
+  if (!canWriteCatalogue(admin)) {
     return {
       response: NextResponse.json(
         { error: "Votre rôle ne permet pas de modifier les médias." },
@@ -47,7 +48,7 @@ export async function POST(
   if ("response" in auth) return auth.response;
 
   const { id } = await params;
-  const parsed = createMediaSchema.safeParse(await request.json());
+  const parsed = createMediaSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success || !isVercelBlobUrl(parsed.data.url)) {
     return NextResponse.json({ error: "URL média invalide." }, { status: 400 });
   }
@@ -71,13 +72,14 @@ export async function POST(
       productId: id,
       type: "IMAGE",
       url: parsed.data.url,
-      sourceUrl: parsed.data.url,
+      sourceUrl: null,
       isPrimary: product._count.media === 0,
       sortOrder: (product.media[0]?.sortOrder ?? -1) + 1,
     },
     select: { id: true, url: true, isPrimary: true, sortOrder: true },
   });
 
+  await prisma.auditLog.create({ data: { action: "PRODUCT_MEDIA_CREATE", entityType: "Product", entityId: id, userId: auth.admin.id, metadata: { mediaId: media.id } } });
   return NextResponse.json({ media });
 }
 
@@ -89,14 +91,14 @@ export async function DELETE(
   if ("response" in auth) return auth.response;
 
   const { id } = await params;
-  const parsed = deleteMediaSchema.safeParse(await request.json());
+  const parsed = deleteMediaSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ error: "URL média invalide." }, { status: 400 });
   }
 
   const media = await prisma.productMedia.findUnique({
     where: { productId_url: { productId: id, url: parsed.data.url } },
-    select: { id: true, url: true, isPrimary: true },
+    select: { id: true, url: true, sourceUrl: true, isPrimary: true },
   });
   if (!media) {
     return NextResponse.json(
@@ -105,12 +107,13 @@ export async function DELETE(
     );
   }
 
-  if (isVercelBlobUrl(media.url)) {
-    await del(media.url);
+  if (!isVercelBlobUrl(media.url) || (media.sourceUrl && media.sourceUrl !== media.url)) {
+    return NextResponse.json({ error: "Ce média provient du catalogue fournisseur. Sa suppression est protégée." }, { status: 409 });
   }
 
   await prisma.$transaction(async (tx) => {
     await tx.productMedia.delete({ where: { id: media.id } });
+    await tx.auditLog.create({ data: { action: "PRODUCT_MEDIA_DELETE", entityType: "Product", entityId: id, userId: auth.admin.id, metadata: { mediaId: media.id } } });
     if (media.isPrimary) {
       const next = await tx.productMedia.findFirst({
         where: { productId: id, type: "IMAGE" },
@@ -126,5 +129,7 @@ export async function DELETE(
     }
   });
 
-  return NextResponse.json({ deleted: true, url: media.url });
+  let cleanupPending = false;
+  try { await del(media.url); } catch { cleanupPending = true; }
+  return NextResponse.json({ deleted: true, url: media.url, cleanupPending });
 }

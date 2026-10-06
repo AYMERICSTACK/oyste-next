@@ -1,3 +1,4 @@
+import { CommercialText } from "@/components/layout/CommercialTextProvider";
 import { FileText, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -56,8 +57,7 @@ export default function ProductMediaFrame({
 
       {documentCount > 0 && !compact ? (
         <div className="absolute right-5 top-5 z-10 inline-flex items-center gap-2 rounded-full bg-[#007f8f] px-3 py-1 text-xs font-black text-white shadow-sm">
-          <FileText size={13} /> Fiche technique
-        </div>
+          <FileText size={13} /> <CommercialText field="content051"/></div>
       ) : null}
 
       {hasImage ? (
@@ -78,7 +78,7 @@ export default function ProductMediaFrame({
             <ImageIcon size={24} />
           </span>
           {!compact ? (
-            <p className="text-xs font-black uppercase tracking-[0.18em]">Visuel en attente</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em]"><CommercialText field="content052"/></p>
           ) : null}
         </div>
       )}

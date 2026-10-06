@@ -38,5 +38,6 @@ export async function getCurrentAdmin() {
   const token = (await cookies()).get(COOKIE_NAME)?.value;
   const payload = token ? decode(token) : null;
   if (!payload) return null;
-  return prisma.adminUser.findUnique({ where: { id: payload.adminId }, select: { id: true, email: true, firstName: true, lastName: true, role: true, status: true, lastLoginAt: true } });
+  const admin = await prisma.adminUser.findUnique({ where: { id: payload.adminId }, select: { id: true, email: true, firstName: true, lastName: true, role: true, status: true, lastLoginAt: true } });
+  return admin?.status === "ACTIVE" ? admin : null;
 }

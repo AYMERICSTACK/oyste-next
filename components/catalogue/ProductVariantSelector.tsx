@@ -1,4 +1,5 @@
 "use client";
+import { useCommercialTexts } from "@/components/layout/CommercialTextProvider";
 
 import { formatCmuText, formatTechnicalValue } from "@/lib/catalogue/format-cmu-display";
 
@@ -128,6 +129,7 @@ export default function ProductVariantSelector({
   productHref,
   familyLabel,
   galleryImages = [],
+  mediaManaged = false,
   variantGalleryImages = {},
   documentCount = 0,
   recommendationCandidates = [],
@@ -146,10 +148,13 @@ export default function ProductVariantSelector({
   productHref?: string;
   familyLabel?: string;
   galleryImages?: string[];
+  mediaManaged?: boolean;
   variantGalleryImages?: Record<string, string[]>;
   documentCount?: number;
   recommendationCandidates?: CapacityRecommendation[];
 }) {
+ const commerce=useCommercialTexts();
+
   const effectiveOptionSchema = useMemo(
     () => buildOptionSchema(variants, optionSchema),
     [optionSchema, variants],
@@ -255,6 +260,7 @@ export default function ProductVariantSelector({
   // variante 8 t). La galerie produit générale ne sert que de repli lorsqu'il
   // n'existe aucun média exact pour la variante.
   const images = useMemo(() => {
+    if (mediaManaged) return galleryImages;
     if (selectedVariantImages.length) {
       return Array.from(new Set(selectedVariantImages.filter(Boolean))).slice(0, 8);
     }
@@ -264,9 +270,9 @@ export default function ProductVariantSelector({
       : [resolvedImageUrl];
 
     return Array.from(new Set(ordered.filter(Boolean))).slice(0, 8);
-  }, [galleryImages, isGenericFallback, resolvedImageUrl, selectedVariantImages]);
+  }, [galleryImages, isGenericFallback, resolvedImageUrl, selectedVariantImages, mediaManaged]);
 
-  const preferredImage = images[0] || resolvedImageUrl;
+  const preferredImage = images[0] || (mediaManaged ? "" : resolvedImageUrl);
 
   const [selectedGalleryImage, setSelectedGalleryImage] = useState<string | null>(null);
 
@@ -366,7 +372,7 @@ export default function ProductVariantSelector({
   const hasCapacityOption = effectiveOptionSchema.some((option) => /^(cmu|capacit)/i.test(option.label));
   const dynamicKitoHeightControl = needsDynamicKitoLift && kitoChainRule ? (
     <fieldset>
-      <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-600">Hauteur de levage</legend>
+      <legend className="mb-2 text-xs font-black uppercase tracking-[0.16em] text-slate-600">{commerce.content009}</legend>
       <div className="flex max-w-[260px] items-center rounded-xl border border-slate-200 bg-white px-3 shadow-sm focus-within:border-[#007f8f] focus-within:ring-4 focus-within:ring-[#007f8f]/10">
         <input
           type="number"
@@ -380,10 +386,10 @@ export default function ProductVariantSelector({
           className="w-full bg-transparent py-3 text-right text-base font-black text-slate-950 outline-none"
           aria-label="Hauteur de levage en mètres"
         />
-        <span className="ml-2 text-sm font-black text-slate-500">m</span>
+        <span className="ml-2 text-sm font-black text-slate-500">{commerce.content010}</span>
       </div>
-      <p className="mt-1.5 text-xs font-semibold text-slate-500">Hauteur standard : {kitoChainRule.baseLiftM} m. Le prix final se met à jour automatiquement.</p>
-      {extraKitoLiftM > 0 && !kitoPricingLoading && !kitoChainPricing ? <p className="mt-2 text-xs font-bold text-orange-800">Tarif indisponible pour cette hauteur : commande sur devis.</p> : null}
+      <p className="mt-1.5 text-xs font-semibold text-slate-500">{commerce.content011}{kitoChainRule.baseLiftM} {commerce.content012}</p>
+      {extraKitoLiftM > 0 && !kitoPricingLoading && !kitoChainPricing ? <p className="mt-2 text-xs font-bold text-orange-800">{commerce.content013}</p> : null}
     </fieldset>
   ) : null;
 
@@ -392,7 +398,7 @@ export default function ProductVariantSelector({
       <section id="galerie-produit" className="scroll-mt-28 grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-start">
         <div className="overflow-hidden rounded-[2.5rem] border border-slate-200 bg-white shadow-sm lg:sticky lg:top-24">
           <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4">
-            <p className="text-sm font-bold text-slate-600">Cliquez sur l&apos;image pour l&apos;agrandir</p>
+            <p className="text-sm font-bold text-slate-600">{commerce.content014}</p>
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#007f8f]/10 text-[#007f8f]">
               <ImageIcon size={20} />
             </span>
@@ -414,8 +420,7 @@ export default function ProductVariantSelector({
             />
             {activeImage ? (
               <span className="absolute bottom-5 right-5 z-10 inline-flex items-center gap-2 rounded-full bg-slate-950/90 px-4 py-2 text-xs font-black text-white shadow-lg backdrop-blur transition group-hover:bg-[#007f8f]">
-                <ZoomIn size={16} /> Agrandir
-              </span>
+                <ZoomIn size={16} /> {commerce.content015}</span>
             ) : null}
           </button>
 
@@ -441,8 +446,7 @@ export default function ProductVariantSelector({
             ))}
             {images.length === 0 ? (
               <div className="col-span-full rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center text-xs font-black uppercase tracking-[0.14em] text-slate-500">
-                Visuels en attente
-              </div>
+                {commerce.content016}</div>
             ) : null}
           </div>
         </div>
@@ -457,7 +461,7 @@ export default function ProductVariantSelector({
                 {formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
               </h2>
               <p className="mt-2 text-sm font-bold text-slate-500">
-                Code article · {selectedVariant?.code || productCode}
+                {commerce.content017}{selectedVariant?.code || productCode}
               </p>
             </div>
             <span className="hidden h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 sm:flex">
@@ -526,8 +530,8 @@ export default function ProductVariantSelector({
                 ))}
               </div>
 
-              {selectedVariant ? <p className="mt-4 text-xs font-bold text-slate-500">Réf. {selectedVariant.code} · {stockLabel(selectedVariant.stock)}{selectedVariant.weightKg ? ` · ${selectedVariant.weightKg} kg` : ""}</p> : null}
-              {hasIncludedDirectionLimit ? <p className="mt-3 flex items-center gap-2 text-sm font-black text-emerald-700"><CheckCircle2 size={17} /> Fin de course de direction incluse</p> : null}
+              {selectedVariant ? <p className="mt-4 text-xs font-bold text-slate-500">{commerce.content018}{selectedVariant.code} {commerce.content019}{stockLabel(selectedVariant.stock)}{selectedVariant.weightKg ? ` · ${selectedVariant.weightKg} kg` : ""}</p> : null}
+              {hasIncludedDirectionLimit ? <p className="mt-3 flex items-center gap-2 text-sm font-black text-emerald-700"><CheckCircle2 size={17} /> {commerce.content020}</p> : null}
             </div>
           ) : null}
 
@@ -543,13 +547,12 @@ export default function ProductVariantSelector({
                 </p>
               </div>
               <div className="rounded-2xl bg-white/10 px-4 py-3">
-                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">Disponibilité</p>
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-400">{commerce.content021}</p>
                 <p className="mt-1 text-sm font-black text-white">{leadTimeInfo.label}</p>
                 <p className="mt-1 max-w-[360px] text-[10px] font-semibold leading-4 text-slate-300">{leadTimeInfo.note}</p>
                 {leadTimeInfo.url ? (
                   <a href={leadTimeInfo.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-[10px] font-black text-cyan-300 underline underline-offset-2">
-                    Voir les délais COMEGÉ
-                  </a>
+                    {commerce.content022}</a>
                 ) : null}
               </div>
             </div>
@@ -558,7 +561,7 @@ export default function ProductVariantSelector({
           <div className="mt-5 grid gap-3">
             {isConfiguratorProduct ? (
               <Button href={configuratorHref} className="w-full justify-center py-4 text-base">
-                Configurer ce produit <ArrowRight size={18} />
+                {commerce.content023}<ArrowRight size={18} />
               </Button>
             ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
               <AddToCartButton
@@ -576,12 +579,12 @@ export default function ProductVariantSelector({
                 cartItemId={kitoCartItemId}
               />
             ) : (
-              <Button href="#demande-devis" className="w-full justify-center py-4 text-base">
-                Demander un devis <FileQuestion size={18} />
+              <Button href={commerce.content024} className="w-full justify-center py-4 text-base">
+                {commerce.content025}<FileQuestion size={18} />
               </Button>
             ))}
-            <Button href="#documents-techniques" variant="ghost" className="w-full justify-center">
-              Documents techniques {documentCount > 0 ? `(${documentCount})` : ""} <Download size={18} />
+            <Button href={commerce.content026} variant="ghost" className="w-full justify-center">
+              {commerce.content027}{documentCount > 0 ? `(${documentCount})` : ""} <Download size={18} />
             </Button>
           </div>
           </div>
@@ -600,7 +603,7 @@ export default function ProductVariantSelector({
           </div>
           {isConfiguratorProduct ? (
             <a href={configuratorHref} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
-              Configurer <ArrowRight size={17} />
+              {commerce.content028}<ArrowRight size={17} />
             </a>
           ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
             <AddToCartButton
@@ -618,8 +621,8 @@ export default function ProductVariantSelector({
               cartItemId={kitoCartItemId}
             />
           ) : (
-            <a href="#demande-devis" className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white">
-              Devis <FileQuestion size={17} />
+            <a href={commerce.content029} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white">
+              {commerce.content030}<FileQuestion size={17} />
             </a>
           ))}
         </div>

@@ -27,7 +27,8 @@
     "shipping:backfill": "tsx scripts/backfill-product-shipping.ts",
     "prebuild": "prisma generate",
     "stockman:auth": "node scripts/stockman-auth.js",
-    "adei:commercial": "tsx scripts/apply-adei-commercial-rules.ts"
+    "adei:commercial": "tsx scripts/apply-adei-commercial-rules.ts",
+    "test:admin": "node --import tsx --test lib/admin/__tests__/*.test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.8.0",
