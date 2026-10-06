@@ -508,9 +508,14 @@ export async function runNextStockmanDiscoveryBatch(jobId?: string) {
 export async function runStockmanDiscoveryWorkCycle(budgetMs = 45_000) {
   const started = Date.now();
   let batches = 0;
-  // One bounded batch per cron request leaves room for Chromium startup,
-  // navigation and transactional persistence inside the 60-second budget.
-  while (batches === 0 && Date.now() - started < budgetMs) {
+  const maxBatches = 3;
+  // Keep every page as its own durable/checkpointed batch, but reuse the same
+  // cron invocation while there is enough wall-clock budget for another page.
+  // A 15 s reserve protects Vercel's 60 s limit (navigation itself is capped
+  // at 12 s) and avoids losing several pages at once on a hard timeout.
+  const reserveMs = 15_000;
+  const latestSafeStart = Math.max(0, budgetMs - reserveMs);
+  while (batches < maxBatches && (batches === 0 || Date.now() - started < latestSafeStart)) {
     const processed = await runNextStockmanDiscoveryBatch();
     if (!processed) break;
     batches += 1;
