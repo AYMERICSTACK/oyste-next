@@ -1958,12 +1958,17 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-cyan-100">
             <div className="h-full rounded-full bg-[#00a1b5] transition-all duration-500" style={{ width: `${Math.max(2, Math.min(100, progress.percent))}%` }} />
           </div>
-          <div className="mt-3 grid gap-2 text-[10px] font-bold text-cyan-800 sm:grid-cols-2 lg:grid-cols-5">
-            <span>Pages : {progress.pagesVisited}</span>
-            <span>Fiches trouvées : {progress.productUrlsFound}</span>
-            <span>Fiches lues : {progress.productPagesProcessed}</span>
-            <span>Références : {progress.referencesFound}</span>
-            <span>Échecs : {progress.failures}</span>
+          <div className="mt-3 grid gap-2 text-[10px] font-bold text-cyan-800 sm:grid-cols-2 lg:grid-cols-4">
+            <span>Activité : {progress.activity === "mixed" ? "Browse + fiches" : progress.activity === "products" ? "Fiches produit" : progress.activity === "browse" ? "Exploration browse" : progress.phase}</span>
+            <span>Browse : {progress.browseDone ?? progress.pagesVisited} fini(s) · {progress.browsePending ?? 0} en attente · {progress.browseFailed ?? 0} échec(s)</span>
+            <span>Fiches : {progress.productUrlsFound} trouvée(s) · {progress.productPagesProcessed} lue(s) · {progress.productsPending ?? 0} en attente · {progress.productsFailed ?? 0} échec(s)</span>
+            <span>Références / occurrences : {progress.referencesFound}</span>
+            <span>Débit browse : {progress.browsePerMinute == null ? "mesure en cours" : `${progress.browsePerMinute}/min`}</span>
+            <span>Débit fiches : {progress.productsPerMinute == null ? "mesure en cours" : `${progress.productsPerMinute}/min`}</span>
+            <span>Rendement récent : {progress.recentDiscoveryYield == null ? "indisponible" : `${progress.recentDiscoveryYield.toFixed(2)} nouvelle(s) fiche(s)/page (${progress.recentProductsDiscovered ?? 0}/${progress.recentBrowsePages ?? 0})`}</span>
+            <span>Browse sans nouvelle fiche : {progress.consecutiveBrowseWithoutProduct ?? 0} consécutive(s)</span>
+            <span>ETA : {progress.etaLabel ?? "non calculable avec les données actuelles"}</span>
+            <span>Échecs totaux : {progress.failures}</span>
           </div>
         </div> : loading ? <div className="mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-xs font-bold text-cyan-800">Démarrage du job Stockman…</div> : null}
         {message ? <div className="mt-4 flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700"><AlertCircle size={18} className="shrink-0" /><pre className="min-w-0 whitespace-pre-wrap break-words font-sans">{message}</pre></div> : null}
@@ -1978,6 +1983,14 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             </p>
             <p className="mt-1 text-xs font-bold opacity-80">
               {scan.pagesVisited} page(s) explorée(s) · {scan.diagnostics.uniqueProductUrls} fiche(s) produit détectée(s) · {scan.diagnostics.browseQueueRemaining ?? 0} page(s) encore en attente.
+            </p>
+            {!scan.diagnostics.scanComplete && scan.diagnostics.partialReasons?.length ? (
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-xs font-bold">
+                {scan.diagnostics.partialReasons.map((reason) => <li key={reason}>{reason}</li>)}
+              </ul>
+            ) : null}
+            <p className="mt-2 text-[11px] font-bold opacity-80">
+              Rendement des {scan.diagnostics.recentBrowsePages ?? 0} dernières pages browse : {scan.diagnostics.recentDiscoveryYield == null ? "indisponible" : `${scan.diagnostics.recentDiscoveryYield.toFixed(2)} nouvelle(s) fiche(s)/page`} · série actuelle sans nouvelle fiche : {scan.diagnostics.consecutiveBrowseWithoutProduct ?? 0}.
             </p>
           </div>
           {scan.differential ? (

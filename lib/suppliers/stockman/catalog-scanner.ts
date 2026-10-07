@@ -70,6 +70,12 @@ export type StockmanCatalogScanDiagnostics = {
   relatedProducts: number;
   unknownReferences: number;
   scanComplete: boolean;
+  partialReasons?: string[];
+  recentBrowsePages?: number;
+  recentProductsDiscovered?: number;
+  recentDiscoveryYield?: number | null;
+  consecutiveBrowseWithoutProduct?: number;
+  maxConsecutiveBrowseWithoutProduct?: number;
   crawlCounters?: Record<string, number>;
   languageCoverage?: Record<string, number>;
   matchingPayloadBytes?: number;
@@ -837,6 +843,7 @@ export type StockmanDiscoveryBatchResult = {
  */
 export async function scanStockmanDiscoveryBatch(
   nodes: StockmanDiscoveryBatchNode[],
+  onResult?: (result: StockmanDiscoveryBatchResult) => Promise<void>,
 ): Promise<StockmanDiscoveryBatchResult[]> {
   if (!nodes.length) return [];
   const { browser, context } = await openStockmanBrowser();
@@ -978,6 +985,10 @@ export async function scanStockmanDiscoveryBatch(
         result.error = error instanceof Error ? error.message : "Lecture Stockman impossible";
       }
       results.push(result);
+      // Persist each completed node before navigating to the next one. This
+      // keeps browser reuse compatible with Vercel hard timeouts: at most the
+      // currently open page is replayed after its queue lease expires.
+      if (onResult) await onResult(result);
     }
     return results;
   } finally {

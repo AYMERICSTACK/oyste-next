@@ -23,3 +23,19 @@ export function hasProvenCompleteStockmanScan(diagnostics: StockmanCompletenessI
     && diagnostics.productPageFailures === 0
     && diagnostics.browseQueueRemaining === 0;
 }
+
+export function stockmanPartialReasons(diagnostics: StockmanCompletenessInput) {
+  const reasons: string[] = [];
+  if (diagnostics.browseLimitReached) reasons.push("Limite de pages browse atteinte");
+  if (diagnostics.productLimitReached) reasons.push("Limite de fiches produit atteinte");
+  if (diagnostics.queueLimitReached) reasons.push("Limite de capacité de queue atteinte");
+  if ((diagnostics.discardedUrls ?? 0) > 0) reasons.push(`${diagnostics.discardedUrls} URL(s) rejetée(s) sans visite`);
+  if ((diagnostics.unvisitedUrls ?? 0) > 0) reasons.push(`${diagnostics.unvisitedUrls} URL(s) non terminée(s)`);
+  if ((diagnostics.navigationErrors ?? 0) > 0) reasons.push(`${diagnostics.navigationErrors} erreur(s) de navigation browse`);
+  if ((diagnostics.productErrors ?? 0) > 0 || (diagnostics.productPageFailures ?? 0) > 0) {
+    reasons.push(`${Math.max(diagnostics.productErrors ?? 0, diagnostics.productPageFailures ?? 0)} erreur(s) de fiche produit`);
+  }
+  if ((diagnostics.browseQueueRemaining ?? 0) > 0) reasons.push(`${diagnostics.browseQueueRemaining} page(s) browse encore en attente`);
+  if (diagnostics.scanComplete !== true && reasons.length === 0) reasons.push("Preuve stricte de couverture globale absente");
+  return reasons;
+}

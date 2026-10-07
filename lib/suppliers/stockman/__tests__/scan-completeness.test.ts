@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { hasProvenCompleteStockmanScan } from "../scan-completeness";
+import { hasProvenCompleteStockmanScan, stockmanPartialReasons } from "../scan-completeness";
 
 const complete = {
   scanComplete: true,
@@ -33,4 +33,27 @@ test("une preuve incomplète ou un échec produit bloque les disparitions", () =
   }
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, productPageFailures: 1 }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, browseQueueRemaining: 1 }), false);
+});
+
+test("les limites, erreurs et queues non épuisées produisent des raisons PARTIAL explicites", () => {
+  const reasons = stockmanPartialReasons({
+    ...complete,
+    scanComplete: false,
+    browseLimitReached: true,
+    productLimitReached: true,
+    queueLimitReached: true,
+    discardedUrls: 2,
+    unvisitedUrls: 3,
+    navigationErrors: 1,
+    productErrors: 2,
+    productPageFailures: 2,
+    browseQueueRemaining: 4,
+  });
+  assert.equal(reasons.length, 8);
+  assert.match(reasons.join(" · "), /Limite de pages browse/);
+  assert.match(reasons.join(" · "), /2 erreur\(s\) de fiche produit/);
+});
+
+test("un scan certifié complet n'a aucune raison PARTIAL", () => {
+  assert.deepEqual(stockmanPartialReasons(complete), []);
 });

@@ -272,6 +272,10 @@ export default function SuppliersWorkspace({
     );
   }
 
+  // At this point the workspace can only render an existing supplier.
+  // Keep the invariant explicit for TypeScript as selectedSupplierId and
+  // creatingSupplier are independent pieces of React state.
+  if (!selected) return null;
 
   const isStockman = slugify(selected.name) === "stockman";
   const isAdei = slugify(selected.name) === "adei";

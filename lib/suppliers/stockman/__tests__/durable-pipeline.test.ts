@@ -49,6 +49,52 @@ test("réconciliation partielle, lots et reprise idempotente sans désactivation
   assert.equal(records.get("ABSENT").isActive, true);
 });
 
+test("une preuve complète autorise la désactivation d'une référence réellement absente", async () => {
+  const [, { persistStockmanLivingReference }] = await modules;
+  const seenAt = new Date("2026-10-02T08:00:00Z");
+  const records = [{ reference: "ABSENT", designation: "Absent", category: null, sourceUrl: "url", isActive: true, lastSeenAt: new Date(0) }];
+  let disabled = 0;
+  const db = {
+    stockmanCatalogReference: {
+      findMany: async () => records,
+      deleteMany: async () => ({ count: 0 }),
+      upsert: async () => ({}),
+      updateMany: async () => { disabled++; return { count: 1 }; },
+    },
+    stockmanCatalogSnapshot: { create: async () => ({}) },
+  } as unknown as PrismaClient;
+  const discovery = {
+    startedAt: seenAt.toISOString(), finishedAt: seenAt.toISOString(), pagesVisited: 1, productPages: 1,
+    diagnostics: completeDiagnostics, matches: [],
+  } as unknown as StockmanCatalogDiscovery;
+  const stats = await persistStockmanLivingReference(discovery, { db, offset: 0, take: 0, finalize: true });
+  assert.equal(disabled, 1);
+  assert.equal(stats.disappearanceCheckSkipped, false);
+});
+
+test("une demande d'annulation libère proprement toute la queue sans lancer le crawl", async (t) => {
+  const [{ prisma }, , { runNextStockmanDiscoveryBatch }] = await modules;
+  const replace = (target: any, key: string, fn: (...args: any[]) => any) => {
+    const original = target[key]; target[key] = fn; t.after(() => { target[key] = original; });
+  };
+  const job: any = {
+    id: "cancel-job", status: "CANCEL_REQUESTED", phase: "DISCOVERING", options: {},
+    leaseOwner: null, leaseExpiresAt: null, leaseVersion: 0,
+  };
+  let queueCancelled = 0;
+  const apply = (data: any) => { for (const [key, value] of Object.entries(data)) job[key] = value && typeof value === "object" && "increment" in value ? (job[key] ?? 0) + (value as any).increment : value; };
+  replace(prisma.stockmanDiscoveryJob, "findUnique", async () => ({ ...job }));
+  replace(prisma.stockmanDiscoveryJob, "findUniqueOrThrow", async () => ({ ...job }));
+  replace(prisma.stockmanDiscoveryJob, "findFirst", async () => ({ ...job }));
+  replace(prisma.stockmanDiscoveryJob, "updateMany", async ({ data }: any) => { apply(data); return { count: 1 }; });
+  replace(prisma.stockmanDiscoveryQueueItem, "updateMany", async () => { queueCancelled++; return { count: 2 }; });
+  assert.equal(await runNextStockmanDiscoveryBatch(job.id), true);
+  assert.equal(job.status, "CANCELLED");
+  assert.equal(job.phase, "FINISHED");
+  assert.equal(job.leaseOwner, null);
+  assert.equal(queueCancelled, 1);
+});
+
 test("création atomique réutilise un job compatible, matching et réconciliation reprennent par lots", async (t) => {
   const [{ prisma }, , { startStockmanDiscoveryJob, runNextStockmanDiscoveryBatch }] = await modules;
   const replace = (target: any, key: string, fn: (...args: any[]) => any) => {

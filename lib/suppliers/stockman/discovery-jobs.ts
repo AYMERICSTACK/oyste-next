@@ -5,7 +5,8 @@ import { scanStockmanDiscoveryBatch, type StockmanCatalogScanDiagnostics, type S
 import { createStockmanEquivalenceMatcher, type StockmanMatchCandidate } from "./equivalence-engine";
 import { persistStockmanLivingReference } from "./living-reference";
 import { canonicalizeStockmanUrl, stockmanQueueIdentity, stockmanUrlLanguage, stockmanTaxonomyIdentity } from "./url";
-import { chooseStockmanBranch } from "./queue-policy";
+import { chooseStockmanBranch, hasStockmanCrawlWork, planStockmanCrawlBatch, type StockmanCrawlNodeType } from "./queue-policy";
+import { stockmanPartialReasons } from "./scan-completeness";
 import type { StockmanCatalogDiscovery, StockmanCatalogMatch, StockmanDiscoveryJobProgress, StockmanDiscoveryJobStatus } from "./types";
 
 type ScanOptions = { seedUrl?: string; maxBrowsePages?: number; maxProductPages?: number };
@@ -30,10 +31,19 @@ type DurableDiagnostics = {
   matchingPayloadBytes?: number;
   reconciling?: { nextIndex: number; finishedAt: string; newCount: number; changedCount: number };
   crawlCounters?: Record<string, number>;
+  discoveryYield?: {
+    pagesMeasured: number;
+    productsDiscovered: number;
+    recentProductsPerPage: number[];
+    consecutiveWithoutProduct: number;
+    maxConsecutiveWithoutProduct: number;
+  };
 };
 const LEASE_MS = 70_000;
 const MAX_ATTEMPTS = 3;
 const MATCH_BATCH_SIZE = 50;
+const CRAWL_BATCH_SIZE = 3;
+const YIELD_WINDOW_PAGES = 25;
 
 const nowIso = () => new Date().toISOString();
 const hashUrl = (url: string) => createHash("sha256").update(stockmanQueueIdentity(url) ?? url).digest("hex");
@@ -45,6 +55,14 @@ function limits(value: unknown): Limits {
 const baseDiagnostics = (): DurableDiagnostics => ({
   discardedUrls: 0, browseLimitReached: false, productLimitReached: false, queueLimitReached: false,
   canonicalizedUrls: 0, duplicateUrlsAvoided: 0, categoriesDiscovered: 0, subcategoriesDiscovered: 0,
+});
+
+const baseDiscoveryYield = (): NonNullable<DurableDiagnostics["discoveryYield"]> => ({
+  pagesMeasured: 0,
+  productsDiscovered: 0,
+  recentProductsPerPage: [],
+  consecutiveWithoutProduct: 0,
+  maxConsecutiveWithoutProduct: 0,
 });
 
 function matchingState(value: unknown): MatchingState | null {
@@ -79,31 +97,64 @@ async function counts(jobId: string, db = prisma) {
 }
 
 async function updateProgress(jobId: string, phase: string, owner: string, leaseVersion: number) {
-  const [c, referencesFound, job] = await Promise.all([
+  const recentSince = new Date(Date.now() - 15 * 60_000);
+  const [c, referencesFound, job, recentBrowseDone, recentProductsDone] = await Promise.all([
     counts(jobId),
     prisma.stockmanDiscoveryResult.count({ where: { jobId } }),
-    phase === "MATCHING" ? prisma.stockmanDiscoveryJob.findUnique({ where: { id: jobId }, select: { diagnostics: true } }) : Promise.resolve(null),
+    prisma.stockmanDiscoveryJob.findUnique({ where: { id: jobId }, select: { diagnostics: true, startedAt: true, createdAt: true } }),
+    prisma.stockmanDiscoveryQueueItem.count({ where: { jobId, nodeType: "BROWSE", state: "DONE", updatedAt: { gte: recentSince } } }),
+    prisma.stockmanDiscoveryQueueItem.count({ where: { jobId, nodeType: "PRODUCT", state: "DONE", updatedAt: { gte: recentSince } } }),
   ]);
-  const productTotal = Math.max(c.productsFound, 1);
   const durable = job ? { ...baseDiagnostics(), ...json(job.diagnostics, baseDiagnostics()) } : baseDiagnostics();
+  const yieldState = { ...baseDiscoveryYield(), ...durable.discoveryYield };
   const matching = matchingState(durable.matching);
   const matchingDone = matching?.nextIndex ?? 0;
   const matchingTotal = matching?.total ?? 0;
   const matchingPercent = matchingTotal > 0 ? Math.min(98, 90 + Math.round((matchingDone / matchingTotal) * 8)) : 90;
+  const elapsedMinutes = Math.max(1 / 60, (Date.now() - (job?.startedAt ?? job?.createdAt ?? new Date()).getTime()) / 60_000);
+  const rateWindowMinutes = Math.min(15, elapsedMinutes);
+  const hasRateSample = elapsedMinutes >= 2;
+  const browsePerMinute = hasRateSample ? Math.round((recentBrowseDone / rateWindowMinutes) * 10) / 10 : null;
+  const productsPerMinute = hasRateSample ? Math.round((recentProductsDone / rateWindowMinutes) * 10) / 10 : null;
+  const etaParts = [
+    c.browsePending > 0 && browsePerMinute ? c.browsePending / browsePerMinute : c.browsePending > 0 ? null : 0,
+    c.productsPending > 0 && productsPerMinute ? c.productsPending / productsPerMinute : c.productsPending > 0 ? null : 0,
+  ];
+  const etaMinutes = hasRateSample && etaParts.every((value) => value !== null)
+    ? Math.max(1, Math.ceil(etaParts.reduce<number>((sum, value) => sum + (value ?? 0), 0)))
+    : null;
+  const crawlKnown = c.browseDone + c.browsePending + c.browseFailed + c.productsDone + c.productsPending + c.productsFailed;
+  const crawlDone = c.browseDone + c.productsDone;
+  const crawlPercent = crawlKnown > 0 ? Math.min(89, Math.max(2, Math.round((crawlDone / crawlKnown) * 89))) : 2;
+  const recentProducts = yieldState.recentProductsPerPage.reduce((sum, value) => sum + value, 0);
+  const recentYield = yieldState.recentProductsPerPage.length
+    ? Math.round((recentProducts / yieldState.recentProductsPerPage.length) * 100) / 100
+    : null;
+  const crawling = phase === "DISCOVERING" || phase === "PARSING_PRODUCTS";
+  const activity = crawling
+    ? c.browsePending > 0 && c.productsPending > 0 ? "mixed" as const : c.productsPending > 0 ? "products" as const : c.browsePending > 0 ? "browse" as const : "idle" as const
+    : phase === "MATCHING" ? "matching" as const : phase === "RECONCILING" ? "reconciling" as const : "idle" as const;
   const progress: StockmanDiscoveryJobProgress = {
-    phase: phase === "DISCOVERING" ? "catalogue" : phase === "PARSING_PRODUCTS" ? "products" : phase === "FINISHED" ? "completed" : "matching",
-    percent: phase === "DISCOVERING" ? Math.min(35, 2 + c.browseDone) : phase === "PARSING_PRODUCTS" ? Math.min(90, 35 + Math.round(c.productsDone / productTotal * 55)) : phase === "FINISHED" ? 100 : matchingPercent,
-    message: phase === "DISCOVERING"
-      ? `Exploration durable : ${c.browseDone} page(s), ${c.productsFound} fiche(s) détectée(s).`
-      : phase === "PARSING_PRODUCTS"
-        ? `Lecture durable : ${c.productsDone}/${c.productsFound} · ${referencesFound} référence(s).`
-        : phase === "FINISHED"
+    phase: crawling ? (c.productsDone > 0 ? "products" : "catalogue") : phase === "FINISHED" ? "completed" : "matching",
+    percent: crawling ? crawlPercent : phase === "FINISHED" ? 100 : matchingPercent,
+    message: crawling
+      ? `Crawl entrelacé : ${c.browseDone} page(s) browse, ${c.productsDone}/${c.productsFound} fiche(s) lue(s), ${referencesFound} référence(s).`
+      : phase === "FINISHED"
           ? `Scan terminé : ${referencesFound} référence(s) analysée(s).`
           : matchingTotal > 0
             ? `Rapprochement durable : ${matchingDone}/${matchingTotal} référence(s).`
             : "Préparation du rapprochement avec le catalogue OYSTE…",
     pagesVisited: c.browseDone, productUrlsFound: c.productsFound, productPagesProcessed: c.productsDone, referencesFound,
-    failures: c.browseFailed + c.productsFailed, updatedAt: nowIso(),
+    failures: c.browseFailed + c.productsFailed, updatedAt: nowIso(), activity,
+    browseDone: c.browseDone, browsePending: c.browsePending, browseFailed: c.browseFailed,
+    productsPending: c.productsPending, productsFailed: c.productsFailed,
+    browsePerMinute, productsPerMinute,
+    recentBrowsePages: yieldState.recentProductsPerPage.length,
+    recentProductsDiscovered: recentProducts,
+    recentDiscoveryYield: recentYield,
+    consecutiveBrowseWithoutProduct: yieldState.consecutiveWithoutProduct,
+    etaMinutes,
+    etaLabel: etaMinutes === null ? "ETA indisponible : débit récent insuffisant" : `ETA approximative : ${etaMinutes} min`,
   };
   await prisma.stockmanDiscoveryJob.updateMany({ where: { id: jobId, leaseOwner: owner, leaseVersion, leaseExpiresAt: { gt: new Date() }, status: { in: ["QUEUED", "RUNNING"] } }, data: { progress: progress as Prisma.InputJsonValue } });
 }
@@ -242,51 +293,129 @@ async function enqueue(
     diagnostic.crawlCounters = counters;
     await db.stockmanDiscoveryJob.update({ where: { id: jobId }, data: { diagnostics: diagnostic as Prisma.InputJsonValue } });
   }
+  return {
+    newBrowseQueued: data.filter((item) => item.nodeType === "BROWSE" && item.state === "PENDING").length,
+    newProductsQueued: data.filter((item) => item.nodeType === "PRODUCT" && item.state === "PENDING").length,
+  };
+}
+
+async function persistCrawlResult(
+  jobId: string,
+  owner: string,
+  leaseVersion: number,
+  cap: Limits,
+  item: Awaited<ReturnType<typeof claim>>[number],
+  result: Awaited<ReturnType<typeof scanStockmanDiscoveryBatch>>[number],
+) {
+  await prisma.$transaction(async (tx) => {
+    const db = tx as unknown as typeof prisma;
+    await fenceLease(jobId, owner, leaseVersion, true, db);
+    if (!result.ok) {
+      await db.stockmanDiscoveryQueueItem.updateMany({
+        where: { id: item.id, leaseOwner: owner, claimVersion: leaseVersion },
+        data: {
+          state: item.attempts >= MAX_ATTEMPTS ? "FAILED" : "PENDING",
+          leaseOwner: null,
+          leaseExpiresAt: null,
+          claimVersion: null,
+          lastError: result.error ?? "Lecture impossible",
+        },
+      });
+      return;
+    }
+
+    const enqueued = await enqueue(jobId, result.children, cap, item.branchKey, item.depth, result.finalUrl, db);
+    for (const reference of result.references) {
+      const occurrenceKey = createHash("sha256")
+        .update([reference.sourceUrl, reference.reference, reference.relationType, reference.familyReference ?? ""].join("\u001f"))
+        .digest("hex");
+      await db.stockmanDiscoveryResult.upsert({
+        where: { jobId_occurrenceKey: { jobId, occurrenceKey } },
+        create: { jobId, occurrenceKey, reference: reference.reference, sourceUrl: reference.sourceUrl, relationType: reference.relationType, payload: reference as unknown as Prisma.InputJsonValue },
+        update: { sourceUrl: reference.sourceUrl, relationType: reference.relationType, payload: reference as unknown as Prisma.InputJsonValue },
+      });
+    }
+    const catalogueSignature = createHash("sha256").update(JSON.stringify([...new Set(result.children.map((child) => {
+      const url = new URL(child.url);
+      return `${child.navigationKind}:${url.pathname.match(/--([^/]+)\.aspx$/i)?.[1] ?? url.pathname}${url.search}`;
+    }))].sort())).digest("hex");
+    const trace = result.pageTrace ?? {
+      catalogueSignature,
+      taxonomyCandidateIdentity: stockmanTaxonomyIdentity(result.finalUrl),
+      finalUrl: result.finalUrl,
+      linkTraces: result.linkTraces,
+      counters: result.counters,
+    };
+    const current = await db.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId }, select: { diagnostics: true } });
+    const diagnostics = { ...baseDiagnostics(), ...json(current.diagnostics, baseDiagnostics()) };
+    const counters = { ...diagnostics.crawlCounters };
+    for (const [key, count] of Object.entries(result.counters)) counters[key] = (counters[key] ?? 0) + count;
+    const language = stockmanUrlLanguage(result.finalUrl);
+    const taxonomyKind = new URL(result.finalUrl).pathname.match(/--(\d+)\.aspx$/i)
+      ? ([...new URL(result.finalUrl).pathname.matchAll(/--\d+(?=\.aspx$|\/|$)/g)].length > 1 ? "SUBCATEGORY" : "CATEGORY")
+      : item.nodeType;
+    const pageKey = `visited:${language}:${taxonomyKind}`;
+    counters[pageKey] = (counters[pageKey] ?? 0) + 1;
+
+    let discoveryYield = diagnostics.discoveryYield;
+    if (item.nodeType === "BROWSE") {
+      const previous = { ...baseDiscoveryYield(), ...diagnostics.discoveryYield };
+      const recentProductsPerPage = [...previous.recentProductsPerPage, enqueued.newProductsQueued].slice(-YIELD_WINDOW_PAGES);
+      const consecutiveWithoutProduct = enqueued.newProductsQueued === 0 ? previous.consecutiveWithoutProduct + 1 : 0;
+      discoveryYield = {
+        pagesMeasured: previous.pagesMeasured + 1,
+        productsDiscovered: previous.productsDiscovered + enqueued.newProductsQueued,
+        recentProductsPerPage,
+        consecutiveWithoutProduct,
+        maxConsecutiveWithoutProduct: Math.max(previous.maxConsecutiveWithoutProduct, consecutiveWithoutProduct),
+      };
+    }
+
+    await db.stockmanDiscoveryJob.update({
+      where: { id: jobId },
+      data: { diagnostics: { ...diagnostics, crawlCounters: counters, discoveryYield } as unknown as Prisma.InputJsonValue },
+    });
+    await db.stockmanDiscoveryQueueItem.updateMany({
+      where: { id: item.id, leaseOwner: owner, claimVersion: leaseVersion },
+      data: { state: "DONE", leaseOwner: null, leaseExpiresAt: null, claimVersion: null, lastError: null, trace: trace as unknown as Prisma.InputJsonValue },
+    });
+  }, { timeout: 20_000 });
+}
+
+async function claimScheduledItems(
+  jobId: string,
+  owner: string,
+  leaseVersion: number,
+  plan: StockmanCrawlNodeType[],
+) {
+  const items: Awaited<ReturnType<typeof claim>> = [];
+  for (const nodeType of plan) {
+    const claimed = await claim(jobId, owner, leaseVersion, nodeType, 1);
+    if (claimed[0]) items.push(claimed[0]);
+  }
+  return items;
 }
 
 async function crawlBatch(jobId: string, owner: string, leaseVersion: number, phase: "DISCOVERING" | "PARSING_PRODUCTS", cap: Limits) {
-  const nodeType = phase === "DISCOVERING" ? "BROWSE" : "PRODUCT";
-  // Une navigation maximum, une tentative de 12 s par nœud : le lot reste
-  // borné sous la fenêtre Vercel et checkpointé après chaque nœud.
-  const items = await claim(jobId, owner, leaseVersion, nodeType, 1);
+  const backlog = await counts(jobId);
+  const plan = planStockmanCrawlBatch(backlog, CRAWL_BATCH_SIZE);
+  const items = await claimScheduledItems(jobId, owner, leaseVersion, plan);
   if (!items.length) return false;
-  const nodes: StockmanDiscoveryBatchNode[] = items.map((item) => ({ id: item.id, url: item.canonicalUrl, nodeType, label: item.label, depth: item.depth }));
-  for (const result of await scanStockmanDiscoveryBatch(nodes)) {
-    const item = items.find((candidate) => candidate.id === result.nodeId)!;
-    await prisma.$transaction(async (tx) => {
-      const db = tx as unknown as typeof prisma;
-      await fenceLease(jobId, owner, leaseVersion, false, db);
-      if (result.ok) {
-        await enqueue(jobId, result.children, cap, item.branchKey, item.depth, result.finalUrl, db);
-        for (const reference of result.references) {
-          const occurrenceKey = createHash("sha256").update([reference.sourceUrl, reference.reference, reference.relationType, reference.familyReference ?? ""].join("\u001f")).digest("hex");
-          await db.stockmanDiscoveryResult.upsert({
-            where: { jobId_occurrenceKey: { jobId, occurrenceKey } },
-            create: { jobId, occurrenceKey, reference: reference.reference, sourceUrl: reference.sourceUrl, relationType: reference.relationType, payload: reference as unknown as Prisma.InputJsonValue },
-            update: { sourceUrl: reference.sourceUrl, relationType: reference.relationType, payload: reference as unknown as Prisma.InputJsonValue },
-          });
-        }
-        const catalogueSignature = createHash("sha256").update(JSON.stringify([...new Set(result.children.map((child) => {
-        const url = new URL(child.url);
-        return `${child.navigationKind}:${url.pathname.match(/--([^/]+)\.aspx$/i)?.[1] ?? url.pathname}${url.search}`;
-      }))].sort())).digest("hex");
-      const trace = result.pageTrace ?? { catalogueSignature, taxonomyCandidateIdentity: stockmanTaxonomyIdentity(result.finalUrl), finalUrl: result.finalUrl, linkTraces: result.linkTraces, counters: result.counters };
-        const current = await db.stockmanDiscoveryJob.findUniqueOrThrow({ where: { id: jobId }, select: { diagnostics: true } });
-        const diagnostics = { ...baseDiagnostics(), ...json(current.diagnostics, baseDiagnostics()) };
-        const counters = { ...diagnostics.crawlCounters };
-        for (const [key, count] of Object.entries(result.counters)) counters[key] = (counters[key] ?? 0) + count;
-        const language = stockmanUrlLanguage(result.finalUrl);
-        const taxonomyKind = new URL(result.finalUrl).pathname.match(/--(\d+)\.aspx$/i) ? ([...new URL(result.finalUrl).pathname.matchAll(/--\d+(?=\.aspx$|\/|$)/g)].length > 1 ? "SUBCATEGORY" : "CATEGORY") : item.nodeType;
-        const pageKey = `visited:${language}:${taxonomyKind}`;
-        counters[pageKey] = (counters[pageKey] ?? 0) + 1;
-        await db.stockmanDiscoveryJob.update({ where: { id: jobId }, data: { diagnostics: { ...diagnostics, crawlCounters: counters } as unknown as Prisma.InputJsonValue } });
-        await db.stockmanDiscoveryQueueItem.updateMany({ where: { id: item.id, leaseOwner: owner, claimVersion: leaseVersion }, data: { state: "DONE", leaseOwner: null, leaseExpiresAt: null, claimVersion: null, lastError: null, trace: trace as unknown as Prisma.InputJsonValue } });
-      } else {
-        await db.stockmanDiscoveryQueueItem.updateMany({ where: { id: item.id, leaseOwner: owner, claimVersion: leaseVersion }, data: { state: item.attempts >= MAX_ATTEMPTS ? "FAILED" : "PENDING", leaseOwner: null, leaseExpiresAt: null, claimVersion: null, lastError: result.error ?? "Lecture impossible" } });
-      }
-    }, { timeout: 20_000 });
-  }
-  await fenceLease(jobId, owner, leaseVersion, true);
+  const nodes: StockmanDiscoveryBatchNode[] = items.map((item) => ({
+    id: item.id,
+    url: item.canonicalUrl,
+    nodeType: item.nodeType as StockmanCrawlNodeType,
+    label: item.label,
+    depth: item.depth,
+  }));
+
+  // One browser/context is reused for the bounded mixed batch. The callback
+  // checkpoints every node before the next navigation starts.
+  await scanStockmanDiscoveryBatch(nodes, async (result) => {
+    const item = items.find((candidate) => candidate.id === result.nodeId);
+    if (!item) throw new Error(`Nœud Stockman réclamé introuvable : ${result.nodeId}`);
+    await persistCrawlResult(jobId, owner, leaseVersion, cap, item, result);
+  });
   await updateProgress(jobId, phase, owner, leaseVersion);
   return true;
 }
@@ -392,23 +521,56 @@ async function buildDiscovery(jobId: string): Promise<StockmanCatalogDiscovery> 
   const frReferences = new Set(occurrences.filter((item) => stockmanUrlLanguage(item.sourceUrl) === "fr").map((item) => item.reference));
   const enReferences = new Set(occurrences.filter((item) => stockmanUrlLanguage(item.sourceUrl) === "en").map((item) => item.reference));
   const sharedReferences = [...frReferences].filter((reference) => enReferences.has(reference)).length;
+  const browseQueueRemaining = browse.filter((item) => ["PENDING", "PROCESSING"].includes(item.state)).length;
+  const unvisitedUrls = queue.filter((item) => item.state !== "DONE").length;
+  const navigationErrors = browse.filter((item) => item.state === "FAILED").length;
+  const productErrors = productsQ.filter((item) => item.state === "FAILED").length;
+  const scanComplete = json<{ coveragePolicyVersion?: number }>(job.options, {}).coveragePolicyVersion === 1
+    && canonicalizeStockmanUrl(json<ScanOptions>(job.options, {}).seedUrl || "https://www.stockman.fr/") === "https://www.stockman.fr/"
+    && !durable.browseLimitReached
+    && !durable.productLimitReached
+    && !durable.queueLimitReached
+    && durable.discardedUrls === 0
+    && failed.length === 0
+    && queue.every((item) => item.state === "DONE")
+    && browse.length > 0
+    && productsQ.length > 0;
+  const partialReasons = stockmanPartialReasons({
+    scanComplete,
+    browseLimitReached: durable.browseLimitReached,
+    productLimitReached: durable.productLimitReached,
+    queueLimitReached: durable.queueLimitReached,
+    discardedUrls: durable.discardedUrls,
+    unvisitedUrls,
+    navigationErrors,
+    productErrors,
+    productPageFailures: productErrors,
+    browseQueueRemaining,
+  });
+  const yieldState = { ...baseDiscoveryYield(), ...durable.discoveryYield };
+  const recentProductsDiscovered = yieldState.recentProductsPerPage.reduce((sum, value) => sum + value, 0);
   const diagnostics: StockmanCatalogScanDiagnostics = {
     languageCoverage: { frUniqueReferences: frReferences.size, enUniqueReferences: enReferences.size, sharedReferences, frOnlyReferences: frReferences.size - sharedReferences, enOnlyReferences: enReferences.size - sharedReferences },
     productLinksCollected: productsQ.length, uniqueProductUrls: productsQ.length, productPageAttempts: productsQ.reduce((sum, item) => sum + item.attempts, 0), productPagesOpened: productsQ.filter((item) => item.state === "DONE").length,
     productPageFailures: productsQ.filter((item) => item.state === "FAILED").length, productPageRedirects: pageTraces.filter((t) => t.finalUrl !== t.requestedUrl).length, productPagesWithReferences: pageTraces.filter((t) => t.extractedReferences.length).length,
     productPagesWithoutReferences: pageTraces.filter((t) => !t.extractedReferences.length).length, extractedOccurrences: occurrences.length, duplicateReferences: Math.max(0, occurrences.length - references.length), extractedFromRows: occurrences.length, extractedFromBody: 0,
-    noReferenceSamples: pageTraces.filter((t) => !t.extractedReferences.length).slice(0, 12).map((t) => t.finalUrl), failedPageSamples: failed.slice(0, 12).map((item) => `${item.canonicalUrl} · ${item.lastError ?? "Erreur"}`), browseQueueRemaining: browse.filter((item) => ["PENDING", "PROCESSING"].includes(item.state)).length,
-    browseLimitReached: durable.browseLimitReached, productLimitReached: durable.productLimitReached, queueLimitReached: durable.queueLimitReached, discardedUrls: durable.discardedUrls, unvisitedUrls: queue.filter((item) => item.state !== "DONE").length,
-    navigationErrors: browse.filter((item) => item.state === "FAILED").length, productErrors: productsQ.filter((item) => item.state === "FAILED").length, canonicalizedUrls: durable.canonicalizedUrls, duplicateUrlsAvoided: durable.duplicateUrlsAvoided, categoriesDiscovered: durable.categoriesDiscovered, subcategoriesDiscovered: durable.subcategoriesDiscovered,
+    noReferenceSamples: pageTraces.filter((t) => !t.extractedReferences.length).slice(0, 12).map((t) => t.finalUrl), failedPageSamples: failed.slice(0, 12).map((item) => `${item.canonicalUrl} · ${item.lastError ?? "Erreur"}`), browseQueueRemaining,
+    browseLimitReached: durable.browseLimitReached, productLimitReached: durable.productLimitReached, queueLimitReached: durable.queueLimitReached, discardedUrls: durable.discardedUrls, unvisitedUrls,
+    navigationErrors, productErrors, canonicalizedUrls: durable.canonicalizedUrls, duplicateUrlsAvoided: durable.duplicateUrlsAvoided, categoriesDiscovered: durable.categoriesDiscovered, subcategoriesDiscovered: durable.subcategoriesDiscovered,
     matchingPayloadBytes: durable.matchingPayloadBytes,
     crawlCounters: durable.crawlCounters,
     familiesDiscovered: productsQ.length, primaryReferences: (relationCounts.PRIMARY ?? 0) + (relationCounts.PRIMARY_VARIANT ?? 0), accessoryReferences: relationCounts.ACCESSORY ?? 0, optionReferences: relationCounts.OPTION ?? 0,
-    relatedProducts: pageTraces.reduce((sum, t) => sum + t.relatedProducts.length, 0), unknownReferences: relationCounts.UNKNOWN ?? 0, scanComplete: json<{ coveragePolicyVersion?: number }>(job.options, {}).coveragePolicyVersion === 1 && canonicalizeStockmanUrl(json<ScanOptions>(job.options, {}).seedUrl || "https://www.stockman.fr/") === "https://www.stockman.fr/" && !durable.browseLimitReached && !durable.productLimitReached && !durable.queueLimitReached && durable.discardedUrls === 0 && failed.length === 0 && queue.every((item) => item.state === "DONE") && browse.length > 0 && productsQ.length > 0,
+    relatedProducts: pageTraces.reduce((sum, t) => sum + t.relatedProducts.length, 0), unknownReferences: relationCounts.UNKNOWN ?? 0, scanComplete, partialReasons,
+    recentBrowsePages: yieldState.recentProductsPerPage.length,
+    recentProductsDiscovered,
+    recentDiscoveryYield: yieldState.recentProductsPerPage.length > 0 ? recentProductsDiscovered / yieldState.recentProductsPerPage.length : null,
+    consecutiveBrowseWithoutProduct: yieldState.consecutiveWithoutProduct,
+    maxConsecutiveBrowseWithoutProduct: yieldState.maxConsecutiveWithoutProduct,
   };
   const m = (kind: string) => matches.filter((item) => item.missingKind === kind).length;
   return { startedAt: (job.startedAt ?? job.createdAt).toISOString(), finishedAt: nowIso(), pagesVisited: browse.filter((item) => item.state === "DONE").length, productPages: productsQ.filter((item) => item.state === "DONE").length, diagnostics,
     totals: { discovered: matches.length, matched: matches.filter((x) => x.status === "matched").length, exact: matches.filter((x) => x.matchMethod === "exact" && ["matched", "already_linked"].includes(x.status)).length, normalized: matches.filter((x) => x.matchMethod === "normalized" && ["matched", "already_linked"].includes(x.status)).length, equivalence: matches.filter((x) => x.matchMethod === "excel" && ["matched", "already_linked"].includes(x.status)).length, suggested: matches.filter((x) => x.status === "suggested").length, missing: matches.filter((x) => x.status === "missing").length, ambiguous: matches.filter((x) => x.status === "ambiguous").length, missingAnalysis: { excelUnmapped: m("excel_unmapped"), referenceClose: m("reference_close"), designationClose: m("designation_close"), familyProbable: m("family_probable"), confirmedMissing: m("confirmed_missing") }, alreadyLinked: matches.filter((x) => x.status === "already_linked").length },
-    matches, pageTraces, productLinkTraces: browse.flatMap((item) => json<{ linkTraces?: NonNullable<StockmanCatalogDiscovery["productLinkTraces"]> }>(item.trace, {}).linkTraces ?? []), warnings: failed.map((item) => `${item.canonicalUrl} · ${item.lastError ?? "Lecture impossible"}`).slice(0, 100) };
+    matches, pageTraces, productLinkTraces: browse.flatMap((item) => json<{ linkTraces?: NonNullable<StockmanCatalogDiscovery["productLinkTraces"]> }>(item.trace, {}).linkTraces ?? []), warnings: [...partialReasons.map((reason) => `Scan PARTIAL : ${reason}.`), ...failed.map((item) => `${item.canonicalUrl} · ${item.lastError ?? "Lecture impossible"}`)].slice(0, 100) };
 }
 
 async function reconcile(jobId: string, owner: string, leaseVersion: number) {
@@ -440,7 +602,7 @@ async function reconcile(jobId: string, owner: string, leaseVersion: number) {
     await db.stockmanDiscoveryJob.update({ where: { id: jobId }, data: {
       error: null, status: discovery.diagnostics.scanComplete ? "COMPLETE" : "PARTIAL", phase: "FINISHED", result: discovery as unknown as Prisma.InputJsonValue,
       diagnostics: discovery.diagnostics as unknown as Prisma.InputJsonValue, finishedAt: new Date(state.finishedAt), leaseOwner: null, leaseExpiresAt: null,
-      progress: { ...json(job.progress, baseProgress()), phase: "completed", percent: 100, message: "Scan durable terminé.", updatedAt: nowIso() } as Prisma.InputJsonValue,
+      progress: { ...json(job.progress, baseProgress()), phase: "completed", percent: 100, message: discovery.diagnostics.scanComplete ? "Scan certifié complet terminé." : `Scan PARTIAL : ${discovery.diagnostics.partialReasons?.join(" · ") || "preuve stricte de couverture absente"}.`, updatedAt: nowIso() } as Prisma.InputJsonValue,
     } });
   }, { timeout: 25_000 });
 }
@@ -464,22 +626,11 @@ export async function runNextStockmanDiscoveryBatch(jobId?: string) {
       return true;
     }
 
-    if (job.phase === "DISCOVERING") {
+    if (job.phase === "DISCOVERING" || job.phase === "PARSING_PRODUCTS") {
       const c = await counts(job.id);
-      if (c.browsePending) return await crawlBatch(job.id, owner, leaseVersion, "DISCOVERING", cap);
-      await fenceLease(job.id, owner, leaseVersion, true);
-      const transitioned = await prisma.stockmanDiscoveryJob.updateMany({
-        where: { id: job.id, leaseOwner: owner, leaseVersion },
-        data: { phase: "PARSING_PRODUCTS" },
-      });
-      if (transitioned.count !== 1) throw new Error("Lease Stockman perdu : transition vers les fiches abandonnée.");
-      await updateProgress(job.id, "PARSING_PRODUCTS", owner, leaseVersion);
-      return true;
-    }
-
-    if (job.phase === "PARSING_PRODUCTS") {
-      const c = await counts(job.id);
-      if (c.productsPending) return await crawlBatch(job.id, owner, leaseVersion, "PARSING_PRODUCTS", cap);
+      if (hasStockmanCrawlWork(c)) {
+        return await crawlBatch(job.id, owner, leaseVersion, job.phase as "DISCOVERING" | "PARSING_PRODUCTS", cap);
+      }
       await fenceLease(job.id, owner, leaseVersion, true);
       const transitioned = await prisma.stockmanDiscoveryJob.updateMany({
         where: { id: job.id, leaseOwner: owner, leaseVersion },
@@ -509,11 +660,12 @@ export async function runStockmanDiscoveryWorkCycle(budgetMs = 45_000) {
   const started = Date.now();
   let batches = 0;
   const maxBatches = 3;
-  // Keep every page as its own durable/checkpointed batch, but reuse the same
-  // cron invocation while there is enough wall-clock budget for another page.
-  // A 15 s reserve protects Vercel's 60 s limit (navigation itself is capped
-  // at 12 s) and avoids losing several pages at once on a hard timeout.
-  const reserveMs = 15_000;
+  // A batch contains at most three 12 s navigations and checkpoints after
+  // each page. A following batch starts only when at least 39 s remain in the
+  // 45 s work budget (36 s navigation ceiling + persistence margin). Fast
+  // matching/reconciliation batches can still use all three slots, while a
+  // slow crawl batch remains safely below Vercel's 60 s route limit.
+  const reserveMs = 39_000;
   const latestSafeStart = Math.max(0, budgetMs - reserveMs);
   while (batches < maxBatches && (batches === 0 || Date.now() - started < latestSafeStart)) {
     const processed = await runNextStockmanDiscoveryBatch();

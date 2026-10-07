@@ -191,6 +191,12 @@ export type StockmanCatalogScanDiagnostics = {
   relatedProducts?: number;
   unknownReferences?: number;
   scanComplete?: boolean;
+  partialReasons?: string[];
+  recentBrowsePages?: number;
+  recentProductsDiscovered?: number;
+  recentDiscoveryYield?: number | null;
+  consecutiveBrowseWithoutProduct?: number;
+  maxConsecutiveBrowseWithoutProduct?: number;
 };
 
 
@@ -387,6 +393,20 @@ export type StockmanDiscoveryJobProgress = {
   referencesFound: number;
   failures: number;
   updatedAt: string;
+  activity?: "browse" | "products" | "mixed" | "matching" | "reconciling" | "idle";
+  browseDone?: number;
+  browsePending?: number;
+  browseFailed?: number;
+  productsPending?: number;
+  productsFailed?: number;
+  browsePerMinute?: number | null;
+  productsPerMinute?: number | null;
+  recentBrowsePages?: number;
+  recentProductsDiscovered?: number;
+  recentDiscoveryYield?: number | null;
+  consecutiveBrowseWithoutProduct?: number;
+  etaMinutes?: number | null;
+  etaLabel?: string;
 };
 
 export type StockmanDiscoveryJobStatus = {
