@@ -1,5 +1,4 @@
 import PresentationInitialization from "@/components/admin/PresentationInitialization";
-import ReferenceManager from "@/components/admin/ReferenceManager";
 import { AlertTriangle, Building2, CheckCircle2, Package } from "lucide-react";
 import SuppliersWorkspace from "@/components/admin/SuppliersWorkspace";
 import { getAdminSuppliersFromDatabase, getSupplierStats } from "@/lib/admin/suppliers-data";
@@ -27,9 +26,9 @@ export default async function SuppliersPage() {
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-600">
             Référentiel catalogue
           </p>
-          <h1 className="mt-2 text-3xl font-black md:text-4xl">Fournisseurs</h1>
+          <h1 className="mt-2 text-3xl font-black md:text-4xl">Fournisseurs & intégrations</h1>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
-            Un espace unique pour piloter chaque fournisseur : produits, imports, synchronisation, pricing et connexion.
+            Une vue unique pour gérer les fiches fournisseurs et piloter les intégrations, produits, imports, synchronisations et tarifs.
           </p>
         </div>
         <div className="rounded-full border border-cyan-100 bg-cyan-50 px-4 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-cyan-800">
@@ -47,7 +46,6 @@ export default async function SuppliersPage() {
         ))}
       </section>
 
-      <ReferenceManager kind="suppliers" />
       <SuppliersWorkspace suppliers={adminSuppliers} stockmanStatus={stockmanStatus} />
     </main>
   );
