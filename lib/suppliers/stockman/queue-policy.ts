@@ -26,6 +26,10 @@ export function hasStockmanCrawlWork(backlog: StockmanCrawlBacklog) {
   return backlog.browsePending > 0 || backlog.productsPending > 0;
 }
 
+export function unprocessedStockmanClaimIds(claimedIds: string[], processedIds: ReadonlySet<string>) {
+  return claimedIds.filter((id) => !processedIds.has(id));
+}
+
 /**
  * Durable crawl scheduling policy.
  *

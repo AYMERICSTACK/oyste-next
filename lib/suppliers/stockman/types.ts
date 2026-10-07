@@ -197,6 +197,8 @@ export type StockmanCatalogScanDiagnostics = {
   recentDiscoveryYield?: number | null;
   consecutiveBrowseWithoutProduct?: number;
   maxConsecutiveBrowseWithoutProduct?: number;
+  globalIncidentActive?: boolean;
+  circuitRetryAfter?: string | null;
 };
 
 
@@ -393,7 +395,7 @@ export type StockmanDiscoveryJobProgress = {
   referencesFound: number;
   failures: number;
   updatedAt: string;
-  activity?: "browse" | "products" | "mixed" | "matching" | "reconciling" | "idle";
+  activity?: "browse" | "products" | "mixed" | "matching" | "reconciling" | "cooldown" | "idle";
   browseDone?: number;
   browsePending?: number;
   browseFailed?: number;
@@ -405,6 +407,8 @@ export type StockmanDiscoveryJobProgress = {
   recentProductsDiscovered?: number;
   recentDiscoveryYield?: number | null;
   consecutiveBrowseWithoutProduct?: number;
+  circuitOpen?: boolean;
+  circuitRetryAfter?: string | null;
   etaMinutes?: number | null;
   etaLabel?: string;
 };

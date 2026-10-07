@@ -1959,7 +1959,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             <div className="h-full rounded-full bg-[#00a1b5] transition-all duration-500" style={{ width: `${Math.max(2, Math.min(100, progress.percent))}%` }} />
           </div>
           <div className="mt-3 grid gap-2 text-[10px] font-bold text-cyan-800 sm:grid-cols-2 lg:grid-cols-4">
-            <span>Activité : {progress.activity === "mixed" ? "Browse + fiches" : progress.activity === "products" ? "Fiches produit" : progress.activity === "browse" ? "Exploration browse" : progress.phase}</span>
+            <span>Activité : {progress.activity === "cooldown" ? "Pause automatique HTTP 500" : progress.activity === "mixed" ? "Browse + fiches" : progress.activity === "products" ? "Fiches produit" : progress.activity === "browse" ? "Exploration browse" : progress.phase}</span>
             <span>Browse : {progress.browseDone ?? progress.pagesVisited} fini(s) · {progress.browsePending ?? 0} en attente · {progress.browseFailed ?? 0} échec(s)</span>
             <span>Fiches : {progress.productUrlsFound} trouvée(s) · {progress.productPagesProcessed} lue(s) · {progress.productsPending ?? 0} en attente · {progress.productsFailed ?? 0} échec(s)</span>
             <span>Références / occurrences : {progress.referencesFound}</span>
@@ -1969,6 +1969,7 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
             <span>Browse sans nouvelle fiche : {progress.consecutiveBrowseWithoutProduct ?? 0} consécutive(s)</span>
             <span>ETA : {progress.etaLabel ?? "non calculable avec les données actuelles"}</span>
             <span>Échecs totaux : {progress.failures}</span>
+            {progress.circuitOpen ? <span className="text-amber-800">Reprise automatique : {progress.circuitRetryAfter ? new Date(progress.circuitRetryAfter).toLocaleTimeString("fr-FR") : "prochain cron autorisé"}</span> : null}
           </div>
         </div> : loading ? <div className="mt-4 rounded-xl border border-cyan-100 bg-cyan-50 p-4 text-xs font-bold text-cyan-800">Démarrage du job Stockman…</div> : null}
         {message ? <div className="mt-4 flex gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm font-semibold text-slate-700"><AlertCircle size={18} className="shrink-0" /><pre className="min-w-0 whitespace-pre-wrap break-words font-sans">{message}</pre></div> : null}

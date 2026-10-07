@@ -23,6 +23,7 @@ test("autorise la réconciliation destructive uniquement après preuve complète
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, unvisitedUrls: 1 }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, navigationErrors: 1 }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, productErrors: 1 }), false);
+  assert.equal(hasProvenCompleteStockmanScan({ ...complete, globalIncidentActive: true }), false);
 });
 
 test("une preuve incomplète ou un échec produit bloque les disparitions", () => {
@@ -56,4 +57,10 @@ test("les limites, erreurs et queues non épuisées produisent des raisons PARTI
 
 test("un scan certifié complet n'a aucune raison PARTIAL", () => {
   assert.deepEqual(stockmanPartialReasons(complete), []);
+});
+
+test("un circuit HTTP 500 ouvert force PARTIAL et bloque la réconciliation destructive", () => {
+  const incident = { ...complete, scanComplete: false, globalIncidentActive: true };
+  assert.equal(hasProvenCompleteStockmanScan(incident), false);
+  assert.match(stockmanPartialReasons(incident).join(" · "), /Incident global HTTP 500/);
 });

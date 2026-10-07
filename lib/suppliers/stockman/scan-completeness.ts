@@ -9,6 +9,7 @@ export type StockmanCompletenessInput = {
   productErrors?: number;
   productPageFailures?: number;
   browseQueueRemaining?: number;
+  globalIncidentActive?: boolean;
 };
 
 export function hasProvenCompleteStockmanScan(diagnostics: StockmanCompletenessInput) {
@@ -21,7 +22,8 @@ export function hasProvenCompleteStockmanScan(diagnostics: StockmanCompletenessI
     && diagnostics.navigationErrors === 0
     && diagnostics.productErrors === 0
     && diagnostics.productPageFailures === 0
-    && diagnostics.browseQueueRemaining === 0;
+    && diagnostics.browseQueueRemaining === 0
+    && diagnostics.globalIncidentActive !== true;
 }
 
 export function stockmanPartialReasons(diagnostics: StockmanCompletenessInput) {
@@ -36,6 +38,7 @@ export function stockmanPartialReasons(diagnostics: StockmanCompletenessInput) {
     reasons.push(`${Math.max(diagnostics.productErrors ?? 0, diagnostics.productPageFailures ?? 0)} erreur(s) de fiche produit`);
   }
   if ((diagnostics.browseQueueRemaining ?? 0) > 0) reasons.push(`${diagnostics.browseQueueRemaining} page(s) browse encore en attente`);
+  if (diagnostics.globalIncidentActive) reasons.push("Incident global HTTP 500 Stockman actif");
   if (diagnostics.scanComplete !== true && reasons.length === 0) reasons.push("Preuve stricte de couverture globale absente");
   return reasons;
 }

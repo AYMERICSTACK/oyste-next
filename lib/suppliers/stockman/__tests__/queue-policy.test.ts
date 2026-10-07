@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { chooseStockmanBranch, hasStockmanCrawlWork, planStockmanCrawlBatch } from "../queue-policy";
+import { chooseStockmanBranch, hasStockmanCrawlWork, planStockmanCrawlBatch, unprocessedStockmanClaimIds } from "../queue-policy";
 
 test("la queue privilégie la profondeur puis la branche la moins récemment traitée", () => {
   const branches = [
@@ -49,4 +49,11 @@ test("le matching n'est autorisé qu'après épuisement des deux files de crawl"
   assert.equal(hasStockmanCrawlWork({ browsePending: 1, productsPending: 0 }), true);
   assert.equal(hasStockmanCrawlWork({ browsePending: 0, productsPending: 1 }), true);
   assert.equal(hasStockmanCrawlWork({ browsePending: 0, productsPending: 0 }), false);
+});
+
+test("un arrêt de batch rend identifiables tous les claims non traités à remettre en attente", () => {
+  assert.deepEqual(
+    unprocessedStockmanClaimIds(["node-1", "node-2", "node-3"], new Set(["node-1"])),
+    ["node-2", "node-3"],
+  );
 });
