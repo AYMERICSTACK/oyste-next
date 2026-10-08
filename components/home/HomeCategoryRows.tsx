@@ -20,7 +20,7 @@ function CategoryRow({ row }: { row: HomeCategoryRow }) {
   return (
     <article className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 shadow-sm lg:grid-cols-[235px_minmax(0,1fr)]">
       <a href={row.href} className="group relative min-h-[150px] overflow-hidden rounded-xl bg-slate-950 text-white">
-        <img src={row.imageUrl} alt="" className="absolute inset-0 h-full w-full object-contain p-3 opacity-70 transition duration-300 group-hover:scale-105 group-hover:opacity-85" />
+        <img src={row.imageUrl} alt="" className={`absolute inset-0 h-full w-full transition duration-300 group-hover:scale-105 ${row.imageUrl.startsWith("/images/home-categories/") ? "object-cover opacity-90 group-hover:opacity-100" : "object-contain p-3 opacity-70 group-hover:opacity-85"}`} />
         <span className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent" />
         <span className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4">
           <span><span className="block text-[10px] font-black uppercase tracking-[0.2em] text-orange-400">{commerce.content001}</span><strong className="mt-1 block text-lg font-black uppercase leading-tight">{row.title}</strong></span>

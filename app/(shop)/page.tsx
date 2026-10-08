@@ -12,6 +12,15 @@ import { getProductImageUrl } from "@/lib/product-images";
 import { catalogueSubFamilies, filterProductsByFamily, getProductCardImages, getProductsByCategoryAndFamily } from "@/lib/catalogue/repository";
 import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-repository";
 
+// Visuels éditoriaux dédiés aux cinq univers de la page d’accueil.
+const homeUniverseImages: Record<string, string> = {
+  levage: "/images/home-categories/levage.webp",
+  manutention: "/images/home-categories/manutention.webp",
+  "motorisation-sew": "/images/home-categories/motorisation-sew.webp",
+  stockage: "/images/home-categories/stockage.webp",
+  "acces-hauteur": "/images/home-categories/acces-hauteur.webp",
+};
+
 export default async function HomePage() {
   const { home } = await getCmsContent();
   const heroCategoryLinks = orderedVisible(home.quickLinks);
@@ -20,7 +29,7 @@ export default async function HomePage() {
   const categoryRows = visibleHome(categories.filter(item => !item.homeParentId)).map(category => ({
     slug: category.slug, title: category.homeLabel || category.publicLabel || category.name,
     href: category.publicHref || `/catalogue/${category.slug}`,
-    imageUrl: category.homeImageUrl || category.imageUrl || "",
+    imageUrl: homeUniverseImages[category.slug] || category.homeImageUrl || category.imageUrl || "",
     children: visibleHome(categories.filter(item => item.homeParentId === category.id)).map(family => ({
       title: family.homeLabel || family.publicLabel || family.name, href: family.publicHref || `/catalogue/${category.slug}?famille=${family.publicFamilySlug || family.slug}`, imageUrl: family.homeImageUrl || family.imageUrl || undefined,
     })),
