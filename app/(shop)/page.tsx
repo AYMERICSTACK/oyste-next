@@ -21,6 +21,7 @@ import {
   getProductsByCategoryAndFamily,
 } from "@/lib/catalogue/repository";
 import { getDatabaseProductsByCategory } from "@/lib/catalogue/database-repository";
+import { prisma } from "@/lib/db/prisma";
 
 // Visuels éditoriaux dédiés aux cinq univers de la page d’accueil.
 const homeUniverseImages: Record<string, string> = {
@@ -36,6 +37,12 @@ export default async function HomePage() {
   const heroCategoryLinks = orderedVisible(home.quickLinks);
   const slides = orderedVisible(home.slides);
   const { categories, suppliers } = await getPublicPresentation();
+  // Reuse real, published Stockman product media for the two homepage family cards.
+  const familyPhotoProducts = await prisma.product.findMany({
+    where: { code: { in: ["LP", "UPLIFT5"] }, publicationStatus: "PUBLISHED" },
+    select: { code: true, media: { where: { type: "IMAGE" }, orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }], take: 1, select: { url: true } } },
+  }).catch(() => []);
+  const stockmanFamilyImages = new Map(familyPhotoProducts.map(product => [product.code.toUpperCase(), product.media[0]?.url]));
   const categoryRows = visibleHome(
     categories.filter((item) => !item.homeParentId),
   ).map((category) => ({
@@ -61,7 +68,13 @@ export default async function HomePage() {
       href:
         family.publicHref ||
         `/catalogue/${category.slug}?famille=${family.publicFamilySlug || family.slug}`,
-      imageUrl: family.homeImageUrl || family.imageUrl || undefined,
+      imageUrl: /élévateur de charge|elevateur de charge/i.test(
+        family.homeLabel || family.publicLabel || family.name,
+      )
+        ? stockmanFamilyImages.get("LP") || "https://www.stockman.fr/fr/upload/products_data/images/medium/elevateur-leve-charge-manuel-climatiseur-stockman_LP125.jpg"
+        : /nacelle/i.test(family.homeLabel || family.publicLabel || family.name)
+          ? stockmanFamilyImages.get("UPLIFT5") || family.homeImageUrl || family.imageUrl || undefined
+          : family.homeImageUrl || family.imageUrl || undefined,
     })),
   }));
 
