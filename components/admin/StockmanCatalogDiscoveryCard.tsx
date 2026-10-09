@@ -1450,8 +1450,9 @@ export default function StockmanCatalogDiscoveryCard({
       const errors: Array<{ reference?: unknown; message?: unknown }> = [];
       const ignoredGhosts: string[] = [];
       // Lecture fournisseur par lots de 20 pour éviter un appel serveur trop long.
-      for (let offset = 0; offset < rows.length; offset += 20) {
-        const items = rows.slice(offset, offset + 20).map((row) => ({
+      const batchSize = pilot ? 2 : 20;
+      for (let offset = 0; offset < rows.length; offset += batchSize) {
+        const items = rows.slice(offset, offset + batchSize).map((row) => ({
           reference: row.reference,
           designation: row.designation,
           category: row.category,
@@ -1469,7 +1470,7 @@ export default function StockmanCatalogDiscoveryCard({
         if (!response.ok)
           throw new Error(
             payload.message ||
-              `Préparation impossible (lot ${Math.floor(offset / 20) + 1}).`,
+              `Préparation impossible (lot ${Math.floor(offset / batchSize) + 1}).`,
           );
         prepared += Number(payload.prepared ?? 0);
         if (Array.isArray(payload.errors)) errors.push(...payload.errors);
