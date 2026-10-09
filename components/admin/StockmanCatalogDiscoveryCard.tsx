@@ -835,46 +835,126 @@ export default function StockmanCatalogDiscoveryCard({ enabled }: { enabled: boo
     }
   }
 
-  async function auditUnresolvedReferences() {
-    if (!scan) return;
-    const items = scan.matches.filter((item) => item.catalogueState !== "present");
-    if (!items.length) {
-      setMessage("Aucune référence non résolue à auditer.");
-      return;
+
+async function auditUnresolvedReferences() {
+  if (!scan) return;
+
+  const items = scan.matches.filter(
+    (item) => item.catalogueState !== "present"
+  );
+
+  if (!items.length) {
+    setMessage("Aucune référence non résolue à auditer.");
+    return;
+  }
+
+  setAuditingUnresolved(true);
+  setMessage(null);
+  setUnresolvedAudit(null);
+
+  try {
+    const batchSize = 200;
+    const batchCount = Math.ceil(items.length / batchSize);
+
+    const results: StockmanUnresolvedAudit[] = [];
+
+    for (let offset = 0; offset < items.length; offset += batchSize) {
+      const batchNumber = Math.floor(offset / batchSize) + 1;
+      const batch = items.slice(offset, offset + batchSize);
+
+      setMessage(
+        `Analyse Stockman en cours : lot ${batchNumber}/${batchCount} (${Math.min(offset + batch.length, items.length)}/${items.length} références).`
+      );
+
+      const response = await fetch(
+        "/api/admin/suppliers/stockman/discovery",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "audit_unresolved",
+            items: batch.map((item) => ({
+              reference: item.reference,
+              designation: item.designation,
+              sourceUrl: item.sourceUrl,
+              category: item.category,
+              status: item.status,
+              matchMethod: item.matchMethod,
+              confidence: item.confidence,
+              missingKind: item.missingKind,
+              catalogueState: item.catalogueState,
+            })),
+          }),
+        }
+      );
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          `Lot ${batchNumber}/${batchCount} : ${
+            payload.message ||
+            `Erreur HTTP ${response.status}`
+          }`
+        );
+      }
+
+      const result = payload as StockmanUnresolvedAudit;
+
+      if (
+        !Array.isArray(result.rows) ||
+        result.rows.length !== batch.length ||
+        result.total !== batch.length ||
+        result.dryRun !== true
+      ) {
+        throw new Error(
+          `Réponse incomplète ou invalide pour le lot ${batchNumber}/${batchCount}.`
+        );
+      }
+
+      results.push(result);
     }
 
-    setAuditingUnresolved(true);
-    setMessage(null);
-    setUnresolvedAudit(null);
-    try {
-      const response = await fetch("/api/admin/suppliers/stockman/discovery", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "audit_unresolved",
-          items: items.map((item) => ({
-            reference: item.reference,
-            designation: item.designation,
-            sourceUrl: item.sourceUrl,
-            category: item.category,
-            status: item.status,
-            matchMethod: item.matchMethod,
-            confidence: item.confidence,
-            missingKind: item.missingKind,
-            catalogueState: item.catalogueState,
-          })),
-        }),
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "Audit des références non résolues impossible.");
-      setUnresolvedAudit(payload as StockmanUnresolvedAudit);
-      setMessage(`Audit V2.12.6 terminé : ${payload.toImport || 0} à importer · ${payload.existing || 0} déjà existante(s) · ${payload.ambiguous || 0} ambiguë(s). Aucune modification effectuée.`);
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Audit des références non résolues impossible.");
-    } finally {
-      setAuditingUnresolved(false);
+    const merged: StockmanUnresolvedAudit = {
+      version: "V2.12.6",
+      auditedAt: new Date().toISOString(),
+      total: results.reduce((sum, result) => sum + result.total, 0),
+      existing: results.reduce((sum, result) => sum + result.existing, 0),
+      toImport: results.reduce((sum, result) => sum + result.toImport, 0),
+      ambiguous: results.reduce((sum, result) => sum + result.ambiguous, 0),
+      rows: results.flatMap((result) => result.rows),
+      dryRun: true,
+    };
+
+    if (
+      merged.total !== items.length ||
+      merged.existing + merged.toImport + merged.ambiguous !== merged.total
+    ) {
+      throw new Error(
+        "Le bilan de l'analyse est incohérent. Aucun résultat partiel n'a été validé."
+      );
     }
+
+    setUnresolvedAudit(merged);
+
+    setMessage(
+      `Audit V2.12.6 terminé : ${merged.toImport} à importer · ` +
+      `${merged.existing} déjà existante(s) · ` +
+      `${merged.ambiguous} ambiguë(s). ` +
+      `Aucune modification effectuée.`
+    );
+  } catch (error) {
+    setUnresolvedAudit(null);
+    setMessage(
+      error instanceof Error
+        ? error.message
+        : "Audit des références non résolues impossible."
+    );
+  } finally {
+    setAuditingUnresolved(false);
   }
+}
+
 
   async function auditDuplicateStructure() {
     if (!unresolvedAudit) return;
