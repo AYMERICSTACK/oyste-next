@@ -1,6 +1,11 @@
 import type { BrowserContext } from "playwright";
 import { openStockmanBrowser } from "@/lib/suppliers/stockman/browser";
 import { parseStockmanProduct } from "@/lib/suppliers/stockman/parser";
+import {
+  assertStockmanDocumentStatus,
+  classifyStockmanProductReadError,
+  type StockmanProductReadErrorKind,
+} from "@/lib/suppliers/stockman/product-read-error";
 import type { StockmanCommercialFamily, StockmanProduct } from "@/lib/suppliers/stockman/types";
 
 function validateStockmanUrl(value: string) {
@@ -1433,10 +1438,11 @@ async function readStockmanProduct(
   });
 
   try {
-    await page.goto(sourceUrl, {
+    const initialResponse = await page.goto(sourceUrl, {
       waitUntil: "domcontentloaded",
       timeout: 45_000,
     });
+    assertStockmanDocumentStatus(initialResponse?.status() ?? null);
 
     await page.waitForTimeout(1_200);
 
@@ -1504,7 +1510,8 @@ async function readStockmanProduct(
 
     if (detailUrl && detailUrl !== page.url()) {
       const validatedDetailUrl = validateStockmanUrl(detailUrl);
-      await page.goto(validatedDetailUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      const detailResponse = await page.goto(validatedDetailUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      assertStockmanDocumentStatus(detailResponse?.status() ?? null);
       await page.waitForTimeout(1_200);
       await page.waitForFunction(
         (ref) => {
@@ -1566,11 +1573,11 @@ export async function getStockmanProduct(
 
 export async function getStockmanProducts(
   targets: Array<{ reference: string; productUrl: string }>,
-): Promise<Array<{ product?: StockmanProduct; error?: string }>> {
+): Promise<Array<{ product?: StockmanProduct; error?: string; errorKind?: StockmanProductReadErrorKind }>> {
   const { browser, context } = await openStockmanBrowser();
 
   try {
-    const results: Array<{ product?: StockmanProduct; error?: string }> = [];
+    const results: Array<{ product?: StockmanProduct; error?: string; errorKind?: StockmanProductReadErrorKind }> = [];
 
     for (const target of targets) {
       try {
@@ -1582,12 +1589,7 @@ export async function getStockmanProducts(
           ),
         });
       } catch (error) {
-        results.push({
-          error:
-            error instanceof Error
-              ? error.message
-              : "Lecture Stockman impossible.",
-        });
+        results.push(classifyStockmanProductReadError(error));
       }
     }
 

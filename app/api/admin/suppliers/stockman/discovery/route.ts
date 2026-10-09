@@ -8,6 +8,7 @@ import { getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import { auditStockmanUnresolved } from "@/lib/suppliers/stockman/unresolved-audit";
 import { auditStockmanDuplicateStructure } from "@/lib/suppliers/stockman/duplicate-structure-audit";
 import { isKnownFalseStockmanReference } from "@/lib/suppliers/stockman/reference-hygiene";
+import { stockmanPreparationHttpStatus, type StockmanProductReadErrorKind } from "@/lib/suppliers/stockman/product-read-error";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -180,10 +181,16 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const requestStartedAt = Date.now();
   const body = await request.json().catch(() => null);
   const action = body?.action;
   const denied = await authorize(action === "link" || action === "prepare_import");
   if (denied) return denied;
+  console.info("[STOCKMAN_DISCOVERY_ACTION]", JSON.stringify({
+    action: typeof action === "string" ? action : "invalid",
+    itemCount: Array.isArray(body?.items) ? body.items.length : undefined,
+    referenceCount: Array.isArray(body?.references) ? body.references.length : undefined,
+  }));
 
   if (action === "scan") {
     const parsed = scanSchema.safeParse(body);
@@ -281,7 +288,7 @@ export async function POST(request: Request) {
     let prepared = 0;
     const preparedReferences: string[] = [];
     const ignoredGhosts: string[] = [];
-    const errors: Array<{ reference: string; message: string }> = [...eligibilityErrors];
+    const errors: Array<{ reference: string; message: string; errorKind?: StockmanProductReadErrorKind }> = [...eligibilityErrors];
 
     for (let index = 0; index < eligible.length; index += 1) {
       const item = eligible[index];
@@ -300,7 +307,7 @@ export async function POST(request: Request) {
           ignoredGhosts.push(item.reference);
           continue;
         }
-        errors.push({ reference: item.reference, message: liveError });
+        errors.push({ reference: item.reference, message: liveError, errorKind: live?.errorKind });
         continue;
       }
       const product = live.product;
@@ -334,7 +341,29 @@ export async function POST(request: Request) {
     }
 
     const preparedTotal = await prisma.stockmanImportDraft.count({ where: { status: "PREPARED" } });
-    return NextResponse.json({ prepared, preparedReferences, ignoredGhosts, errors, preparedTotal });
+    const status = stockmanPreparationHttpStatus({ prepared, errors });
+    const supplierUnavailable = errors.some((item) => item.errorKind === "supplier_unavailable");
+    const message = status === 503
+      ? "STOCKMAN est temporairement indisponible. Aucun brouillon n’a été préparé ; réessayez plus tard sans relancer le crawl."
+      : status === 401
+        ? "La session STOCKMAN n’est plus authentifiée. Aucun brouillon n’a été préparé."
+        : status === 422
+          ? "Aucun brouillon n’a pu être préparé à partir des fiches STOCKMAN sélectionnées."
+          : undefined;
+    console.info("[STOCKMAN_PREPARE_IMPORT]", JSON.stringify({
+      outcome: status === 200 ? (errors.length ? "partial" : "prepared") : supplierUnavailable ? "supplier_unavailable" : "failed",
+      requested: normalized.length,
+      eligible: eligible.length,
+      prepared,
+      errors: errors.length,
+      ignoredGhosts: ignoredGhosts.length,
+      status,
+      durationMs: Date.now() - requestStartedAt,
+    }));
+    return NextResponse.json(
+      { prepared, preparedReferences, ignoredGhosts, errors, preparedTotal, message },
+      { status },
+    );
   }
 
   if (action === "link") {

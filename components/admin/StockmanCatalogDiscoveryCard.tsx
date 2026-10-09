@@ -1445,11 +1445,12 @@ export default function StockmanCatalogDiscoveryCard({
 
     setPreparingImports(true);
     setMessage(null);
+    let prepared = 0;
+    let processed = 0;
     try {
-      let prepared = 0;
       const errors: Array<{ reference?: unknown; message?: unknown }> = [];
       const ignoredGhosts: string[] = [];
-      // Lecture fournisseur par lots de 20 pour éviter un appel serveur trop long.
+      // Le pilote reste volontairement borné à deux lectures fournisseur par requête.
       const batchSize = pilot ? 2 : 20;
       for (let offset = 0; offset < rows.length; offset += batchSize) {
         const items = rows.slice(offset, offset + batchSize).map((row) => ({
@@ -1467,17 +1468,31 @@ export default function StockmanCatalogDiscoveryCard({
           },
         );
         const payload = await response.json().catch(() => ({}));
-        if (!response.ok)
+        const responseErrors: Array<{ reference?: unknown; message?: unknown }> = Array.isArray(payload.errors)
+          ? payload.errors.filter(
+              (entry: unknown): entry is { reference?: unknown; message?: unknown } =>
+                Boolean(entry && typeof entry === "object"),
+            )
+          : [];
+        if (!response.ok) {
+          const responseDetail = responseErrors
+            .slice(0, 2)
+            .map((entry) => `${String(entry.reference ?? "?")}: ${String(entry.message ?? "Erreur")}`)
+            .join(" · ");
           throw new Error(
-            payload.message ||
-              `Préparation impossible (lot ${Math.floor(offset / batchSize) + 1}).`,
+            `${payload.message || `Préparation impossible (lot ${Math.floor(offset / batchSize) + 1}).`}${responseDetail ? ` · ${responseDetail}` : ""}`,
           );
+        }
         prepared += Number(payload.prepared ?? 0);
-        if (Array.isArray(payload.errors)) errors.push(...payload.errors);
+        processed += items.length;
+        errors.push(...responseErrors);
         if (Array.isArray(payload.ignoredGhosts))
           ignoredGhosts.push(
             ...payload.ignoredGhosts.map((value: unknown) => String(value)),
           );
+        setMessage(
+          `Pilote STOCKMAN : ${processed}/${rows.length} référence(s) analysée(s), ${prepared} brouillon(s) préparé(s), ${errors.length} erreur(s). Aucun produit n’est publié.`,
+        );
       }
 
       // Recharge immédiatement le snapshot PostgreSQL recalculé afin que les
@@ -1521,9 +1536,7 @@ export default function StockmanCatalogDiscoveryCard({
       );
     } catch (error) {
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Préparation des références résolues impossible.",
+        `${prepared > 0 ? `${prepared} brouillon(s) déjà préparé(s). ` : "Aucun brouillon préparé. "}${error instanceof Error ? error.message : "Préparation des références résolues impossible."} Aucun produit n’est publié et le crawl ne doit pas être relancé.`,
       );
     } finally {
       setPreparingImports(false);
