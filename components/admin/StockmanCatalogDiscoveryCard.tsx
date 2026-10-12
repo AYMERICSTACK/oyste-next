@@ -1440,7 +1440,7 @@ export default function StockmanCatalogDiscoveryCard({
     const allRows = unresolvedAudit.rows.filter(
       (row) => row.decision === "to_import",
     );
-    const rows = pilot ? allRows.slice(0, 20) : allRows;
+    const rows = pilot ? allRows.slice(0, 2) : allRows;
     if (!rows.length) return;
 
     setPreparingImports(true);
