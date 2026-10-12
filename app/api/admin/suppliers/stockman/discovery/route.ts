@@ -4,7 +4,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { prisma } from "@/lib/db/prisma";
 import { getStockmanDiscoveryJob, startStockmanDiscoveryJob } from "@/lib/suppliers/stockman/discovery-jobs";
-import { getStockmanProducts } from "@/lib/suppliers/stockman/client";
+import { diagnoseStockmanNavigation, getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import { auditStockmanUnresolved } from "@/lib/suppliers/stockman/unresolved-audit";
 import { auditStockmanDuplicateStructure } from "@/lib/suppliers/stockman/duplicate-structure-audit";
 import { isKnownFalseStockmanReference } from "@/lib/suppliers/stockman/reference-hygiene";
@@ -30,6 +30,12 @@ const prepareImportSchema = z.object({
     category: z.string().nullable().optional(),
     sourceUrl: z.string().url(),
   })).min(1).max(100),
+});
+
+const navigationProbeSchema = z.object({
+  action: z.literal("navigation_probe"),
+  reference: z.string().min(2).max(31),
+  productUrl: z.string().url(),
 });
 
 const unresolvedAuditSchema = z.object({
@@ -229,6 +235,25 @@ export async function POST(request: Request) {
     }
     const audit = await auditStockmanDuplicateStructure(parsed.data.references);
     return NextResponse.json(audit, { headers: { "Cache-Control": "no-store" } });
+  }
+
+  if (action === "navigation_probe") {
+    const parsed = navigationProbeSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json(
+        { message: "Paramètres du diagnostic de navigation invalides." },
+        { status: 400 },
+      );
+    }
+    const diagnostic = await diagnoseStockmanNavigation(parsed.data.productUrl);
+    return NextResponse.json(
+      {
+        reference: parsed.data.reference.trim().toUpperCase(),
+        ...diagnostic,
+        message: "Diagnostic A/B/C terminé en lecture seule. Aucun import ni aucune écriture catalogue n’a été exécuté.",
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   if (action === "prepare_import") {

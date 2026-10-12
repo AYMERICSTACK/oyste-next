@@ -6,6 +6,13 @@ import {
   classifyStockmanProductReadError,
   type StockmanProductReadErrorKind,
 } from "@/lib/suppliers/stockman/product-read-error";
+import {
+  navigationProbeConclusion,
+  safeStockmanPath,
+  stockmanFrenchUrl,
+  type StockmanNavigationProbeLabel,
+  type StockmanNavigationProbeResult,
+} from "@/lib/suppliers/stockman/navigation-probe";
 import type {
   StockmanCommercialFamily,
   StockmanProduct,
@@ -36,6 +43,123 @@ function normalizeReference(reference: string) {
   }
 
   return normalizedReference;
+}
+
+async function navigationCookieSummary(context: BrowserContext) {
+  const cookies = await context.cookies(["https://www.stockman.fr/"]);
+  return {
+    total: cookies.length,
+    persistent: cookies.filter((cookie) => cookie.expires > 0).length,
+    aspNetSession: cookies.some((cookie) => cookie.name.trim().toLowerCase() === "asp.net_sessionid"),
+  };
+}
+
+async function runStockmanNavigationProbe(
+  context: BrowserContext,
+  probe: StockmanNavigationProbeLabel,
+  requestedUrl: string,
+): Promise<StockmanNavigationProbeResult> {
+  const page = await context.newPage();
+  const responses: StockmanNavigationProbeResult["redirects"] = [];
+  page.on("response", (response) => {
+    if (response.request().resourceType() !== "document") return;
+    const headers = response.headers();
+    responses.push({
+      status: response.status(),
+      path: safeStockmanPath(response.url()),
+      locationPath: headers.location ? safeStockmanPath(headers.location, response.url()) : null,
+    });
+  });
+
+  const before = await navigationCookieSummary(context);
+  const startedAt = Date.now();
+  try {
+    const response = await page.goto(requestedUrl, { waitUntil: "domcontentloaded", timeout: 12_000 });
+    const requestHeaders: Record<string, string> = response
+      ? await response.request().allHeaders().catch(() => ({}))
+      : {};
+    const browser = await page.evaluate(() => ({
+      userAgent: navigator.userAgent,
+      language: navigator.language,
+      platform: navigator.platform,
+      webdriver: navigator.webdriver,
+    })).catch(() => ({ userAgent: null, language: null, platform: null, webdriver: null }));
+    const after = await navigationCookieSummary(context);
+    return {
+      probe,
+      requestedPath: safeStockmanPath(requestedUrl),
+      finalPath: safeStockmanPath(page.url()),
+      status: response?.status() ?? null,
+      redirects: responses,
+      requestHeaders: {
+        userAgent: requestHeaders["user-agent"] ?? null,
+        acceptLanguage: requestHeaders["accept-language"] ?? null,
+        secChUa: requestHeaders["sec-ch-ua"] ?? null,
+      },
+      browser,
+      cookies: {
+        before: before.total,
+        after: after.total,
+        persistentBefore: before.persistent,
+        persistentAfter: after.persistent,
+        aspNetSessionBefore: before.aspNetSession,
+        aspNetSessionAfter: after.aspNetSession,
+      },
+      durationMs: Date.now() - startedAt,
+      error: null,
+    };
+  } catch {
+    const after = await navigationCookieSummary(context);
+    return {
+      probe,
+      requestedPath: safeStockmanPath(requestedUrl),
+      finalPath: page.url() ? safeStockmanPath(page.url()) : null,
+      status: null,
+      redirects: responses,
+      requestHeaders: { userAgent: null, acceptLanguage: null, secChUa: null },
+      browser: { userAgent: null, language: null, platform: null, webdriver: null },
+      cookies: {
+        before: before.total,
+        after: after.total,
+        persistentBefore: before.persistent,
+        persistentAfter: after.persistent,
+        aspNetSessionBefore: before.aspNetSession,
+        aspNetSessionAfter: after.aspNetSession,
+      },
+      durationMs: Date.now() - startedAt,
+      error: "navigation_failed",
+    };
+  } finally {
+    await page.close().catch(() => undefined);
+  }
+}
+
+export async function diagnoseStockmanNavigation(productUrl: string) {
+  const exactUrl = validateStockmanUrl(productUrl.trim());
+  const frenchUrl = stockmanFrenchUrl(exactUrl);
+  const { browser, context: authenticatedExactContext } = await openStockmanBrowser();
+  const initialState = await authenticatedExactContext.storageState();
+  const authenticatedFrenchContext = await browser.newContext({ storageState: initialState });
+  const anonymousFrenchContext = await browser.newContext();
+
+  try {
+    const results: StockmanNavigationProbeResult[] = [];
+    for (const [context, probe, url] of [
+      [authenticatedExactContext, "authenticated_exact", exactUrl],
+      [authenticatedFrenchContext, "authenticated_with_fr", frenchUrl],
+      [anonymousFrenchContext, "anonymous_with_fr", frenchUrl],
+    ] as const) {
+      const result = await runStockmanNavigationProbe(context, probe, url);
+      results.push(result);
+      console.info("[STOCKMAN_NAVIGATION_PROBE]", JSON.stringify(result));
+    }
+    return { results, conclusion: navigationProbeConclusion(results) };
+  } finally {
+    await authenticatedExactContext.close().catch(() => undefined);
+    await authenticatedFrenchContext.close().catch(() => undefined);
+    await anonymousFrenchContext.close().catch(() => undefined);
+    await browser.close().catch(() => undefined);
+  }
 }
 
 function compactDiagnosticText(value: string, maxLength = 2400) {

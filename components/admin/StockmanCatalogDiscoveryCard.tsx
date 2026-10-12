@@ -51,6 +51,7 @@ export default function StockmanCatalogDiscoveryCard({
   const activeJobRef = useRef<string | null>(null);
   const [linking, setLinking] = useState(false);
   const [preparingImports, setPreparingImports] = useState(false);
+  const [probingNavigation, setProbingNavigation] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -1540,6 +1541,61 @@ export default function StockmanCatalogDiscoveryCard({
       );
     } finally {
       setPreparingImports(false);
+    }
+  }
+
+  async function probeStockmanNavigation() {
+    const row = unresolvedAudit?.rows.find(
+      (item) => item.decision === "to_import",
+    );
+    if (!row) return;
+
+    setProbingNavigation(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/admin/suppliers/stockman/discovery", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "navigation_probe",
+          reference: row.reference,
+          productUrl: row.sourceUrl,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(
+          payload.message || "Diagnostic de navigation impossible.",
+        );
+      }
+      const labels: Record<string, string> = {
+        authenticated_exact: "A authentifiée exacte",
+        authenticated_with_fr: "B authentifiée /fr",
+        anonymous_with_fr: "C anonyme /fr",
+      };
+      const summary = Array.isArray(payload.results)
+        ? payload.results
+            .map(
+              (item: {
+                probe?: unknown;
+                status?: unknown;
+                finalPath?: unknown;
+              }) =>
+                `${labels[String(item.probe)] || String(item.probe)} : HTTP ${String(item.status ?? "absent")} → ${String(item.finalPath ?? "inconnu")}`,
+            )
+            .join(" · ")
+        : "Résultat détaillé disponible dans les logs Vercel.";
+      setMessage(
+        `Diagnostic navigation ${row.reference} terminé sans import ni écriture : ${summary} · conclusion=${String(payload.conclusion ?? "inconclusive")}.`,
+      );
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Diagnostic de navigation impossible.",
+      );
+    } finally {
+      setProbingNavigation(false);
     }
   }
 
@@ -4080,8 +4136,18 @@ export default function StockmanCatalogDiscoveryCard({
                           </div>
                           <button
                             type="button"
+                            onClick={() => void probeStockmanNavigation()}
+                            disabled={probingNavigation || preparingImports}
+                            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-xs font-black text-blue-800 disabled:opacity-50"
+                          >
+                            {probingNavigation
+                              ? "Diagnostic A/B/C…"
+                              : "Diagnostiquer la navigation"}
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => void prepareResolvedImports(true)}
-                            disabled={preparingImports}
+                            disabled={preparingImports || probingNavigation}
                             className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-700 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"
                           >
                             {preparingImports
