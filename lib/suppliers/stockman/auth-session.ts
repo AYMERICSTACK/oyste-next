@@ -1,9 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { mkdir } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { getStockmanAuthFile, stockmanAuthFileExists } from "@/lib/suppliers/stockman/browser";
 import { inspectStockmanSessionPersistence, loadStockmanSessionState, saveStockmanSessionState } from "@/lib/suppliers/stockman/session-store";
+import { validateSanitizedStockmanSession } from "@/lib/suppliers/stockman/session-validation";
 
 const STOCKMAN_HOME = "https://www.stockman.fr/";
 const TEST_URL = "https://www.stockman.fr/fr/diables-et-chariots-de-manutention--6/chariots-et-servantes--11/--1/chariot-acier-1000-x-700-mm-modulable-1-ou-2-timons-300-a-500-kg--CHM.aspx";
@@ -195,26 +196,24 @@ export async function confirmInteractiveStockmanLogin(jobId: string) {
     );
   }
 
+  const storageState = await job.context.storageState();
+  const validated = await validateSanitizedStockmanSession({
+    browser: job.browser,
+    candidateState: storageState,
+    checkCommercialAccess: (page) => checkCommercialAccess(page as Page),
+  });
+
+  // Rien n'est remplacé avant que l'état assaini destiné à Neon ait prouvé,
+  // dans un nouveau contexte, qu'il ouvre encore une vraie fiche commerciale.
+  await saveStockmanSessionState(validated.persistedState);
+
   const authFile = getStockmanAuthFile();
   await mkdir(path.dirname(authFile), { recursive: true });
-  const storageState = await job.context.storageState({ path: authFile });
-
-  // La session est chiffrée puis persistée en base pour être utilisable
-  // par les runtimes éphémères (Vercel) sans commiter stockman-auth.json.
-  await saveStockmanSessionState(storageState);
-
-  // On valide la session sauvegardée dans un nouveau contexte avant d'écraser
-  // définitivement l'état de connexion côté interface.
-  const verificationContext = await job.browser.newContext({ storageState: authFile });
-  try {
-    const verificationPage = await verificationContext.newPage();
-    const verification = await checkCommercialAccess(verificationPage);
-    if (!verification.stockFound || !verification.priceFound) {
-      throw new Error("La session a été sauvegardée mais ne restitue pas l’accès revendeur.");
-    }
-  } finally {
-    await verificationContext.close().catch(() => undefined);
-  }
+  await writeFile(
+    authFile,
+    JSON.stringify(validated.persistedState, null, 2),
+    "utf8",
+  );
 
   jobs.delete(jobId);
   await job.context.close().catch(() => undefined);

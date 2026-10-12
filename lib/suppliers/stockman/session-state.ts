@@ -1,4 +1,4 @@
-type StockmanStorageCookie = {
+export type StockmanStorageCookie = {
   name: string;
   domain: string;
   path: string;
