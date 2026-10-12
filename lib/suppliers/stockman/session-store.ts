@@ -3,6 +3,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
 import type { BrowserContext } from "playwright";
 
 import { prisma } from "@/lib/db/prisma";
+import { sanitizeStockmanStorageState } from "@/lib/suppliers/stockman/session-state";
 
 const SESSION_ID = "stockman-main";
 const AAD = Buffer.from("oyste-stockman-session-v1", "utf8");
@@ -70,7 +71,8 @@ function decryptState(payloadText: string): StockmanStorageState {
 }
 
 export async function saveStockmanSessionState(state: StockmanStorageState) {
-  const encryptedState = encryptState(state);
+  const sanitized = sanitizeStockmanStorageState(state);
+  const encryptedState = encryptState(sanitized.state);
   const validatedAt = new Date();
 
   await prisma.stockmanAuthSession.upsert({
@@ -151,5 +153,16 @@ export async function loadStockmanSessionState(): Promise<StockmanStorageState |
   });
 
   if (!record) return null;
-  return decryptState(record.encryptedState);
+  const sanitized = sanitizeStockmanStorageState(
+    decryptState(record.encryptedState),
+  );
+  if (sanitized.removedVolatileCookies > 0) {
+    console.info(
+      "[STOCKMAN_SESSION_SANITIZED]",
+      JSON.stringify({
+        removedVolatileCookies: sanitized.removedVolatileCookies,
+      }),
+    );
+  }
+  return sanitized.state;
 }
