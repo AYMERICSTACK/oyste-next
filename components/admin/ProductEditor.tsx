@@ -566,7 +566,7 @@ export default function ProductEditor({
       </div>
 
       <div className="mt-5 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm md:p-7">
+        <section className="min-w-0 rounded-[1.5rem] border border-slate-200 bg-white p-5 shadow-sm md:p-7">
           {active === "Informations" && (
             <div>
               <h2 className="text-xl font-black">Informations générales</h2>
