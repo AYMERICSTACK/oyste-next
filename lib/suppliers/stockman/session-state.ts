@@ -17,7 +17,7 @@ export type StockmanStorageStateLike = {
   }>;
 };
 
-const VOLATILE_STOCKMAN_COOKIE_NAMES = new Set(["asp.net_sessionid"]);
+const VOLATILE_STOCKMAN_COOKIE_NAMES = new Set<string>();
 
 export function sanitizeStockmanStorageState<T extends StockmanStorageStateLike>(
   state: T,
