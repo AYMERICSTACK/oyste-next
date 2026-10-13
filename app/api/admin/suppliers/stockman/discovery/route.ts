@@ -322,13 +322,11 @@ export async function POST(request: Request) {
         const liveError = live?.error || "Lecture Stockman impossible.";
         // V2.12.8.2 — si la fiche s'ouvre mais que le DOM commercial ne
         // contient pas cette référence, il s'agit d'un ancien faux positif du
-        // scanner. On le retire du référentiel persistant au lieu de le faire
-        // remonter éternellement comme produit à importer.
+        // scanner. On conserve les données existantes afin de permettre
+        // une vérification manuelle sans suppression automatique.
         if (/n['’]a pas été trouvée sur cette fiche Stockman/i.test(liveError)) {
-          await prisma.$transaction([
-            prisma.stockmanCatalogReference.deleteMany({ where: { reference: item.reference } }),
-            prisma.stockmanImportDraft.deleteMany({ where: { reference: item.reference } }),
-          ]);
+          // Ne jamais supprimer automatiquement un brouillon ou une référence.
+          // La fiche suspecte est signalée pour examen.
           ignoredGhosts.push(item.reference);
           continue;
         }
@@ -336,6 +334,15 @@ export async function POST(request: Request) {
         continue;
       }
       const product = live.product;
+
+      if (isKnownFalseStockmanReference(item.reference)) {
+        errors.push({
+          reference: item.reference,
+          message: "Référence technique ou faux positif STOCKMAN : préparation bloquée.",
+        });
+        continue;
+      }
+
       await prisma.stockmanImportDraft.upsert({
         where: { reference: item.reference },
         create: {
