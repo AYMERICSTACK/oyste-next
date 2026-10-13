@@ -1,3 +1,4 @@
+import { selectBestStockmanOccurrence } from "./occurrence-selection";
 import { createHash, randomUUID } from "node:crypto";
 import type { Prisma } from "@/generated/prisma/client";
 import { prisma } from "@/lib/db/prisma";
@@ -488,7 +489,7 @@ async function uniqueReferencesForMatching(jobId: string) {
   const byReference = new Map<string, StockmanDiscoveredReference>();
   for (const item of stored) {
     const occurrence = item.payload as unknown as StockmanDiscoveredReference;
-    if (!byReference.has(occurrence.reference) || stockmanUrlLanguage(occurrence.sourceUrl) === "fr" && stockmanUrlLanguage(byReference.get(occurrence.reference)!.sourceUrl) !== "fr") byReference.set(occurrence.reference, occurrence);
+    byReference.set(occurrence.reference, selectBestStockmanOccurrence(byReference.get(occurrence.reference), occurrence));
   }
   return [...byReference.values()];
 }
@@ -566,7 +567,7 @@ async function buildDiscovery(jobId: string): Promise<StockmanCatalogDiscovery> 
   ]);
   const occurrences = stored.map((item) => item.payload as unknown as StockmanDiscoveredReference);
   const byReference = new Map<string, StockmanDiscoveredReference>();
-  for (const occurrence of occurrences) if (!byReference.has(occurrence.reference) || stockmanUrlLanguage(occurrence.sourceUrl) === "fr" && stockmanUrlLanguage(byReference.get(occurrence.reference)!.sourceUrl) !== "fr") byReference.set(occurrence.reference, occurrence);
+  for (const occurrence of occurrences) byReference.set(occurrence.reference, selectBestStockmanOccurrence(byReference.get(occurrence.reference), occurrence));
   const references = [...byReference.values()];
   const durable = { ...baseDiagnostics(), ...json(job.diagnostics, baseDiagnostics()) };
   const matching = matchingState(durable.matching);
