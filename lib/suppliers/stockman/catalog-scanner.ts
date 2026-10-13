@@ -204,13 +204,18 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
-function referenceFromProductUrl(value: string) {
+export function referenceFromProductUrl(value: string) {
   try {
     const url = new URL(value);
     const file = decodeURIComponent(url.pathname).split("/").pop() ?? "";
-    const match = file.match(/--([A-Z0-9][A-Z0-9./_-]{1,30})\.aspx$/i);
+    const match = file.match(/--([A-Z0-9][A-Z0-9 ./_-]{1,30})\.aspx$/i);
     if (!match?.[1]) return null;
     const candidate = cleanReferenceToken(match[1]);
+    if (candidate.includes(" ")) {
+      return /^[A-Z0-9][A-Z0-9 ./_-]{1,30}$/.test(candidate) && /[A-Z]/.test(candidate)
+        ? candidate
+        : null;
+    }
     return isPlausibleReference(candidate, candidate) ? candidate : null;
   } catch {
     return null;
@@ -388,7 +393,7 @@ async function linksFrom(page: Page) {
   })));
 }
 
-async function commercialRows(page: Page): Promise<StockmanCommercialRowSnapshot[]> {
+export async function commercialRows(page: Page): Promise<StockmanCommercialRowSnapshot[]> {
   // V2.12.8.2 — source stricte : une variante n'est retenue que si Stockman
   // l'expose dans une vraie ligne commerciale avec son champ `ref_article`.
   // Les <article>/<li> et paragraphes SEO ne sont plus parcourus : des mots
@@ -431,7 +436,7 @@ async function commercialRows(page: Page): Promise<StockmanCommercialRowSnapshot
         ancestorClass: owner.getAttribute("class") ?? "",
         dataAttributes,
         // A generic commercial table is insufficient evidence of main variants.
-        isPrimaryFamilyTable: Boolean(table?.matches("[data-relation=primary], [data-relation=primary-variant]") || precedingHeadings.some((label) => /^(?:variantes? principales?|primary variants?)$/i.test(label.trim()))),
+        isPrimaryFamilyTable: Boolean(table?.matches("[data-relation=primary], [data-relation=primary-variant]") || table?.closest("#Content_table_articles") || precedingHeadings.some((label) => /^(?:variantes? principales?|primary variants?)$/i.test(label.trim()))),
         isCommercialTable: Boolean(table),
         rowIndex,
       });
