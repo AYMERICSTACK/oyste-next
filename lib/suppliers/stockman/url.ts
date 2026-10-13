@@ -26,8 +26,7 @@ export function canonicalizeStockmanUrl(value: string, base = "https://www.stock
     url.hash = "";
 
     url.pathname = url.pathname
-      .replace(/\/{2,}/g, "/")
-      .replace(/^\/fr(?=\/|$)/i, "") || "/";
+      .replace(/\/{2,}/g, "/") || "/";
 
     if (url.pathname.length > 1) url.pathname = url.pathname.replace(/\/+$/, "");
 

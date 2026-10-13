@@ -131,7 +131,7 @@ test("création atomique réutilise un job compatible, matching et réconciliati
   replace(prisma.stockmanCatalogReference, "updateMany", async () => ({ count: 0 }));
   replace(prisma.stockmanCatalogSnapshot, "create", async () => { snapshots++; return {}; });
   replace(prisma.stockmanCatalogSnapshot, "updateMany", async () => ({ count: 1 }));
-  const first = await startStockmanDiscoveryJob({ seedUrl: "http://stockman.fr/fr/" });
+  const first = await startStockmanDiscoveryJob({ seedUrl: "http://stockman.fr/" });
   const reused = await startStockmanDiscoveryJob({ seedUrl: "https://www.stockman.fr/" });
   assert.equal(first?.jobId, reused?.jobId); assert.equal(queueCreates, 1);
   job.phase = "MATCHING";
