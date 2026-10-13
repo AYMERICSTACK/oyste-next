@@ -263,7 +263,9 @@ export async function syncStockmanProduct(
   selectedFields: StockmanSyncField[] = ["price", "stock", "weight"],
   applyEnrichment = false,
 ): Promise<StockmanSyncResult> {
-  const fields = Array.from(new Set(selectedFields));
+  const fields = Array.from(new Set(selectedFields)).filter(
+    (field) => field !== "weight" || stockmanUsableWeight(product.weightKg) !== null,
+  );
   if (!fields.length) throw new Error("Sélectionnez au moins une donnée à synchroniser.");
 
   const reference = product.reference.trim().toUpperCase();
@@ -299,10 +301,12 @@ export async function syncStockmanProduct(
     };
     const changedFields = changedFieldsFor(previous, product, fields);
     const metadataChanged = sourceString(variant.sourceData, "sourceUrl") !== product.sourceUrl;
-    const categoryResolution = await resolveStockmanCategory({
-      sourceUrl: product.sourceUrl,
-      designation: product.designation,
-    });
+    const categoryResolution = applyEnrichment
+      ? await resolveStockmanCategory({
+          sourceUrl: product.sourceUrl,
+          designation: product.designation,
+        })
+      : null;
     const incomingFeatures = applyEnrichment ? (product.features ?? []) : [];
 
     if (changedFields.length || metadataChanged || Boolean(categoryResolution) || incomingFeatures.length > 0) {
@@ -388,10 +392,12 @@ export async function syncStockmanProduct(
   };
   const changedFields = changedFieldsFor(previous, product, fields);
   const metadataChanged = sourceString(existing.sourceData, "sourceUrl") !== product.sourceUrl;
-  const categoryResolution = await resolveStockmanCategory({
-    sourceUrl: product.sourceUrl,
-    designation: product.designation,
-  });
+  const categoryResolution = applyEnrichment
+    ? await resolveStockmanCategory({
+        sourceUrl: product.sourceUrl,
+        designation: product.designation,
+      })
+    : null;
 
   const seo = applyEnrichment ? buildStockmanSeo(product) : null;
 
