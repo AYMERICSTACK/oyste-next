@@ -11,6 +11,21 @@ const statusStyle = {
   Masqué: "bg-slate-100 text-slate-600 ring-slate-500/15",
 };
 
+const catalogueStock = (product: AdminCatalogueProduct): number => {
+  if (product.variants?.length) {
+    return product.variants.reduce((total, variant) => total + Math.max(0, variant.stock ?? 0), 0);
+  }
+  return product.stock ?? 0;
+};
+
+const cataloguePrice = (product: AdminCatalogueProduct): number | null => {
+  const variantPrices = (product.variants ?? [])
+    .map((variant) => variant.priceHT)
+    .filter((price): price is number => price !== null && price !== undefined && price > 0);
+
+  if (variantPrices.length) return Math.min(...variantPrices);
+  return product.minPriceHT ?? product.priceHT ?? null;
+};
 type SortKey = "name" | "manufacturer" | "price" | "stock" | "completeness";
 
 export default function CatalogueManager({
@@ -41,7 +56,7 @@ export default function CatalogueManager({
   const filtered = useMemo(() => {
     const result = products.filter((product) => {
       const search = `${product.name} ${product.code} ${product.manufacturer} ${product.categoryPath}`.toLowerCase();
-      const matchesStock = stock === "Tous" || (stock === "En stock" && (product.stock ?? 0) > 0) || (stock === "Rupture" && (product.stock ?? 0) <= 0);
+      const matchesStock = stock === "Tous" || (stock === "En stock" && catalogueStock(product) > 0) || (stock === "Rupture" && catalogueStock(product) <= 0);
       const matchesCompleteness = completeness === "Toutes" || (completeness === "Complètes" && product.completeness >= 70) || (completeness === "À compléter" && product.completeness < 70);
       return search.includes(query.toLowerCase())
         && (status === "Tous" || product.status === status)
@@ -55,8 +70,8 @@ export default function CatalogueManager({
       let comparison = 0;
       if (sortBy === "name") comparison = a.name.localeCompare(b.name, "fr");
       if (sortBy === "manufacturer") comparison = (a.manufacturer || "").localeCompare(b.manufacturer || "", "fr");
-      if (sortBy === "price") comparison = (a.priceHT ?? Number.MAX_SAFE_INTEGER) - (b.priceHT ?? Number.MAX_SAFE_INTEGER);
-      if (sortBy === "stock") comparison = (a.stock ?? 0) - (b.stock ?? 0);
+      if (sortBy === "price") comparison = (cataloguePrice(a) ?? Number.MAX_SAFE_INTEGER) - (cataloguePrice(b) ?? Number.MAX_SAFE_INTEGER);
+      if (sortBy === "stock") comparison = catalogueStock(a) - catalogueStock(b);
       if (sortBy === "completeness") comparison = a.completeness - b.completeness;
       return sortDirection === "asc" ? comparison : -comparison;
     });
@@ -132,11 +147,11 @@ export default function CatalogueManager({
         "Nom court": product.shortName || "",
         "Fournisseur": product.manufacturer || "Sans fournisseur",
         "Catégorie": product.categoryPath || "Non classé",
-        "Prix HT (€)": product.priceHT ?? null,
+        "Prix HT (€)": cataloguePrice(product),
         "Prix minimum HT (€)": product.minPriceHT ?? null,
         "Prix maximum HT (€)": product.maxPriceHT ?? null,
-        "Stock": product.stock ?? 0,
-        "État du stock": (product.stock ?? 0) > 0 ? "En stock" : "Rupture",
+        "Stock": catalogueStock(product),
+        "État du stock": catalogueStock(product) > 0 ? "En stock" : "Rupture",
         "Délai": product.delay || "",
         "Poids (kg)": product.weightKg ?? null,
         "Longueur colis (cm)": product.packageLengthCm ?? null,
@@ -290,7 +305,7 @@ export default function CatalogueManager({
             <td className="px-4 py-4"><div className="flex items-center gap-3"><button title="Épingler" className="text-slate-250 hover:text-amber-500"><Star size={15} /></button><div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">{product.images[0] ? <img src={product.images[0]} alt="" className="h-full w-full object-contain p-1" /> : <ImageIcon size={20} className="text-slate-300" />}</div><div className="min-w-0"><p className="max-w-[300px] truncate text-sm font-black text-slate-900">{product.name}</p><p className="mt-1 text-[11px] font-bold text-slate-400">{product.code}</p><p className="mt-1 text-[9px] font-bold text-slate-300">Modifié le {String(((pageStart + index) % 17) + 1).padStart(2, "0")}/07/2026 par Aymeric D.</p></div></div></td>
             <td className="px-4 py-4"><button onClick={() => { setSupplier(product.manufacturer || "Sans fournisseur"); setCurrentPage(1); }} className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-black text-slate-700 hover:bg-cyan-50 hover:text-[#007f8f]">{product.manufacturer || "Sans fournisseur"}</button></td>
             <td className="px-4 py-4"><p className="max-w-[220px] truncate text-xs font-bold text-slate-600">{product.categoryPath || "Non classé"}</p></td>
-            <td className="px-4 py-4"><p className="text-sm font-black">{product.priceHT != null ? `${product.priceHT.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "Sur étude"}</p><p className={`mt-1 text-[10px] font-black ${(product.stock ?? 0) > 0 ? "text-emerald-600" : "text-red-500"}`}>{(product.stock ?? 0) > 0 ? `${product.stock} en stock` : "Rupture"}</p></td>
+            <td className="px-4 py-4"><p className="text-sm font-black">{cataloguePrice(product) != null ? `${product.variants?.length ? "À partir de " : ""}${cataloguePrice(product)!.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "Sur étude"}</p><p className={`mt-1 text-[10px] font-black ${catalogueStock(product) > 0 ? "text-emerald-600" : "text-red-500"}`}>{catalogueStock(product) > 0 ? `${catalogueStock(product)} en stock${product.variants?.length ? ` (${product.variants.length} variantes)` : ""}` : "Rupture"}</p></td>
             <td className="px-4 py-4"><div className="flex items-center gap-3 text-xs font-bold text-slate-500"><span className="inline-flex items-center gap-1"><ImageIcon size={14} />{product.images.length}</span><span className="inline-flex items-center gap-1"><FileText size={14} />{product.documentCount}</span></div></td>
             <td className="px-4 py-4"><div className="w-28"><div className="mb-1 flex items-center justify-between text-[10px] font-black"><span>{product.completeness}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${product.completeness < 70 ? "bg-amber-500" : "bg-[#007f8f]"}`} style={{ width: `${product.completeness}%` }} /></div></div></td>
             <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ring-1 ring-inset ${statusStyle[product.status]}`}>{product.status}</span></td>

@@ -761,7 +761,7 @@ export default function ProductEditor({
                           key={variant.id}
                           className="rounded-xl border border-slate-200 bg-white p-4"
                         >
-                          <div className="grid gap-4 xl:grid-cols-[minmax(220px,1.1fr)_minmax(320px,1.5fr)_150px_minmax(280px,1.2fr)_190px] xl:items-start">
+                          <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3 items-start">
                             <div className="min-w-0">
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="text-xs font-black text-slate-950">
@@ -794,7 +794,7 @@ export default function ProductEditor({
                               ) : null}
                             </div>
 
-                            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                            <div className="grid min-w-0 grid-cols-2 gap-2">
                               <div className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5">
                                 <p className="text-[9px] font-black uppercase tracking-[0.1em] text-slate-400">
                                   Achat HT
