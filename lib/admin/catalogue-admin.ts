@@ -164,7 +164,7 @@ export async function getAdminCatalogueProductsFromDatabase(): Promise<AdminCata
       product.name,
       product.description,
       product.detailedDescription,
-      Number(product.priceHt) > 0 ? Number(product.priceHt) : null,
+      Number(product.priceHt) > 0 || product.variants.some((variant) => Number(variant.priceHt) > 0) ? 1 : null,
       images.length,
       product.features.length,
     ].filter(Boolean).length;
@@ -306,7 +306,7 @@ export async function getAdminCatalogueProductFromDatabase(
     product.name,
     product.description,
     product.detailedDescription,
-    Number(product.priceHt),
+    Number(product.priceHt) > 0 || product.variants.some((variant) => Number(variant.priceHt) > 0) ? 1 : null,
     images.length,
     product.features.length,
   ].filter(Boolean).length;
