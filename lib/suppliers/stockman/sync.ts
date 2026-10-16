@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db/prisma";
 import { resolveStockmanCategory } from "@/lib/suppliers/stockman/category";
 import { buildStockmanSeo } from "@/lib/suppliers/stockman/seo";
+import { selectStockmanDocumentsToAdd } from "@/lib/suppliers/stockman/document-selection";
 import type { Prisma } from "@/generated/prisma/client";
 import type {
   StockmanBulkTarget,
@@ -498,24 +499,30 @@ export async function syncStockmanProduct(
         });
       }
 
-      for (const [index, document] of (enrichment?.documents ?? []).entries()) {
-        await tx.productDocument.upsert({
-          where: { productId_url: { productId: existing.id, url: document.url } },
-          update: {
-            name: document.name,
-            type: document.type,
-            sourceUrl: document.url,
-          },
-          create: {
-            productId: existing.id,
-            name: document.name,
-            type: document.type,
-            url: document.url,
-            sourceUrl: document.url,
-            isPublic: true,
-            sortOrder: index,
-          },
+      if (enrichment?.documents.length) {
+        const existingDocuments = await tx.productDocument.findMany({
+          where: { productId: existing.id },
+          select: { name: true, type: true, url: true },
         });
+
+        const documentsToAdd = selectStockmanDocumentsToAdd(
+          existingDocuments,
+          enrichment.documents,
+        );
+
+        for (const [index, document] of documentsToAdd.entries()) {
+          await tx.productDocument.create({
+            data: {
+              productId: existing.id,
+              name: document.name,
+              type: document.type,
+              url: document.url,
+              sourceUrl: document.url,
+              isPublic: true,
+              sortOrder: existingDocuments.length + index,
+            },
+          });
+        }
       }
 
       if (enrichment?.features.length) {
