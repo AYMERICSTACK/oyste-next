@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db/prisma";
 import { resolveStockmanCategory } from "@/lib/suppliers/stockman/category";
 import { buildStockmanSeo } from "@/lib/suppliers/stockman/seo";
 import { selectStockmanDocumentsToAdd } from "@/lib/suppliers/stockman/document-selection";
+import { selectStockmanImagesToAdd } from "@/lib/suppliers/stockman/image-selection";
 import type { Prisma } from "@/generated/prisma/client";
 import type {
   StockmanBulkTarget,
@@ -467,38 +468,33 @@ export async function syncStockmanProduct(
         },
       });
 
-      // Les médias Stockman sont ajoutés sans supprimer les contenus OYSTE.
-      // Lorsqu'un vrai visuel fournisseur existe, il devient la source de vérité
-      // pour l'image principale : on retire d'abord l'ancien flag primaire, puis
-      // on marque explicitement la première image Stockman.
-      if ((enrichment?.images ?? []).length) {
-        await tx.productMedia.updateMany({
-          where: { productId: existing.id, isPrimary: true },
-          data: { isPrimary: false },
+      // Les photos OYSTE existantes restent intactes : ordre, texte et image principale.
+      // Seules les nouvelles URL fournisseur sont ajoutees en fin de galerie.
+      if (enrichment?.images.length) {
+        const existingImages = await tx.productMedia.findMany({
+          where: { productId: existing.id },
+          select: { url: true, sortOrder: true },
         });
-      }
 
-      for (const [index, image] of (enrichment?.images ?? []).entries()) {
-        await tx.productMedia.upsert({
-          where: { productId_url: { productId: existing.id, url: image.url } },
-          update: {
-            sourceUrl: image.url,
-            altText: image.altText || existing.name,
-            isPrimary: index === 0,
-            sortOrder: index,
-          },
-          create: {
-            productId: existing.id,
-            type: "IMAGE",
-            url: image.url,
-            sourceUrl: image.url,
-            altText: image.altText || existing.name,
-            isPrimary: index === 0,
-            sortOrder: index,
-          },
-        });
-      }
+        const imagesToAdd = selectStockmanImagesToAdd(
+          existingImages,
+          enrichment.images,
+        );
 
+        for (const image of imagesToAdd) {
+          await tx.productMedia.create({
+            data: {
+              productId: existing.id,
+              type: "IMAGE",
+              url: image.url,
+              sourceUrl: image.url,
+              altText: image.altText || existing.name,
+              isPrimary: image.isPrimary,
+              sortOrder: image.sortOrder,
+            },
+          });
+        }
+      }
       if (enrichment?.documents.length) {
         const existingDocuments = await tx.productDocument.findMany({
           where: { productId: existing.id },
