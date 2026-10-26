@@ -213,6 +213,29 @@ function directMatch(
   reason: string,
 ): StockmanCatalogMatch | null {
   const unique = uniqueCandidates(matches);
+
+  // Un parent et sa variante portant la meme reference ne constituent
+  // pas deux produits distincts. La variante est la cible commerciale.
+  const parentVariantPair =
+    unique.length === 2 &&
+    unique.filter((candidate) => candidate.targetType === "product").length === 1 &&
+    unique.filter((candidate) => candidate.targetType === "variant").length === 1 &&
+    unique[0].productId === unique[1].productId &&
+    unique.find((candidate) => candidate.targetType === "product")?.targetId ===
+      unique.find((candidate) => candidate.targetType === "variant")?.productId;
+
+  if (parentVariantPair) {
+    const variant = unique.find((candidate) => candidate.targetType === "variant")!;
+    return safeMatch(
+      item,
+      variant,
+      method,
+      confidence,
+      `${reason} Variante unique du produit parent portant la meme reference.`,
+      method === "normalized" ? variant.supplierCode : undefined,
+    );
+  }
+
   if (unique.length === 1) {
     return safeMatch(
       item,
