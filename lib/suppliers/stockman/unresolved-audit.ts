@@ -247,29 +247,21 @@ export async function auditStockmanUnresolved(items: StockmanCatalogMatch[]): Pr
     // de nom/code ne peut plus la bloquer : accessoire, batterie, roue,
     // station de charge, variante, etc. restent des références commerciales
     // autonomes chez le fournisseur.
-    const clearlyMissing = true;
-
-    if (clearlyMissing) {
-      rows.push({
-        reference: item.reference,
-        designation: item.designation,
-        sourceUrl: item.sourceUrl,
-        category: item.category,
-        previousState: item.catalogueState ?? "to_review",
-        decision: "to_import",
-        confidence: best ? Math.max(85, Math.round((1 - best.combined) * 100)) : 100,
-        reason: best
-          ? "Aucune référence STOCKMAN strictement identique dans OYSTE : référence fournisseur distincte à importer séparément ; les ressemblances avec un parent, accessoire ou modèle voisin ne constituent pas une correspondance."
-          : "Aucune référence STOCKMAN strictement identique dans OYSTE : référence fournisseur distincte à importer.",
-        candidates: ranked.map((entry) =>
-          toAuditCandidate(entry.candidate, entry.referenceScore, entry.designationScore, entry.categoryScore)),
-      });
-      continue;
-    }
-
-
+    // Une absence de correspondance exacte ne prouve pas
+    // qu'une reference doit etre importee.
+    rows.push({
+      reference: item.reference,
+      designation: item.designation,
+      sourceUrl: item.sourceUrl,
+      category: item.category,
+      previousState: item.catalogueState ?? "to_review",
+      decision: "ambiguous",
+      confidence: best ? Math.round(best.combined * 100) : 0,
+      reason: "Aucune correspondance exacte confirmee. Verification humaine requise avant toute importation.",
+      candidates: ranked.map((entry) =>
+        toAuditCandidate(entry.candidate, entry.referenceScore, entry.designationScore, entry.categoryScore)),
+    });
   }
-
   return {
     version: "V2.12.6",
     auditedAt: new Date().toISOString(),

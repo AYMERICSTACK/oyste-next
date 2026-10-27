@@ -1,3 +1,4 @@
+import { stockmanImportPreparationEnabled } from "@/lib/suppliers/stockman/prepare-import-policy";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
@@ -153,7 +154,7 @@ export async function GET(request: Request) {
         ...(item.targetId ? { targetId: item.targetId } : {}),
         ...(item.productId ? { productId: item.productId } : {}),
         ...(item.targetReference ? { targetReference: item.targetReference } : {}),
-        catalogueState: present ? "present" as const : missingKind === "confirmed_missing" ? "to_import" as const : "to_review" as const,
+        catalogueState: present ? "present" as const : stockmanUnconfirmedReferenceDecision(),
         importPrepared: prepared.has(item.reference.trim().toUpperCase()),
       };
     });
@@ -260,6 +261,18 @@ export async function POST(request: Request) {
     const parsed = prepareImportSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ message: "Les produits à préparer sont invalides." }, { status: 400 });
 
+    // STOCKMAN_PREPARE_IMPORT_POLICY_V1
+    // Fail closed : aucune approbation metier tracable n'est encore disponible.
+    if (!stockmanImportPreparationEnabled()) {
+      return NextResponse.json({
+        message: "Preparation STOCKMAN suspendue : approbation metier explicite requise.",
+        prepared: 0,
+        errors: parsed.data.items.map((item) => ({
+          reference: item.reference.trim().toUpperCase(),
+          message: "Preparation bloquee en attente de validation.",
+        })),
+      }, { status: 409 });
+    }
     const normalized = parsed.data.items.map((item) => ({ ...item, reference: item.reference.trim().toUpperCase() }));
     // V2.12.7 — la résolution finale V2.12.6 fait foi. Une référence peut
     // provenir de l'ancien groupe "à vérifier" : on ne la bloque donc plus
@@ -432,4 +445,13 @@ export async function POST(request: Request) {
   }
 
   return NextResponse.json({ message: "Action inconnue." }, { status: 400 });
+}
+
+
+/**
+ * Unconfirmed supplier references require manual review.
+ */
+function stockmanUnconfirmedReferenceDecision():
+  "present" | "to_import" | "to_review" {
+  return "to_review";
 }

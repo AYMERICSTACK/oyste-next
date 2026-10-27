@@ -84,7 +84,7 @@ function matchingState(value: unknown): MatchingState | null {
 function catalogueStateForMatch(match: StockmanCatalogMatch) {
   return match.status === "matched" || match.status === "already_linked"
     ? "present" as const
-    : match.status === "missing" && match.missingKind === "confirmed_missing"
+    : stockmanAutomaticImportRecommendationEnabled()
       ? "to_import" as const
       : "to_review" as const;
 }
@@ -786,4 +786,12 @@ export async function cancelStockmanDiscoveryJob(jobId: string) {
     where: { id: jobId, status: { in: ["QUEUED", "RUNNING"] } },
     data: { status: "CANCEL_REQUESTED", cancelRequestedAt: new Date() },
   })).count === 1;
+}
+
+
+/**
+ * Automatic supplier import recommendations remain disabled.
+ */
+function stockmanAutomaticImportRecommendationEnabled(): boolean {
+  return false;
 }
