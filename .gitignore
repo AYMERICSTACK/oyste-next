@@ -116,3 +116,5 @@ kito-weight-audit.txt
 
 tmp/invoices/
 export_ouvrages_2026.xlsm
+
+.stockman-private/

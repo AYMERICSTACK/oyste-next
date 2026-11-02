@@ -2,6 +2,7 @@ import { productPresentationSchema } from "./product-presentation";
 import { prisma } from "@/lib/db/prisma";
 import { getProductCardImages, type CatalogueProduct } from "./repository";
 import { getDatabaseProductsByCategory } from "./database-repository";
+import { getStockmanCategoryProducts } from "./stockman-category-products";
 import { legacyCategories, legacySuppliers, type PublicCategory } from "./presentation-defaults";
 import type { Category, Supplier } from "@/generated/prisma/client";
 export const visibleHome = <T extends { isActive: boolean; homeVisible: boolean; homeOrder: number }>(items: T[]) => items.filter(item => item.isActive && item.homeVisible).sort((a, b) => a.homeOrder - b.homeOrder);
@@ -53,8 +54,70 @@ export async function getPublicCategory(slug: string) {
   const { categories } = await getPublicPresentation();
   return categories.find(item => item.slug === slug && item.isActive && item.catalogueVisible);
 }
+
+// STOCKMAN_PUBLIC_FAMILIES_V43
+const stockmanAdditionalFamilies: Record<string, Array<[string, string]>> = {
+  "manutention-au-sol": [
+    ["Accessoires de grues d'atelier", "accessoires-grues-atelier"],
+    ["Accessoires de tables élévatrices", "accessoires-tables-elevatrices"],
+    ["Rétention et stockage des fûts", "retention-futs"],
+    ["Pneus pour chariots élévateurs", "pneus-chariots-elevateurs"],
+    ["Chariots rétractables", "chariot-retractable"],
+    ["Préparateurs de commandes", "preparateur-de-commandes"],
+    ["Tracteurs industriels", "tracteur-industriel"],
+    ["Manutention des fûts", "manutention-des-futs"],
+    ["Presses d'atelier", "presse-atelier"],
+    ["Équipements d'atelier", "equipement-atelier"]
+  ],
+  "stockage-emballage": [
+    ["Convoyeurs", "convoyeur"],
+    ["Feuillards et consommables", "feuillards-consommables"],
+    ["Machines pour adhésifs", "adhesif"],
+    ["Banderoleuses", "banderoleuse"],
+    ["Rayonnages et étagères", "rayonnage"]
+  ]
+};
+
 export function publicFamilies(categories: PublicCategory[], category: PublicCategory) {
-  return categories.filter(item => item.homeParentId === category.id && item.isActive && item.catalogueVisible).sort((a, b) => a.sortOrder - b.sortOrder).map(item => ({ ...item, title: item.publicLabel || item.name, href: item.publicHref || `/catalogue/${category.slug}?famille=${item.publicFamilySlug || item.slug}`, mode: item.publicHref?.startsWith("/configurateur") ? "configurator" as const : "catalogue" as const }));
+  // STOCKMAN_FAMILY_IMAGES_V59
+  // Chaque nouvelle famille recoit l'image d'un produit de sa famille.
+  const stockmanFamilyImages = new Map<string, string>();
+
+  if (stockmanAdditionalFamilies[category.slug]?.length) {
+    for (const product of getStockmanCategoryProducts(category.slug)) {
+      for (const familySlug of product.categories) {
+        if (stockmanFamilyImages.has(familySlug)) continue;
+
+        const image = getProductCardImages(product)[0];
+        if (image) stockmanFamilyImages.set(familySlug, image);
+      }
+    }
+  }
+
+  const existingFamilies = categories.filter(item => item.homeParentId === category.id && item.isActive && item.catalogueVisible).sort((a, b) => a.sortOrder - b.sortOrder).map(item => ({ ...item, title: item.publicLabel || item.name, href: item.publicHref || `/catalogue/${category.slug}?famille=${item.publicFamilySlug || item.slug}`, mode: item.publicHref?.startsWith("/configurateur") ? "configurator" as const : "catalogue" as const }));
+  const additional = (stockmanAdditionalFamilies[category.slug] || [])
+    .filter(([, slug]) => !existingFamilies.some(
+      family => family.publicFamilySlug === slug || family.slug === slug
+    ))
+    .map(([title, slug], index) => ({
+      ...category,
+      imageUrl: stockmanFamilyImages.get(slug) || null,
+      homeImageUrl: stockmanFamilyImages.get(slug) || null,
+      id: "stockman-family:" + category.slug + ":" + slug,
+      slug: category.slug + "-" + slug,
+      name: title,
+      title: title,
+      href: "/catalogue/" + category.slug + "?famille=" + slug,
+      mode: "catalogue" as const,
+      publicLabel: title,
+      publicFamilySlug: slug,
+      publicHref: "/catalogue/" + category.slug + "?famille=" + slug,
+      homeParentId: category.id,
+      parentId: category.id,
+      sortOrder: 1000 + index
+    }));
+
+  return [...existingFamilies, ...additional];
 }
 export function familyProducts(products: CatalogueProduct[], family: { id: string; publicFamilySlug: string | null }, legacyFilter: (items: CatalogueProduct[], slug?: string) => CatalogueProduct[]) {
   const direct = products.filter(product => product.categoryId === family.id);

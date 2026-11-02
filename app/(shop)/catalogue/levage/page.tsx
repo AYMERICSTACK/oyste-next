@@ -72,7 +72,7 @@ export default async function LevagePage({ searchParams }: { searchParams?: Prom
       {selectedFamilySlug && !showPalanChoice ? (
         <section className="bg-white py-10"><Container>
           <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-2xl font-black">{selectedType ? palanTypes.find((item) => item.id === selectedType)?.title : selectedFamily?.title}</h2><p className="mt-2 text-sm text-slate-600">{page.fields.content009}</p></div><a href={selectedFamilySlug === "palan" ? "/catalogue/levage?famille=palan" : "/catalogue/levage"} className="text-sm font-black text-[#007f8f]">{page.fields.content010}</a></div>
-          {products.length ? <CatalogProductGrid products={products.slice(0, 24)} /> : <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-sm font-bold text-orange-800">{page.fields.content011}</div>}
+          {products.length ? <CatalogProductGrid products={products} /> : <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-sm font-bold text-orange-800">{page.fields.content011}</div>}
         </Container></section>
       ) : null}
     </main>

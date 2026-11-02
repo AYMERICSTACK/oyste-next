@@ -1,4 +1,6 @@
-import { Fragment } from "react";
+import StockmanOysteSearchClient from "@/components/catalogue/StockmanOysteSearchClient";
+
+﻿import { Fragment } from "react";
 import { getEditorialPage, editorialIcon } from "@/lib/editorial";
 import { Boxes } from "lucide-react";
 import { getPublicPresentation } from "@/lib/catalogue/public-presentation";
@@ -23,7 +25,11 @@ export default async function CataloguePage() {
         </Container>
       </section>),
 "section2":(<section className="py-10 sm:py-12">
-        <Container><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{roots.map(category => { const legacy = catalogueUniverses.find(item => item.slug === category.slug); return <CategoryCard key={category.slug} slug={category.slug} title={category.publicLabel || category.name} subtitle={category.publicSubtitle || ""} countLabel="" description={category.description || ""} icon={legacy?.icon || Boxes} accent={legacy?.accent || "bg-[#007f8f]"} href={category.publicHref || `/catalogue/${category.slug}`} mode={legacy?.mode || "catalogue"} tags={category.publicTags} imageUrl={category.imageUrl} />; })}</div></Container>
-      </section>)} as Record<string,React.ReactNode>)[block.id]}</Fragment>)}</main>
+        <Container>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{roots.map(category => { const legacy = catalogueUniverses.find(item => item.slug === category.slug); return <CategoryCard key={category.slug} slug={category.slug} title={category.publicLabel || category.name} subtitle={category.publicSubtitle || ""} countLabel="" description={category.description || ""} icon={legacy?.icon || Boxes} accent={legacy?.accent || "bg-[#007f8f]"} href={category.publicHref || `/catalogue/${category.slug}`} mode={legacy?.mode || "catalogue"} tags={category.publicTags} imageUrl={category.imageUrl} />; })}</div></Container>
+      </section>)} as Record<string,React.ReactNode>)[block.id]}</Fragment>)}
+      <StockmanOysteSearchClient />
+</main>
   );
 }

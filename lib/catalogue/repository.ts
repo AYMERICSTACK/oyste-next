@@ -211,6 +211,14 @@ export const catalogueSubFamilies: Record<string, CatalogueSubFamily[]> = {
     { title: "Table élévatrice", href: "/catalogue/manutention-au-sol?famille=table-elevatrice" },
     { title: "Tireur pousseur", href: "/catalogue/manutention-au-sol?famille=tireur-pousseur" },
     { title: "Transpalette", href: "/catalogue/manutention-au-sol?famille=transpalette" },
+    // STOCKMAN_NAVIGATION_V42
+    { title: "Pneus pour chariots élévateurs", href: "/catalogue/manutention-au-sol?famille=pneus-chariots-elevateurs" },
+    { title: "Chariots rétractables", href: "/catalogue/manutention-au-sol?famille=chariot-retractable" },
+    { title: "Préparateurs de commandes", href: "/catalogue/manutention-au-sol?famille=preparateur-de-commandes" },
+    { title: "Tracteurs industriels", href: "/catalogue/manutention-au-sol?famille=tracteur-industriel" },
+    { title: "Manutention des fûts", href: "/catalogue/manutention-au-sol?famille=manutention-des-futs" },
+    { title: "Presses d'atelier", href: "/catalogue/manutention-au-sol?famille=presse-atelier" },
+    { title: "Équipements d'atelier", href: "/catalogue/manutention-au-sol?famille=equipement-atelier" },
   ],
   "motorisation-sew": [
     { title: "Huile", href: "/catalogue/motorisation-sew?famille=huile" },
@@ -222,6 +230,12 @@ export const catalogueSubFamilies: Record<string, CatalogueSubFamily[]> = {
     { title: "Équipement de quai", href: "/catalogue/stockage-emballage?famille=equipement-de-quai" },
     { title: "Kits de cerclage", href: "/catalogue/stockage-emballage?famille=kits-de-cerclage" },
     { title: "Outils de cerclage", href: "/catalogue/stockage-emballage?famille=outils-de-cerclage" },
+    // STOCKMAN_NAVIGATION_V42
+    { title: "Convoyeurs", href: "/catalogue/stockage-emballage?famille=convoyeur" },
+    { title: "Feuillards et consommables", href: "/catalogue/stockage-emballage?famille=feuillards-consommables" },
+    { title: "Machines pour adhésifs", href: "/catalogue/stockage-emballage?famille=adhesif" },
+    { title: "Banderoleuses", href: "/catalogue/stockage-emballage?famille=banderoleuse" },
+    { title: "Rayonnages et étagères", href: "/catalogue/stockage-emballage?famille=rayonnage" },
   ],
   "acces-hauteur": [
     { title: "Escabeau", href: "/catalogue/acces-hauteur?famille=escabeau" },
@@ -598,6 +612,20 @@ export function getSubFamilyBySlug(categorySlug: string, familySlug: string) {
 }
 
 export function filterProductsByFamily(products: CatalogueProduct[], familySlug?: string) {
+  // STOCKMAN_FAMILY_FILTER_V38
+  if (familySlug) {
+    return products.filter((product) => {
+      if (
+        product.id.startsWith("stockman-") &&
+        product.manufacturer === "STOCKMAN"
+      ) {
+        return product.categories.includes(familySlug);
+      }
+
+      return productMatchesFamily(product, familySlug);
+    });
+  }
+
   if (!familySlug) return products;
   return products.filter((product) => productMatchesFamily(product, familySlug));
 }

@@ -1,3 +1,4 @@
+import { getStockmanCategoryProducts } from "./stockman-category-products";
 import { applyProductPresentation, productPresentationSchema } from "./product-presentation";
 import "server-only";
 
@@ -569,7 +570,64 @@ export async function getDatabaseProductsByCategory(
     ...virtualProducts.filter((product) => !knownSlugs.has(product.slug)),
   ];
 
-  return filterProductsByFamily(mergedProducts, familySlug);
+
+  // STOCKMAN_GLOBAL_DEDUP_V54
+  const stockmanProducts = getStockmanCategoryProducts(normalizedSlug);
+
+  const normalizeReference = (value: string | null | undefined) =>
+    String(value || "").trim().toUpperCase();
+
+  const existingCodes = new Set(
+    mergedProducts.flatMap(product => [
+      product.code,
+      product.supplierCode,
+      ...(product.variants || []).flatMap(variant => [
+        variant.code,
+        variant.supplierCode
+      ])
+    ]).filter(Boolean).map(normalizeReference)
+  );
+
+  if (stockmanProducts.length > 0) {
+    const publishedReferences = await prisma.product.findMany({
+      where: {
+        publicationStatus: "PUBLISHED"
+      },
+      select: {
+        code: true,
+        supplierCode: true,
+        variants: {
+          select: {
+            code: true,
+            supplierCode: true
+          }
+        }
+      }
+    });
+
+    for (const product of publishedReferences) {
+      for (const reference of [
+        product.code,
+        product.supplierCode,
+        ...product.variants.flatMap(variant => [
+          variant.code,
+          variant.supplierCode
+        ])
+      ]) {
+        const normalized = normalizeReference(reference);
+        if (normalized) existingCodes.add(normalized);
+      }
+    }
+  }
+
+  const unifiedProducts = [
+    ...mergedProducts,
+    ...stockmanProducts.filter(product =>
+      !existingCodes.has(normalizeReference(product.code))
+    )
+  ];
+
+  return filterProductsByFamily(unifiedProducts, familySlug);
 }
 
 export async function getDatabaseProductBySlug(

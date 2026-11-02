@@ -1,3 +1,4 @@
+import { searchStockmanProducts } from "@/lib/catalogue/stockman-search";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getProductImageUrl } from "@/lib/product-images";
@@ -121,9 +122,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  return NextResponse.json({
-    query,
-    products: products.map((product) => {
+  const oysteResults = products.map((product) => {
       const searchProduct = product as SearchProduct;
       const matchedVariant = findMatchedVariant(searchProduct, query);
       return {
@@ -134,11 +133,52 @@ export async function GET(request: NextRequest) {
         href: matchedVariant
           ? `/catalogue/${getCatalogueUniverseSlug(searchProduct)}/${product.slug}?variant=${encodeURIComponent(matchedVariant.code)}`
           : `/catalogue/${getCatalogueUniverseSlug(searchProduct)}/${product.slug}`,
-        image: getProductImageUrl(matchedVariant?.imageReference || product.imageReference, matchedVariant?.code || product.code, matchedVariant?.supplierCode || product.supplierCode),
+        image: getProductImageUrl(
+          matchedVariant?.imageReference || product.imageReference,
+          matchedVariant?.code || product.code,
+          matchedVariant?.supplierCode || product.supplierCode
+        ),
         price: formatPrice(searchProduct, matchedVariant),
         configurable: product.experienceType === "CONFIGURABLE",
       };
-    }),
+    });
+
+  // STOCKMAN_GLOBAL_SEARCH_DEDUP_V56
+  // Lecture seule : toutes les references des produits publies.
+  const publishedReferences = await prisma.product.findMany({
+    where: {
+      publicationStatus: "PUBLISHED"
+    },
+    select: {
+      code: true,
+      supplierCode: true,
+      variants: {
+        select: {
+          code: true,
+          supplierCode: true
+        }
+      }
+    }
+  });
+
+  const existingCodes = publishedReferences.flatMap(product => [
+    product.code,
+    product.supplierCode || "",
+    ...product.variants.flatMap(variant => [
+      variant.code,
+      variant.supplierCode || ""
+    ])
+  ]);
+
+  const stockmanResults = searchStockmanProducts(
+    query,
+    existingCodes,
+    12
+  );
+
+  return NextResponse.json({
+    query,
+    products: [...oysteResults, ...stockmanResults],
     categories: Array.from(categoryMap.values()).slice(0, 4),
   });
 }
