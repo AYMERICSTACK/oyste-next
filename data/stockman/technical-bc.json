@@ -1,0 +1,44 @@
+{
+  "family": "BC",
+  "references": [
+    "BC10",
+    "BC20",
+    "BC30",
+    "BC50",
+    "BC100"
+  ],
+  "products": {
+    "BC10": {
+      "capacity": "1 000 kg",
+      "imageUrl": "https://www.stockman.fr/fr/upload/products_data/images/medium/griffe-accrochage-palan-mise-en-place-rapide-1000kg-BC10.jpg"
+    },
+    "BC20": {
+      "capacity": "2 000 kg",
+      "imageUrl": "https://www.stockman.fr/fr/upload/products_data/images/medium/griffe-accrochage-palan-mise-en-place-rapide-2000kg-BC20.jpg"
+    },
+    "BC30": {
+      "capacity": "3 000 kg",
+      "imageUrl": "https://www.stockman.fr/fr/upload/products_data/images/medium/griffe-accrochage-palan-mise-en-place-rapide-3000kg-BC30.jpg"
+    },
+    "BC50": {
+      "capacity": "5 000 kg",
+      "imageUrl": "https://www.stockman.fr/fr/upload/products_data/images/medium/griffe-accrochage-palan-mise-en-place-rapide-5000kg-BC50.jpg"
+    },
+    "BC100": {
+      "capacity": "10 000 kg",
+      "imageUrl": "https://www.stockman.fr/fr/upload/products_data/images/medium/griffe-accrochage-palan-mise-en-place-rapide-10000kg-BC100.jpg"
+    }
+  },
+  "gallery": [
+    "https://www.stockman.fr/fr/upload/products_data/images/medium/chariots-porte-palans-et-griffes-d'accrochage-BC20-stockman-1.jpg",
+    "https://www.stockman.fr/fr/upload/products_data/images/small/chariots-porte-palans-et-griffes-d'accrochage-BC20-2.jpg",
+    "https://www.stockman.fr/fr/upload/products_data/images/small/chariots-porte-palans-et-griffes-d'accrochage-BC-3.jpg",
+    "https://www.stockman.fr/fr/upload/products_data/images/small/chariots-porte-palans-et-griffes-d'accrochage-BC-4.jpg"
+  ],
+  "documents": [
+    {
+      "title": "Fiche technique BC",
+      "url": "https://www.stockman.fr/fr/upload/products_data/files/BC_DS_FR_1.pdf"
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { getStockmanSellingPriceHT } from "@/lib/catalogue/stockman-selling-prices";
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
@@ -325,8 +326,8 @@ export function getStockmanCategoryProducts(rayon: string): CatalogueProduct[] {
       categories: [destination.rayon, destination.famille],
       description: record.title,
       detailedDescription: "",
-      priceHT: null,
-      minPriceHT: null,
+      priceHT: getStockmanSellingPriceHT(reference),
+      minPriceHT: getStockmanSellingPriceHT(reference),
       delay: "",
       stock: null,
       imageRef: reference,

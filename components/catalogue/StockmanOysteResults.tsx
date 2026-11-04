@@ -1,3 +1,4 @@
+import { formatStockmanSellingPrice } from "@/lib/catalogue/stockman-selling-prices";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -64,7 +65,7 @@ export default function StockmanOysteResults({
             code={product.reference}
             name={product.title}
             family={product.subcategory || product.category}
-            price="Nous consulter"
+            price={formatStockmanSellingPrice(product.reference)}
             description=""
             href={
               "/catalogue/stockman/" +

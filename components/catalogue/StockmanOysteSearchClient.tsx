@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import ProductCard from "@/components/catalogue/ProductCard";
 
 type Product = {
+  priceHT?: number | null;
   reference: string;
   title: string;
   category: string;
@@ -78,7 +79,7 @@ export default function StockmanOysteSearchClient() {
             code={product.reference}
             name={product.title}
             family={product.subcategory || product.category}
-            price="Nous consulter"
+            price={typeof product.priceHT === "number" && product.priceHT > 0 ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(product.priceHT) + " HT" : "Nous consulter"}
             description=""
             href={
               "/catalogue/stockman/" +

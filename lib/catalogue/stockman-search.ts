@@ -1,3 +1,4 @@
+import { formatStockmanSellingPrice } from "@/lib/catalogue/stockman-selling-prices";
 
 import "server-only";
 import fs from "node:fs";
@@ -96,7 +97,7 @@ export function searchStockmanProducts(
       href: "/catalogue/stockman/" +
         encodeURIComponent(product.reference),
       image: product.imageUrl,
-      price: "Nous consulter",
+      price: formatStockmanSellingPrice(product.reference),
       configurable: false
     }));
 }

@@ -1,3 +1,4 @@
+import { formatStockmanSellingPrice } from "@/lib/catalogue/stockman-selling-prices";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -128,7 +129,7 @@ export default async function StockmanCatalogue({
             <select
               name="category"
               defaultValue={category}
-              className="rounded-xl border border-slate-200 bg-white px-4 py-3"
+              className="w-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white px-4 py-3"
             >
               <option value="all">
                 Toutes les catégories
@@ -160,7 +161,7 @@ export default async function StockmanCatalogue({
                 code={product.reference}
                 name={product.title}
                 family={product.category}
-                price="Nous consulter"
+                price={formatStockmanSellingPrice(product.reference)}
                 description={product.title}
                 href={
                   "/catalogue/stockman/" +
