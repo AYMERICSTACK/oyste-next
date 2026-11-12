@@ -1,3 +1,4 @@
+import type { StockmanAvailability } from "@/lib/suppliers/stockman/availability";
 import productsData from "@/data/catalogue/products.json";
 import categoriesData from "@/data/catalogue/categories.json";
 import statsData from "@/data/catalogue/stats.json";
@@ -9,6 +10,7 @@ export type CatalogueFeature = {
 };
 
 export type CatalogueVariant = {
+  mediaImages?: string[];
   id: string;
   code: string;
   supplierCode: string;
@@ -17,6 +19,7 @@ export type CatalogueVariant = {
   priceHT: number | null;
   delay: string;
   stock: number | null;
+  stockAvailability?: StockmanAvailability;
   weightKg?: number | null;
   packageLengthCm?: number | null;
   packageWidthCm?: number | null;
@@ -68,6 +71,7 @@ export type CatalogueProduct = {
   maxPriceHT?: number | null;
   delay: string;
   stock: number | null;
+  stockAvailability?: StockmanAvailability;
   weightKg?: number | null;
   packageLengthCm?: number | null;
   packageWidthCm?: number | null;
@@ -389,15 +393,39 @@ export function getProductConfiguratorHref(product: CatalogueProduct) {
 }
 
 export function getProductMarketingBadges(product: CatalogueProduct) {
-  if (product.presentationManagedKeys?.includes("marketingBadges")) return product.marketingBadges || [];
-  const configured = product.marketingBadges?.filter(Boolean) || [];
-  if (configured.length) return configured.slice(0, 4);
-  if (getProductExperienceType(product) === "CONFIGURABLE") {
-    return ["Produit sur mesure", "Configuration guidée", "Étude technique"];
-  }
-  return ["Achat en ligne", "Usage professionnel", "Sélection OYSTE"];
-}
+  // OYSTE_BADGES_PRIX_V1
+  const managed = product.presentationManagedKeys?.includes("marketingBadges");
+  const configured = (product.marketingBadges || []).filter(Boolean);
 
+  const badges = managed
+    ? configured
+    : configured.length
+      ? configured.slice(0, 4)
+      : getProductExperienceType(product) === "CONFIGURABLE"
+        ? ["Produit sur mesure", "Configuration guidée", "Étude technique"]
+        : ["Achat en ligne", "Usage professionnel", "Sélection OYSTE"];
+
+  if (getProductExperienceType(product) === "CONFIGURABLE") {
+    return badges;
+  }
+
+  const price = product.minPriceHT ?? product.priceHT;
+  const hasPrice =
+    typeof price === "number" &&
+    Number.isFinite(price) &&
+    price > 0;
+
+  if (hasPrice) {
+    return badges;
+  }
+
+  const safeBadges = badges.filter(
+    (badge) =>
+      !/^(achat en ligne|nous consulter)$/i.test(badge.trim())
+  );
+
+  return ["Nous consulter", ...safeBadges].slice(0, 4);
+}
 export function getProductFaq(product: CatalogueProduct): CatalogueFaqItem[] {
   if (product.presentationManagedKeys?.includes("faq")) return product.faq || [];
   if (product.faq?.length) return product.faq;
