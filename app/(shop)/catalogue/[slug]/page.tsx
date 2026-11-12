@@ -63,7 +63,7 @@ export default async function CatalogueUniversePage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ famille?: string }>;
+  searchParams?: Promise<{ famille?: string; type?: string }>;
 }) {
  const page=await getEditorialPage("families");
 
@@ -93,7 +93,54 @@ export default async function CatalogueUniversePage({
       return [familySlug, familySlug ? familyProducts(categoryProducts, family, filterProductsByFamily).length : 0];
     }),
   );
-  const premiumProducts: PremiumCatalogItem[] = products.map((product) => {
+  // Navigation Transpalettes : classement visuel sans modification Neon.
+  const transpaletteTypes = [
+    { slug: "manuel", label: "Manuels" },
+    { slug: "electrique", label: "Électriques" },
+    { slug: "haute-levee", label: "Haute levée" },
+    { slug: "peseur", label: "Peseurs" },
+    { slug: "tout-terrain", label: "Tout-terrain" },
+    { slug: "accessoires", label: "Accessoires" },
+    { slug: "autres", label: "Autres modèles" },
+  ];
+
+  const isTranspalette = selectedFamilySlug === "transpalette";
+  const selectedType = isTranspalette
+    ? resolvedSearchParams?.type
+    : undefined;
+
+  const transpaletteClass = (product: (typeof products)[number]) => {
+    const source = [
+      product.name,
+      product.shortName,
+      product.categoryPath,
+      ...(product.categories || []),
+    ].join(" ").normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+
+    if (/accessoire|option|batterie|chargeur|station de chargement/.test(source))
+      return "accessoires";
+    if (/tout[- ]terrain/.test(source)) return "tout-terrain";
+    if (/pesage|peseur|pes[eé]e/.test(source)) return "peseur";
+    if (/haute[- ]levee|haute levee|ciseaux/.test(source)) return "haute-levee";
+    if (/electrique|motorise|lithium/.test(source)) return "electrique";
+    if (/manuel|manuelle/.test(source)) return "manuel";
+    return "autres";
+  };
+
+  const visibleProducts = isTranspalette && selectedType
+    ? products.filter(product => transpaletteClass(product) === selectedType)
+    : products;
+
+  const typeCounts = Object.fromEntries(
+    transpaletteTypes.map(type => [
+      type.slug,
+      products.filter(product => transpaletteClass(product) === type.slug).length
+    ])
+  );
+
+  const premiumProducts: PremiumCatalogItem[] = visibleProducts.map((product) => {
     const isConfigurable = getProductExperienceType(product) === "CONFIGURABLE" || (!product.presentationManagedKeys?.includes("experienceType") && isPotenceProduct(product));
     const capacity = extractCapacity(product);
     const marketingBadges = getProductMarketingBadges(product);
@@ -174,6 +221,39 @@ export default async function CatalogueUniversePage({
               >
                 {page.fields.content004}</a>
             </div>
+
+            {isTranspalette ? (
+              <nav aria-label="Types de transpalettes" className="mb-8">
+                <div className="mb-3 text-sm font-bold text-slate-700">
+                  Choisir un type de transpalette
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`/catalogue/${slug}?famille=transpalette`}
+                    className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                      !selectedType
+                        ? "border-[#007f8f] bg-[#007f8f] text-white"
+                        : "border-slate-200 bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    Tous ({products.length})
+                  </a>
+                  {transpaletteTypes.map(type => (
+                    <a
+                      key={type.slug}
+                      href={`/catalogue/${slug}?famille=transpalette&type=${type.slug}`}
+                      className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                        selectedType === type.slug
+                          ? "border-[#007f8f] bg-[#007f8f] text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {type.label} ({typeCounts[type.slug]})
+                    </a>
+                  ))}
+                </div>
+              </nav>
+            ) : null}
 
             {premiumProducts.length > 0 ? (
               <PremiumCatalog products={premiumProducts} />
