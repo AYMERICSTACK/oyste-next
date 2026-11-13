@@ -114,6 +114,19 @@ function capacityInKg(variant: CatalogueVariant | undefined) {
 }
 
 
+// OYSTE_NO_DEGRESSIVE_V3
+function cleanOysteStockmanName(name: string): string {
+  return name
+    .replace(/\s*[-–—]?\s*Pour bénéficier des tarifs d[ée]gressifs\b.*$/i, "")
+    .trim();
+}
+
+function getOysteStockmanHandling(name: string): string | null {
+  return /timon non mont[ée]\s+au[- ]dessus de 3 unit[ée]s command[ée]es/i.test(name)
+    ? "Livraison : timon non monté au-delà de 3 unités commandées."
+    : null;
+}
+
 export default function ProductVariantSelector({
   productName,
   productCode,
@@ -185,6 +198,18 @@ export default function ProductVariantSelector({
   }, [initialOptions]);
 
   const selectedVariant = findMatchingVariant(variants, selectedOptions);
+
+  const rawOysteVariantName =
+    selectedVariant?.label || selectedVariant?.name || productName;
+  const stockmanForDisplay =
+    supplier?.trim().toUpperCase() === "STOCKMAN";
+  const cleanOysteVariantName = stockmanForDisplay
+    ? cleanOysteStockmanName(rawOysteVariantName)
+    : rawOysteVariantName;
+  const stockmanHandlingNote = stockmanForDisplay
+    ? getOysteStockmanHandling(rawOysteVariantName)
+    : null;
+
   const variantTechnicalLines = useMemo(
     () => Object.entries(selectedVariant?.options || {}).map(([label, value]) => ({ label, value })),
     [selectedVariant],
@@ -458,8 +483,13 @@ export default function ProductVariantSelector({
                 {isConfiguratorProduct ? "Votre solution sur mesure" : "Votre produit"}
               </p>
               <h2 className="mt-2 text-2xl font-black text-slate-950">
-                {formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
+                {formatCmuText(cleanOysteVariantName)}
               </h2>
+              {stockmanHandlingNote ? (
+                <p className="mt-2 text-xs font-semibold text-amber-800">
+                  {stockmanHandlingNote}
+                </p>
+              ) : null}
               <p className="mt-2 text-sm font-bold text-slate-500">
                 {commerce.content017}{selectedVariant?.code || productCode}
               </p>
@@ -565,7 +595,7 @@ export default function ProductVariantSelector({
               </Button>
             ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
               <AddToCartButton
-                name={formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
+                name={formatCmuText(cleanOysteVariantName)}
                 code={selectedVariant?.code || productCode}
                 family={familyLabel}
                 supplier={supplier}
@@ -596,7 +626,7 @@ export default function ProductVariantSelector({
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 p-3 shadow-[0_-12px_30px_rgba(15,23,42,0.12)] backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-7xl items-center gap-3">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-black text-slate-950">{selectedVariant?.label || productName}</p>
+            <p className="truncate text-xs font-black text-slate-950">{cleanOysteVariantName}</p>
             <p className="mt-0.5 text-sm font-black text-orange-600">
               {isConfiguratorProduct ? "Sur mesure" : formatPriceHT(displayedPriceHT)}
             </p>
@@ -607,7 +637,7 @@ export default function ProductVariantSelector({
             </a>
           ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
             <AddToCartButton
-              name={formatCmuText(selectedVariant?.label || selectedVariant?.name || productName)}
+              name={formatCmuText(cleanOysteVariantName)}
               code={selectedVariant?.code || productCode}
               family={familyLabel}
               supplier={supplier}
