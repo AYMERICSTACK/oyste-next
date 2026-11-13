@@ -144,6 +144,44 @@ export default async function CatalogueUniversePage({
     const isConfigurable = getProductExperienceType(product) === "CONFIGURABLE" || (!product.presentationManagedKeys?.includes("experienceType") && isPotenceProduct(product));
     const capacity = extractCapacity(product);
     const marketingBadges = getProductMarketingBadges(product);
+
+    // OYSTE_VARIANT_CARD_PRICES_V1
+    // Utilise uniquement les tarifs positifs des variantes deja presentes.
+    const parentPrice = product.minPriceHT ?? product.priceHT;
+    const hasParentPrice =
+      typeof parentPrice === "number" &&
+      Number.isFinite(parentPrice) &&
+      parentPrice > 0;
+
+    const variantPrices = (product.variants || [])
+      .map((variant) => variant.priceHT)
+      .filter(
+        (price): price is number =>
+          typeof price === "number" &&
+          Number.isFinite(price) &&
+          price > 0
+      );
+
+    const lowestVariantPrice = variantPrices.length
+      ? Math.min(...variantPrices)
+      : null;
+
+    const inheritedVariantPrice =
+      !hasParentPrice && lowestVariantPrice !== null
+        ? lowestVariantPrice
+        : null;
+
+    const displayPrice = hasParentPrice
+      ? parentPrice
+      : inheritedVariantPrice;
+
+    const displayPriceLabel = inheritedVariantPrice !== null
+      ? `À partir de ${inheritedVariantPrice.toLocaleString("fr-FR", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        })} € HT`
+      : formatPriceRange(product);
+
     return {
       id: product.id,featured:product.featured,sortOrder:product.sortOrder,presentationPriority:product.presentationManagedKeys?.some(key=>["featured","sortOrder"].includes(key)),
       code: product.code,
@@ -152,8 +190,8 @@ export default async function CatalogueUniversePage({
       description: getCustomerProductDescription(product),
       href: product.href,
       imageUrl: getProductCardImages(product)[0] || "",
-      priceLabel: isConfigurable ? "Configuration sur mesure" : formatPriceRange(product),
-      minPriceHT: product.minPriceHT ?? product.priceHT ?? null,
+      priceLabel: isConfigurable ? "Configuration sur mesure" : displayPriceLabel,
+      minPriceHT: displayPrice ?? null,
       badge: marketingBadges[0] || "Catalogue OYSTE",
       badges: marketingBadges,
       documentCount: getProductAvailableDocumentCount(product),
