@@ -129,9 +129,63 @@ export default async function CatalogueUniversePage({
     return "autres";
   };
 
+  // OYSTE_GERBEUR_FILTERS_V1
+  // Classement visuel uniquement, sans modification des produits.
+  const isGerbeur = selectedFamilySlug === "gerbeur";
+  const gerbeurTypes = [
+    { slug: "manuel", label: "Manuels" },
+    { slug: "semi-electrique", label: "Semi-électriques" },
+    { slug: "electrique", label: "Électriques" },
+    { slug: "embarque", label: "Embarqués" },
+    { slug: "elevateur", label: "Élévateurs" },
+    { slug: "accessoires", label: "Accessoires" },
+    { slug: "autres", label: "Autres modèles" },
+  ];
+
+  const gerbeurClass = (product: (typeof products)[number]) => {
+    const name = `${product.name} ${product.shortName || ""}`
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const path = `${product.categoryPath} ${(product.categories || []).join(" ")}`
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+    if (/accessoires? de gerbeur|accessoires? d.elevateur|pieces detachees/.test(path))
+      return "accessoires";
+    if (/^(accessoire|option|piece detachee|batterie seule|chargeur seul)\b/.test(name))
+      return "accessoires";
+    if (/elevateur|leve.charges?|leve.charge/.test(name))
+      return "elevateur";
+    if (/embarque|autoporte|autonome/.test(name))
+      return "embarque";
+    if (/semi.electrique|semi.motorise/.test(name))
+      return "semi-electrique";
+    if (/manuel|manuelle/.test(name) && !/electrique|motorise/.test(name))
+      return "manuel";
+    if (/electrique|motorise|lithium|batterie/.test(name))
+      return "electrique";
+    if (/gerbeurs? manuels?/.test(path))
+      return "manuel";
+    if (/gerbeurs? semi.electriques?/.test(path))
+      return "semi-electrique";
+    if (/gerbeurs? electriques?/.test(path))
+      return "electrique";
+    return "autres";
+  };
+
+  const selectedGerbeurType = isGerbeur
+    ? resolvedSearchParams?.type
+    : undefined;
+
+  const gerbeurCounts = Object.fromEntries(
+    gerbeurTypes.map(type => [
+      type.slug,
+      products.filter(product => gerbeurClass(product) === type.slug).length
+    ])
+  );
   const visibleProducts = isTranspalette && selectedType
     ? products.filter(product => transpaletteClass(product) === selectedType)
-    : products;
+    : isGerbeur && selectedGerbeurType
+      ? products.filter(product => gerbeurClass(product) === selectedGerbeurType)
+      : products;
 
   const typeCounts = Object.fromEntries(
     transpaletteTypes.map(type => [
@@ -293,6 +347,38 @@ export default async function CatalogueUniversePage({
               </nav>
             ) : null}
 
+            {isGerbeur ? (
+              <nav aria-label="Types de gerbeurs" className="mb-8">
+                <div className="mb-3 text-sm font-bold text-slate-700">
+                  Choisir un type de gerbeur
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`/catalogue/${slug}?famille=gerbeur`}
+                    className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                      !selectedGerbeurType
+                        ? "border-[#007f8f] bg-[#007f8f] text-white"
+                        : "border-slate-200 bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    Tous ({products.length})
+                  </a>
+                  {gerbeurTypes.map(type => (
+                    <a
+                      key={type.slug}
+                      href={`/catalogue/${slug}?famille=gerbeur&type=${type.slug}`}
+                      className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                        selectedGerbeurType === type.slug
+                          ? "border-[#007f8f] bg-[#007f8f] text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {type.label} ({gerbeurCounts[type.slug]})
+                    </a>
+                  ))}
+                </div>
+              </nav>
+            ) : null}
             {premiumProducts.length > 0 ? (
               <PremiumCatalog products={premiumProducts} />
             ) : (
