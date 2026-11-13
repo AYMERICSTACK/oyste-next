@@ -102,6 +102,35 @@ export default async function CatalogProductPage({
     optionSchema: effectiveOptionSchema,
   };
 
+  // OYSTE_DETAIL_VARIANT_PRICE_V2
+  // Prix des variantes existantes, sans modification de Neon.
+  const parentPrice = product.minPriceHT ?? product.priceHT;
+
+  const validVariantPrices = variants
+    .map(variant => variant.priceHT)
+    .filter(
+      (price): price is number =>
+        typeof price === "number" &&
+        Number.isFinite(price) &&
+        price > 0
+    );
+
+  const lowestVariantPrice = validVariantPrices.length
+    ? Math.min(...validVariantPrices)
+    : null;
+
+  const hasParentPrice =
+    typeof parentPrice === "number" &&
+    Number.isFinite(parentPrice) &&
+    parentPrice > 0;
+
+  const detailPriceLabel =
+    !hasParentPrice && lowestVariantPrice !== null
+      ? `À partir de ${lowestVariantPrice.toLocaleString("fr-FR", {
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2
+        })} € HT`
+      : formatPriceRange(product);
   const experienceType = getProductExperienceType(resolvedProduct);
   const isConfigurable = experienceType === "CONFIGURABLE";
   const configuratorHref = getProductConfiguratorHref(resolvedProduct);
@@ -173,7 +202,7 @@ export default async function CatalogProductPage({
 
           <div className="mt-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
             <div><p className="text-xs font-black uppercase tracking-[0.2em] text-orange-600">{familyLabel} {page.fields.content002}{product.parentCode || product.code}</p><h1 className="mt-2 text-3xl font-black leading-tight sm:text-4xl">{product.name}</h1></div>
-            <p className="text-lg font-black text-orange-600">{isConfigurable ? "Configuration sur mesure" : formatPriceRange(product)}</p>
+            <p className="text-lg font-black text-orange-600">{isConfigurable ? "Configuration sur mesure" : detailPriceLabel}</p>
           </div>
         </Container>
       </section>
