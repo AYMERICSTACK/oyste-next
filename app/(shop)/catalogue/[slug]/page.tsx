@@ -157,6 +157,13 @@ export default async function CatalogueUniversePage({
     // Accessoires autonomes : ne pas confondre avec un gerbeur complet.
     if (/^(?:potence\s*(?:\+|et|avec)\s*crochet\b|plateau\b|convoyeur\b|double\s+eperon\b|eperon\b|roto[\s-]*bobine\b)/.test(name))
       return "accessoires";
+    // OYSTE_GERBEUR_ACCESSORIES_V3
+    // Accessoires porte-bobines et rotators pour gerbeurs.
+    if (/^(?:double\s+)?axes?\s+porte[\s-]*bobines?\b/.test(name) ||
+        /^portes?[\s-]*bobines?\b/.test(name) ||
+        /^rotators?\b/.test(name))
+      return "accessoires";
+
     if (/elevateur|leve.charges?|leve.charge/.test(name))
       return "elevateur";
     // Embarque : uniquement les modeles explicitement embarques.
