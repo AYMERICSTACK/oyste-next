@@ -200,6 +200,9 @@ export default async function CatalogueUniversePage({
     const isConfigurable = getProductExperienceType(product) === "CONFIGURABLE" || (!product.presentationManagedKeys?.includes("experienceType") && isPotenceProduct(product));
     const capacity = extractCapacity(product);
     const marketingBadges = getProductMarketingBadges(product);
+    // OYSTE_GERBEUR_LABELS_V1
+    const isSemiElectricGerbeur =
+      isGerbeur && gerbeurClass(product) === "semi-electrique";
 
     // OYSTE_VARIANT_CARD_PRICES_V1
     // Utilise uniquement les tarifs positifs des variantes deja presentes.
@@ -242,7 +245,9 @@ export default async function CatalogueUniversePage({
       id: product.id,featured:product.featured,sortOrder:product.sortOrder,presentationPriority:product.presentationManagedKeys?.some(key=>["featured","sortOrder"].includes(key)),
       code: product.code,
       name: getProductCardTitle(product),
-      family: formatCategoryLabel(product.categoryPath),
+      family: isSemiElectricGerbeur
+        ? "Gerbeur semi-électrique"
+        : formatCategoryLabel(product.categoryPath),
       description: getCustomerProductDescription(product),
       href: product.href,
       imageUrl: getProductCardImages(product)[0] || "",
@@ -258,7 +263,9 @@ export default async function CatalogueUniversePage({
       manufacturer: product.manufacturer || "Non renseigné",
       capacityLabel: capacity.label,
       capacityKg: capacity.value,
-      productType: getProductTypeLabel(product, isConfigurable),
+      productType: isSemiElectricGerbeur
+        ? "Semi-électrique"
+        : getProductTypeLabel(product, isConfigurable),
     };
   });
   const isFamilyView = Boolean(selectedFamilySlug) || subFamilies.length === 0;
