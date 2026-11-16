@@ -154,7 +154,9 @@ export default async function CatalogueUniversePage({
       return "accessoires";
     if (/elevateur|leve.charges?|leve.charge/.test(name))
       return "elevateur";
-    if (/embarque|autoporte|autonome/.test(name))
+    // Embarque : uniquement les modeles explicitement embarques.
+    // Autoporte ne signifie pas embarque.
+    if (/embarque/.test(name) || /gerbeurs? embarques? autonomes?/.test(path))
       return "embarque";
     if (/semi.electrique|semi.motorise/.test(name))
       return "semi-electrique";
