@@ -152,6 +152,11 @@ export default async function CatalogueUniversePage({
       return "accessoires";
     if (/^(accessoire|option|piece detachee|batterie seule|chargeur seul)\b/.test(name))
       return "accessoires";
+
+    // OYSTE_GERBEUR_ACCESSORIES_V2
+    // Accessoires autonomes : ne pas confondre avec un gerbeur complet.
+    if (/^(?:potence\s*(?:\+|et|avec)\s*crochet\b|plateau\b|convoyeur\b|double\s+eperon\b|eperon\b|roto[\s-]*bobine\b)/.test(name))
+      return "accessoires";
     if (/elevateur|leve.charges?|leve.charge/.test(name))
       return "elevateur";
     // Embarque : uniquement les modeles explicitement embarques.
