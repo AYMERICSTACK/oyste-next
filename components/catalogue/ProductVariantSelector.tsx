@@ -267,6 +267,12 @@ export default function ProductVariantSelector({
     configuredDelay: selectedVariant?.delay,
     isConfiguratorProduct,
   });
+  // OYSTE_STOCKMAN_DELAY_GUARD_V1
+  // Un delai STOCKMAN non confirme ne doit pas permettre
+  // une commande directe.
+  const stockmanDelayUnconfirmed =
+    stockmanForDisplay && leadTimeInfo.label === "Délai à confirmer";
+
   const resolvedImageUrl = getProductImageUrl(
     selectedVariant?.imageRef || productCode,
     selectedVariant?.code || productCode,
@@ -593,7 +599,7 @@ export default function ProductVariantSelector({
               <Button href={configuratorHref} className="w-full justify-center py-4 text-base">
                 {commerce.content023}<ArrowRight size={18} />
               </Button>
-            ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
+            ) : (!stockmanDelayUnconfirmed && (selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
               <AddToCartButton
                 name={formatCmuText(cleanOysteVariantName)}
                 code={selectedVariant?.code || productCode}
@@ -635,7 +641,7 @@ export default function ProductVariantSelector({
             <a href={configuratorHref} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
               {commerce.content028}<ArrowRight size={17} />
             </a>
-          ) : ((selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
+          ) : (!stockmanDelayUnconfirmed && (selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
             <AddToCartButton
               name={formatCmuText(cleanOysteVariantName)}
               code={selectedVariant?.code || productCode}
