@@ -1,7 +1,7 @@
 "use client";
 import { useCommercialTexts } from "@/components/layout/CommercialTextProvider";
 
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { useRef } from "react";
 
 export type HomeCategoryRow = {
@@ -15,6 +15,7 @@ export type HomeCategoryRow = {
 function CategoryRow({ row }: { row: HomeCategoryRow }) {
   const commerce=useCommercialTexts();
   const railRef = useRef<HTMLDivElement>(null);
+  const scrollPrevious = () => railRef.current?.scrollBy({ left: -Math.max(260, railRef.current.clientWidth * 0.72), behavior: "smooth" });
   const scrollNext = () => railRef.current?.scrollBy({ left: Math.max(260, railRef.current.clientWidth * 0.72), behavior: "smooth" });
 
   return (
@@ -39,6 +40,7 @@ function CategoryRow({ row }: { row: HomeCategoryRow }) {
             </a>
           ))}
         </div>
+        {row.children.length > 3 ? <button type="button" onClick={scrollPrevious} aria-label={`Revenir aux sous-catégories précédentes ${row.title}`} className="absolute left-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 shadow-lg transition hover:border-orange-400 hover:text-orange-600"><ChevronLeft size={20} /></button> : null}
         {row.children.length > 3 ? <button type="button" onClick={scrollNext} aria-label={`Voir davantage de sous-catégories ${row.title}`} className="absolute right-0 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-950 shadow-lg transition hover:border-orange-400 hover:text-orange-600"><ChevronRight size={20} /></button> : null}
       </div>
     </article>
