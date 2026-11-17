@@ -624,7 +624,7 @@ export function productMatchesFamily(product: CatalogueProduct, familySlug: stri
   if (familySlug === "coins-roulants-et-patins-rouleurs") return /(coins roulants|patins rouleurs)/.test(value);
   if (familySlug === "cric-et-verin") return /(cric|verin|chandelle)/.test(value);
   if (familySlug === "diable") return value.includes("diable");
-  if (familySlug === "gerbeur") return value.includes("gerbeur");
+  if (familySlug === "gerbeur") return /gerbeur|elevateurs? leve.charges?/.test(value);
   if (familySlug === "grue-datelier") return value.includes("grue d'atelier") || value.includes("grue datelier");
   if (familySlug === "table-elevatrice") return value.includes("table elevatrice");
   if (familySlug === "tireur-pousseur") return value.includes("tireur pousseur");

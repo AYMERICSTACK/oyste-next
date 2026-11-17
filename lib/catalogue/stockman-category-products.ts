@@ -1,3 +1,4 @@
+import { isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
 import { getStockmanSellingPriceHT } from "@/lib/catalogue/stockman-selling-prices";
 import "server-only";
 import fs from "node:fs";
@@ -305,7 +306,7 @@ export function getStockmanCategoryProducts(rayon: string): CatalogueProduct[] {
     : [];
 
   return records.flatMap((record): CatalogueProduct[] => {
-    if (!record.reference || !record.title) return [];
+    if (!record.reference || isBlockedStockmanReference(record.reference) || !record.title) return [];
 
     const destination = classify(record);
     if (!destination || destination.rayon !== rayon) return [];
@@ -322,8 +323,12 @@ export function getStockmanCategoryProducts(rayon: string): CatalogueProduct[] {
       shortName: record.title,
       manufacturer: "STOCKMAN",
       categorySlug: destination.rayon,
-      categoryPath: destination.rayon + " > " + destination.famille,
-      categories: [destination.rayon, destination.famille],
+      // Keep the supplier subfamily for accurate OYSTE gerbeur filtering.
+      categoryPath: destination.rayon + " > " + destination.famille +
+        (destination.famille === "gerbeur" && record.subcategory ? " > " + record.subcategory : ""),
+      categories: destination.famille === "gerbeur" && record.subcategory
+        ? [destination.rayon, destination.famille, record.subcategory]
+        : [destination.rayon, destination.famille],
       description: record.title,
       detailedDescription: "",
       priceHT: getStockmanSellingPriceHT(reference),

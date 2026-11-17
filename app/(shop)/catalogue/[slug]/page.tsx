@@ -132,56 +132,45 @@ export default async function CatalogueUniversePage({
   // OYSTE_GERBEUR_FILTERS_V1
   // Classement visuel uniquement, sans modification des produits.
   const isGerbeur = selectedFamilySlug === "gerbeur";
+  // Seven Stockman subfamilies, plus a fallback for legacy OYSTE products.
   const gerbeurTypes = [
-    { slug: "manuel", label: "Manuels" },
-    { slug: "semi-electrique", label: "Semi-électriques" },
-    { slug: "electrique", label: "Électriques" },
-    { slug: "embarque", label: "Embarqués" },
-    { slug: "elevateur", label: "Élévateurs" },
-    { slug: "accessoires", label: "Accessoires" },
+    { slug: "elevateur", label: "Élévateurs lève-charge manuels" },
+    { slug: "manuel-aluminium", label: "Gerbeurs manuels aluminium" },
+    { slug: "manuel-acier", label: "Gerbeurs manuels acier" },
+    { slug: "semi-electrique", label: "Gerbeurs semi-électriques" },
+    { slug: "electrique", label: "Gerbeurs électriques" },
+    { slug: "embarque", label: "Gerbeurs embarqués autonomes" },
+    { slug: "accessoires", label: "Accessoires gerbeurs et élévateurs" },
     { slug: "autres", label: "Autres modèles" },
   ];
 
   const gerbeurClass = (product: (typeof products)[number]) => {
-    const name = `${product.name} ${product.shortName || ""}`
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    const path = `${product.categoryPath} ${(product.categories || []).join(" ")}`
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const normalize = (value: string) => value.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const name = normalize(`${product.name} ${product.shortName || ""}`);
+    const path = normalize(`${product.categoryPath} ${(product.categories || []).join(" ")}`);
 
-    if (/accessoires? de gerbeur|accessoires? d.elevateur|pieces detachees/.test(path))
-      return "accessoires";
-    if (/^(accessoire|option|piece detachee|batterie seule|chargeur seul)\b/.test(name))
-      return "accessoires";
+    // Supplier category wins over designation: aluminium references can be
+    // accessories, and embarked units can also be semi-electric.
+    if (/accessoires? de gerbeurs? et elevateurs? leve.charges?/.test(path)) return "accessoires";
+    if (/elevateurs? leve.charges? manuels?/.test(path)) return "elevateur";
+    if (/gerbeurs? manuels? aluminium/.test(path)) return "manuel-aluminium";
+    if (/gerbeurs? manuels? acier/.test(path)) return "manuel-acier";
+    if (/gerbeurs? semi.electriques?/.test(path)) return "semi-electrique";
+    if (/gerbeurs? electriques?/.test(path)) return "electrique";
+    if (/gerbeurs? embarques? autonomes?/.test(path)) return "embarque";
 
-    // OYSTE_GERBEUR_ACCESSORIES_V2
-    // Accessoires autonomes : ne pas confondre avec un gerbeur complet.
-    if (/^(?:potence\s*(?:\+|et|avec)\s*crochet\b|plateau\b|convoyeur\b|double\s+eperon\b|eperon\b|roto[\s-]*bobine\b)/.test(name))
+    // Legacy OYSTE records may lack the original supplier category.
+    if (/accessoires? de gerbeur|accessoires? d.elevateur|pieces detachees/.test(path) ||
+        /^(accessoire|option|piece detachee|batterie seule|chargeur seul|potence\s*(?:\+|et|avec)\s*crochet|plateau|convoyeur|double\s+eperon|eperon|roto[\s-]*bobine|(?:double\s+)?axes?\s+porte[\s-]*bobines?|portes?[\s-]*bobines?|rotators?)\b/.test(name))
       return "accessoires";
-    // OYSTE_GERBEUR_ACCESSORIES_V3
-    // Accessoires porte-bobines et rotators pour gerbeurs.
-    if (/^(?:double\s+)?axes?\s+porte[\s-]*bobines?\b/.test(name) ||
-        /^portes?[\s-]*bobines?\b/.test(name) ||
-        /^rotators?\b/.test(name))
-      return "accessoires";
-
-    if (/elevateur|leve.charges?|leve.charge/.test(name))
-      return "elevateur";
-    // Embarque : uniquement les modeles explicitement embarques.
-    // Autoporte ne signifie pas embarque.
-    if (/embarque/.test(name) || /gerbeurs? embarques? autonomes?/.test(path))
-      return "embarque";
-    if (/semi.electrique|semi.motorise/.test(name))
-      return "semi-electrique";
+    if (/elevateur|leve.charges?|leve.charge/.test(name)) return "elevateur";
+    if (/embarque/.test(name)) return "embarque";
+    if (/semi.electrique|semi.motorise/.test(name)) return "semi-electrique";
     if (/manuel|manuelle/.test(name) && !/electrique|motorise/.test(name))
-      return "manuel";
-    if (/electrique|motorise|lithium|batterie/.test(name))
-      return "electrique";
-    if (/gerbeurs? manuels?/.test(path))
-      return "manuel";
-    if (/gerbeurs? semi.electriques?/.test(path))
-      return "semi-electrique";
-    if (/gerbeurs? electriques?/.test(path))
-      return "electrique";
+      return /aluminium|alu\b/.test(name) ? "manuel-aluminium" : "manuel-acier";
+    if (/electrique|motorise|lithium|batterie/.test(name)) return "electrique";
+    if (/gerbeurs? manuels?/.test(path)) return "manuel-acier";
     return "autres";
   };
 
