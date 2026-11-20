@@ -377,11 +377,8 @@ export default function StockmanCatalogDiscoveryCard({
 
   useEffect(() => {
     if (!breadcrumbAudit?.finished) return;
-    setBreadcrumbPreviewSelected(
-      new Set(
-        breadcrumbChangePreview.changed.map((row: any) => String(row.id)),
-      ),
-    );
+    // V29 : aucune proposition n'est présélectionnée : validation humaine explicite.
+    setBreadcrumbPreviewSelected(new Set());
     setBreadcrumbPreviewFilter("all");
   }, [breadcrumbAudit?.finished, breadcrumbChangePreview.changed.length]);
 

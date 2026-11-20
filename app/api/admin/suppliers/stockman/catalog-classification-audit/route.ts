@@ -3,6 +3,7 @@ import productsData from "@/data/catalogue/products.json";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { prisma } from "@/lib/db/prisma";
 import { openStockmanBrowser } from "@/lib/suppliers/stockman/browser";
+import { stockmanCategorySemanticVeto, stockmanDesignationKind } from "@/lib/suppliers/stockman/category-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -222,7 +223,7 @@ function legacyCategory(code: string) {
 }
 
 const PRECISE_EXISTING_RULES: Array<{ markers: string[]; path: string; reason: string }> = [
-  { markers: ["diables-leve-charges-encombrantes"], path: "Manutention au sol\\Diable\\Diable aluminium et inox", reason: "chemin Stockman + taxonomie OYSTE existante : diable aluminium" },
+  { markers: ["diables-leve-charges-encombrantes"], path: "Manutention au sol\\Diable", reason: "chemin Stockman : diable lève-charge (matière non déduite)" },
   { markers: ["leve-futs"], path: "Manutention au sol\\Chariot et servante\\Chariot porte-fût", reason: "chemin Stockman + taxonomie OYSTE existante : chariot porte-fût" },
   { markers: ["transpalettes-peseurs"], path: "Manutention au sol\\Transpalette\\Transpalette peseur", reason: "chemin Stockman + taxonomie OYSTE existante : transpalette peseur" },
   { markers: ["plateformes-motorisees"], path: "Manutention au sol\\Chariot et servante\\Plateforme motorisée", reason: "chemin Stockman + taxonomie OYSTE existante : plateforme motorisée" },
@@ -307,12 +308,16 @@ function productKind(name: string, sourceUrl: string) {
   if (text.includes("produit arrete")) return "discontinued" as const;
   if (PRODUCT_ACCESSORY_URL_MARKERS.some((marker) => url.includes(marker))) return "accessory" as const;
   if (PRODUCT_ACCESSORY_PREFIXES.some((marker) => text.startsWith(normalized(marker)))) return "accessory" as const;
+  if (stockmanDesignationKind(name) === "accessory") return "accessory" as const;
   return "product" as const;
 }
 
 function categoryVeto(name: string, proposed: string | null, reason: string) {
   // Une correspondance explicite avec la taxonomie historique OYSTE est prioritaire.
   // Le veto métier protège uniquement contre les classifications déduites du chemin Stockman.
+  const semanticVeto = stockmanCategorySemanticVeto(name, proposed);
+  if (semanticVeto) return semanticVeto;
+  // Les catégories historiques restent prioritaires uniquement si la désignation métier les valide.
   if (reason.startsWith("taxonomie OYSTE historique")) return null;
   const text = normalized(name);
   if (!proposed) return null;
@@ -649,8 +654,8 @@ const BREADCRUMB_RULES: Array<{ markers: RegExp[]; paths: string[]; reason: stri
   },
   {
     markers: [/\bdiables?\s+leve[- ]charges?\s+encombrantes?\b/],
-    paths: ["Manutention au sol\\Diable\\Diable aluminium et inox", "Manutention au sol\\Diable"],
-    reason: "breadcrumb Stockman : diables lève-charges",
+    paths: ["Manutention au sol\\Diable"],
+    reason: "breadcrumb Stockman : diables lève-charges (matière à confirmer)",
   },
   {
     markers: [/\bdiables?\b/],
@@ -676,7 +681,7 @@ function breadcrumbCategory(levels: string[], productName = "") {
     };
   }
 
-  if (breadcrumbLooksLikeAccessory(levels)) {
+  if (breadcrumbLooksLikeAccessory(levels) || stockmanDesignationKind(productName) === "accessory") {
     return {
       path: null as string | null,
       kind: "accessory" as const,
@@ -684,11 +689,16 @@ function breadcrumbCategory(levels: string[], productName = "") {
     };
   }
 
+  if (stockmanDesignationKind(productName) === "review") {
+    return { path: null as string | null, kind: "review" as const, reason: "désignation ambiguë : ne pas déduire la catégorie du breadcrumb" };
+  }
   for (const rule of BREADCRUMB_RULES) {
     if (!rule.markers.some((marker) => marker.test(searchable))) continue;
     for (const path of rule.paths) {
       const existing = knownCategoryPath(path);
-      if (existing) return { path: existing, kind: "category" as const, reason: rule.reason };
+      if (existing && !stockmanCategorySemanticVeto(productName, existing)) {
+        return { path: existing, kind: "category" as const, reason: rule.reason };
+      }
     }
   }
   return {
@@ -915,6 +925,15 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
+      if (!target) {
+        rejected.push({ id, reason: "catégorie cible inexistante : aucune création automatique autorisée" });
+        continue;
+      }
+      const semanticVeto = stockmanCategorySemanticVeto(product.name, target.path);
+      if (semanticVeto) {
+        rejected.push({ id, reason: semanticVeto });
+        continue;
+      }
       const sourceData = cloneSourceData(product.sourceData);
       prepared.push({
         id,
@@ -935,70 +954,12 @@ export async function POST(request: NextRequest) {
     }
 
     const applied = await prisma.$transaction(async (tx) => {
-      const ensured = new Map<string, { id: string; path: string }>();
-
-      const ensureTarget = async (requestedPath: string) => {
-        const key = normalized(requestedPath);
-        const cached = ensured.get(key);
-        if (cached) return cached;
-
-        const parts = requestedPath.split("\\").map((part) => part.trim()).filter(Boolean);
-        let parentId: string | null = null;
-        let currentPath = "";
-        let finalId = "";
-
-        for (const name of parts) {
-          currentPath = currentPath ? `${currentPath}\\${name}` : name;
-
-          const existing: { id: string; path: string | null } | null =
-            await tx.category.findFirst({
-              where: {
-                OR: [
-                  { path: currentPath },
-                  { AND: [{ name }, { parentId }] },
-                ],
-              },
-              select: { id: true, path: true },
-            });
-
-          if (existing) {
-            finalId = existing.id;
-            parentId = existing.id;
-            if (!existing.path) {
-              await tx.category.update({
-                where: { id: existing.id },
-                data: { path: currentPath },
-              });
-            }
-            continue;
-          }
-
-          let slug = slugifyCategory(currentPath);
-          let suffix = 2;
-          while (await tx.category.findUnique({ where: { slug }, select: { id: true } })) {
-            slug = `${slugifyCategory(currentPath)}-${suffix++}`;
-          }
-
-          const created: { id: string } = await tx.category.create({
-            data: { name, slug, path: currentPath, parentId, isActive: true },
-            select: { id: true },
-          });
-          finalId = created.id;
-          parentId = created.id;
-        }
-
-        if (!finalId) throw new Error(`Impossible de résoudre la catégorie cible : ${requestedPath}`);
-        const result = { id: finalId, path: requestedPath };
-        ensured.set(key, result);
-        return result;
-      };
-
       const results: Array<{ id: string; code: string; from: string | null; to: string }> = [];
 
       for (const item of prepared) {
-        const target = item.categoryId
-          ? { id: item.categoryId, path: item.to }
-          : await ensureTarget(item.to);
+        // Seule une categorie OYSTE existante est admise. Aucune creation implicite.
+        if (!item.categoryId) throw new Error(`Categorie cible absente : ${item.to}`);
+        const target = { id: item.categoryId, path: item.to };
 
         const stockman = getStockmanData(item.sourceData);
         const previousHistory = Array.isArray(stockman.categoryClassificationHistory)
