@@ -17,7 +17,9 @@ export type StockmanStorageStateLike = {
   }>;
 };
 
-const VOLATILE_STOCKMAN_COOKIE_NAMES = new Set<string>(["asp.net_sessionid"]);
+// ASP.NET_SessionId est necessaire a la session revendeur STOCKMAN.
+// Il reste chiffre cote serveur dans le stockage Neon.
+const VOLATILE_STOCKMAN_COOKIE_NAMES = new Set<string>();
 
 export function sanitizeStockmanStorageState<T extends StockmanStorageStateLike>(
   state: T,
