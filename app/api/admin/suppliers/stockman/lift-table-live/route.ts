@@ -46,7 +46,7 @@ export async function GET(request: Request) {
         error: "Index absent, suspect ou reference deja rapprochee: lecture fournisseur suspendue.",
         index: validated }, 409);
     const config = PILOTS_V34[pilot];
-    const family = await getStockmanCommercialFamily(config.references[0], config.sourceUrl, { timeoutMs: 35000 });
+    const family = await getStockmanCommercialFamily(config.references[0], config.sourceUrl);
     return reply(auditLiftTableLiveV34(pilot, validated, family, new Date().toISOString()));
   } catch (error) {
     console.error("[STOCKMAN_LIFT_TABLE_LIVE_V34]", error instanceof Error ? error.message : "Erreur inconnue");
