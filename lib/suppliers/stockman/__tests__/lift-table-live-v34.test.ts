@@ -1,0 +1,18 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { auditLiftTableLiveV34, isPilotV34, PILOTS_V34 } from "../lift-table-live-v34";
+import type { StockmanCommercialFamily, StockmanProduct } from "../types";
+const config = PILOTS_V34.STF_N;
+const checkedAt = "2026-11-23T13:00:00.000Z";
+const index = config.references.map(reference => ({ reference, sourceUrl: config.sourceUrl, isActive: true, reconciliationStatus: "SOURCE_REVIEW", referenceQuality: "UNVERIFIED" }));
+const product = (reference: string, price = 200, stock = 5): StockmanProduct => ({ reference, designation: `Table ${reference}`, purchasePriceExVat: price, stock, weightKg: 50, sourceUrl: config.sourceUrl, readAt: checkedAt });
+const family = (products: StockmanProduct[], pageUrl = config.sourceUrl): StockmanCommercialFamily => ({ sourceUrl: config.sourceUrl, pageUrl, familyDesignation: "Tables manuelles", familyReference: "STF N", kind: "product_page", products });
+test("only two allowlisted pilots", () => { assert.equal(isPilotV34("STF_N"), true); assert.equal(isPilotV34("BS"), true); assert.equal(isPilotV34("HW"), false); });
+test("all three matching prices and numeric stocks visible but import blocked", () => { const r = auditLiftTableLiveV34("STF_N", index, family(config.references.map(x => product(x))), checkedAt); assert.equal(r.summary.withNumericPrice, 3); assert.equal(r.summary.withNumericStock, 3); assert.equal(r.summary.readyForImport, 0); assert.equal(r.rows[0].readyForImport, false); });
+test("missing and unexpected references distinctly reported", () => { const r = auditLiftTableLiveV34("STF_N", index, family([product("STF15N"), product("XYZ")]), checkedAt); assert.deepEqual(r.summary.missingReferences, ["STF30N", "STF50N"]); assert.deepEqual(r.summary.unexpectedReferences, ["XYZ"]); });
+test("price on request is never numeric price evidence", () => { const p = {...product("STF15N"),priceOnRequest:true}; const r = auditLiftTableLiveV34("STF_N", index, family([p]), checkedAt); assert.equal(r.rows[0].purchasePriceExVat,null); assert.ok(r.rows[0].blockers.includes("PURCHASE_PRICE_NOT_NUMERIC")); });
+test("stock on request is never numeric stock evidence", () => { const p = {...product("STF15N"),stockOnRequest:true}; const r = auditLiftTableLiveV34("STF_N", index, family([p]), checkedAt); assert.equal(r.rows[0].supplierStock,null); assert.ok(r.rows[0].blockers.includes("SUPPLIER_STOCK_NOT_CONFIRMED")); });
+test("index and existing product reconciliation block", () => { const broken = index.map(x=>({...x})); broken[0].reconciliationStatus="CONFIRMED_IN_OYSTE"; const r = auditLiftTableLiveV34("STF_N",broken,family([product("STF15N")]),checkedAt); assert.ok(r.rows[0].blockers.includes("INDEX_RECONCILIATION_BLOCKED")); });
+test("supplier redirects to another page are not verified", () => { const r = auditLiftTableLiveV34("STF_N",index,family([product("STF15N")],"https://www.stockman.fr/autre.aspx"),checkedAt); assert.equal(r.summary.sourcePageVerified,false); assert.ok(r.rows[0].blockers.includes("SOURCE_PAGE_NOT_CONFIRMED")); });
+test("duplicate supplier rows are blocked", () => { const r = auditLiftTableLiveV34("STF_N",index,family([product("STF15N"),product("STF15N")]),checkedAt); assert.deepEqual(r.summary.duplicateSupplierReferences,["STF15N"]); assert.ok(r.rows[0].blockers.includes("DUPLICATE_SUPPLIER_ROW")); });
+test("unsafe media URLs are excluded", () => { const p={...product("STF15N"), images:[{url:"http://evil.example/a.jpg"},{url:"https://www.stockman.fr/a.jpg"}]}; const r=auditLiftTableLiveV34("STF_N",index,family([p]),checkedAt); assert.equal(r.rows[0].images.length,1); });
