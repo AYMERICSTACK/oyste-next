@@ -38,11 +38,12 @@ export async function GET(request: Request) {
     if (category && category.length > 250) return NextResponse.json({ error: "Categorie trop longue." }, { status: 400 });
     const filtered = rows.filter(r => (!state || r.state === state) && (!category || r.category === category));
     return NextResponse.json({
-      version: "STOCKMAN_IMPORT_PLANNING_V31",
+      version: "STOCKMAN_IMPORT_PLANNING_V31_1",
       mode: "READ_ONLY",
       generatedAt: new Date().toISOString(),
       snapshot: snapshot ? { finishedAt: snapshot.finishedAt.toISOString(), referencesCount: snapshot.referencesCount } : null,
       summary,
+      indexComparison: snapshot ? { snapshotReferencesCount: snapshot.referencesCount, currentIndexEntries: rows.length, delta: rows.length - snapshot.referencesCount, note: "Ecart entre l index actuel et le dernier snapshot termine : ne prouve ni doublons ni nouveaux produits." } : null,
       pagination: { offset, limit, filteredTotal: filtered.length, nextOffset: offset + limit < filtered.length ? offset + limit : null },
       rows: filtered.slice(offset, offset + limit),
       warnings: [
@@ -50,10 +51,12 @@ export async function GET(request: Request) {
         "ACCESSORY_PATH_REVIEW est un indice de navigation et non une preuve de nature commerciale.",
         "PREPARED_DRAFT ne prouve ni stock actuel, ni prix valide, ni autorisation de publication.",
         "Aucun import ni reclassement automatique n'est autorise par cet apercu.",
+        "Les familles sont deduites des segments de navigation de l URL STOCKMAN, pas du champ category brut souvent corrompu.",
+        "Les references suspectes sont seulement signalees : aucune suppression et aucune reactivation automatique.",
       ],
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("[STOCKMAN_IMPORT_PLANNING_V31]", error instanceof Error ? error.message : "Erreur inconnue");
+    console.error("[STOCKMAN_IMPORT_PLANNING_V31_1]", error instanceof Error ? error.message : "Erreur inconnue");
     return NextResponse.json({ error: "Apercu indisponible." }, { status: 500, headers: { "Cache-Control": "no-store" } });
   }
 }

@@ -26,3 +26,29 @@ test("les totaux par categorie ne comptent pas plusieurs fois une reference", ()
   const result = summarizeStockmanPlanning(rows);
   assert.equal(result.totals.all, 2); assert.equal(result.totals.ALREADY_LINKED, 1); assert.equal(result.families[0].total, 2);
 });
+
+test("les 2 niveaux de la vraie URL STOCKMAN remplacent la categorie brute >", async () => {
+  const { supplierFamilyFromUrl } = await import("../import-planning");
+  const url = "https://www.stockman.fr/transpalettes--17/transpalettes-manuels--110/--1/transpalette-manuel-3000-kg--AC30.aspx";
+  assert.equal(supplierFamilyFromUrl(url), "transpalettes / transpalettes manuels");
+  const [row] = planStockmanReferences([base({ category: ">", sourceUrl: url })], []);
+  assert.equal(row.category, "transpalettes / transpalettes manuels");
+  assert.equal(row.categoryEvidence, "SOURCE_URL");
+  assert.equal(row.rawIndexCategory, ">");
+});
+test("une categorie brute de type fiche HTML n est pas une famille", () => {
+  const [row] = planStockmanReferences([base({ category: "LP\n Elevateur leve charge\n Plus d'infos ici", sourceUrl: "https://www.stockman.fr/bad.aspx" })], []);
+  assert.equal(row.category, "Famille fournisseur a verifier");
+  assert.equal(row.categoryEvidence, "UNKNOWN");
+});
+test("les pseudo references date et tension sont signalees sans suppression", async () => {
+  const { referenceLooksSuspicious } = await import("../import-planning");
+  assert.equal(referenceLooksSuspicious("18/09/2026"), true);
+  assert.equal(referenceLooksSuspicious("220V."), true);
+  assert.equal(referenceLooksSuspicious("48V/20"), true);
+  assert.equal(referenceLooksSuspicious("AC30"), false);
+  const rows = planStockmanReferences([base({ reference: "18/09/2026" }), base({ reference: "AC30" })], []);
+  const summary = summarizeStockmanPlanning(rows);
+  assert.equal(summary.totals.all, 2);
+  assert.equal(summary.quality.suspectReferences, 1);
+});
