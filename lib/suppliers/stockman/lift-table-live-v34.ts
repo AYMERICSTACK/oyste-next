@@ -83,7 +83,7 @@ export function auditLiftTableLiveV34(
       supplierStock: item && validStock(item.stock) && !item.stockOnRequest ? item.stock : null,
       stockOnRequest: item?.stockOnRequest ?? null,
       weightKg: item && item.weightKg != null && Number.isFinite(item.weightKg) && item.weightKg >= 0 ? item.weightKg : null,
-      barcode: item?.barcode ?? null,
+      barcode: null,
       sourceReadAt: item?.readAt ?? null,
       images: (item?.images ?? []).filter(i => safeMedia(i.url)).slice(0, 10),
       documents: (item?.documents ?? []).filter(d => safeMedia(d.url)).slice(0, 10),
