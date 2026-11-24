@@ -666,6 +666,16 @@ async function readStockmanCommercialFamily(
     // Certaines références vivantes pointent encore sur une page catégorie.
     // On suit uniquement un vrai lien produit correspondant à la référence de la fiche.
     if (rows.length === 0) {
+      const initialPath = new URL(page.url()).pathname;
+      const sourcePath = new URL(sourceUrl).pathname;
+
+      console.info("[STOCKMAN_V34_NAVIGATION]", JSON.stringify({
+        reference: normalizedHint,
+        sourcePath,
+        initialPath,
+        initialRows: rows.length,
+      }));
+
       const detailUrl = await findStockmanDetailUrl(page, normalizedHint);
       if (detailUrl && detailUrl !== page.url()) {
         await page.goto(validateStockmanUrl(detailUrl), {
