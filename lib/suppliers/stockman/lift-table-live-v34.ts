@@ -3,7 +3,7 @@ import type { StockmanCommercialFamily } from "./types";
 
 export const PILOTS_V34 = {
   STF_N: {
-    sourceUrl: "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-manuelles--97/--1/table-elevatrice-manuelle-economique-150-a-500-kg--STF%20N.aspx",
+    sourceUrl: "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-manuelles--97/--1/table-elevatrice-manuelle-economique-150-a-500-kg--STF%20N.aspx?src=int",
     references: ["STF15N", "STF30N", "STF50N"],
   },
   BS: {
