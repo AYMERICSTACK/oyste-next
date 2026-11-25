@@ -64,6 +64,9 @@ function getModeFromKey(value: string | undefined): StripeMode {
 }
 
 function getCredentials() {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") {
+    return { secretKey: null, publishableKey: null, secretMode: getModeFromKey(undefined), publishableMode: getModeFromKey(undefined) };
+  }
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
 
@@ -225,7 +228,7 @@ export type StripeCheckoutSession = {
 };
 
 function requireSecretKey() {
-  const key = process.env.STRIPE_SECRET_KEY?.trim();
+  const key = getCredentials().secretKey;
 
   if (!key) {
     throw new Error("STRIPE_SECRET_KEY est manquante.");

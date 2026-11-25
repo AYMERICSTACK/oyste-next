@@ -5,8 +5,8 @@ import { verifiedDatabaseUrl } from "../lib/db/verified-database-url";
 assert.equal(process.env.VERCEL_ENV, "preview", "Recette Vercel uniquement");
 assert.equal(process.env.VERCEL_GIT_COMMIT_REF, "recette-stockman-isolee");
 assert.equal(process.env.OYSTE_STOCKMAN_TEST, "true");
-for (const key of ["CRON_SECRET", "STRIPE_SECRET_KEY", "SENDCLOUD_SECRET_KEY", "UPSTASH_REDIS_REST_TOKEN", "BLOB_READ_WRITE_TOKEN"]) {
-  assert(!process.env[key], `Le service ${key} doit être déconnecté en recette`);
+for (const key of ["CRON_SECRET", "STRIPE_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET", "RESEND_API_KEY", "SENDCLOUD_PUBLIC_KEY", "SENDCLOUD_SECRET_KEY", "UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_URL", "BLOB_READ_WRITE_TOKEN", "COMEGE_LOGIN", "COMEGE_PASSWORD"]) {
+  assert(process.env[key] === "disabled-stockman-qa", `Le service ${key} doit être déconnecté en recette`);
 }
 for (const key of ["STOCKMAN_SCHEDULED_COMMERCIAL_READS", "STOCKMAN_SCHEDULED_COMMERCIAL_SYNC", "STOCKMAN_V297_IMPORT_ENABLED", "STOCKMAN_V298_APPLY_APPROVED"]) {
   assert.notEqual(process.env[key], "true", `${key} doit être désactivé en recette`);

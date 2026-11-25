@@ -25,6 +25,7 @@ export type SendcloudConnectionStatus = {
 };
 
 function getCredentials() {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") return null;
   const publicKey = process.env.SENDCLOUD_PUBLIC_KEY?.trim();
   const secretKey = process.env.SENDCLOUD_SECRET_KEY?.trim();
 

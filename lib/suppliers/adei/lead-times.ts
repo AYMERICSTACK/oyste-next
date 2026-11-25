@@ -169,6 +169,7 @@ function browserHeaders() {
 }
 
 function requireComegeCredentials() {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") throw new Error("COMEGE est désactivé en recette.");
   const username = process.env.COMEGE_LOGIN?.trim();
   const password = process.env.COMEGE_PASSWORD?.trim();
   if (!username || !password) {

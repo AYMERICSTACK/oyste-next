@@ -5,6 +5,7 @@ import { syncAdeiLeadTimes } from "@/lib/suppliers/adei/lead-times";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") return new Response(null, { status: 404 });
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ error: "CRON_SECRET non configuré." }, { status: 503 });

@@ -1,4 +1,10 @@
-export const bankTransferDetails = {
+export const bankTransferDetails = process.env.OYSTE_STOCKMAN_TEST === "true" ? {
+  accountHolder: "Recette OYSTE",
+  iban: "Virement désactivé",
+  bic: "Recette",
+  bankName: "Recette",
+  ribUrl: "#",
+} : {
   accountHolder: process.env.BANK_ACCOUNT_HOLDER || "ADEI",
   iban: process.env.BANK_IBAN || "FR7616807004000022255065533",
   bic: process.env.BANK_BIC || "CCBPFRPPGRE",

@@ -8,6 +8,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 export async function GET(request: Request) {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") return new Response(null, { status: 404 });
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ message: "CRON_SECRET non configuré." }, { status: 503 });
