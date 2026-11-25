@@ -5,6 +5,9 @@ import { verifiedDatabaseUrl } from "../lib/db/verified-database-url";
 assert.equal(process.env.VERCEL_ENV, "preview", "Recette Vercel uniquement");
 assert.equal(process.env.VERCEL_GIT_COMMIT_REF, "recette-stockman-isolee");
 assert.equal(process.env.OYSTE_STOCKMAN_TEST, "true");
+assert(/^[a-f0-9]{96}$/.test(process.env.AUTH_SECRET ?? ""), "Clé de session de recette requise");
+assert.equal(process.env.ADMIN_EMAIL, "stockman-recette@example.invalid");
+assert((process.env.ADMIN_PASSWORD?.length ?? 0) >= 40, "Compte de recette dédié requis");
 for (const key of ["CRON_SECRET", "STRIPE_SECRET_KEY", "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET", "RESEND_API_KEY", "SENDCLOUD_PUBLIC_KEY", "SENDCLOUD_SECRET_KEY", "UPSTASH_REDIS_REST_TOKEN", "UPSTASH_REDIS_REST_URL", "BLOB_READ_WRITE_TOKEN", "COMEGE_LOGIN", "COMEGE_PASSWORD"]) {
   assert(process.env[key] === "disabled-stockman-qa", `Le service ${key} doit être déconnecté en recette`);
 }
@@ -29,3 +32,15 @@ try {
 } finally {
   await db.end();
 }
+
+const stripeTestSecret = process.env.OYSTE_STRIPE_TEST_SECRET_KEY ?? "";
+assert(/^(sk|rk)_test_[a-zA-Z0-9]+$/.test(stripeTestSecret), "Clé secrète Stripe de test requise");
+assert(/^pk_test_[a-zA-Z0-9]+$/.test(process.env.OYSTE_STRIPE_TEST_PUBLISHABLE_KEY ?? ""));
+const stripe = await fetch("https://api.stripe.com/v1/balance", {
+  headers: { Authorization: `Bearer ${stripeTestSecret}` },
+  redirect: "error",
+  signal: AbortSignal.timeout(10000),
+});
+assert(stripe.ok, "Stripe ne répond pas avec le compte de test");
+assert.equal((await stripe.json()).livemode, false);
+console.log("STOCKMAN QA: Stripe confirmed in test mode");

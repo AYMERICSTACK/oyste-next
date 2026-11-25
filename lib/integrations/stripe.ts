@@ -65,7 +65,11 @@ function getModeFromKey(value: string | undefined): StripeMode {
 
 function getCredentials() {
   if (process.env.OYSTE_STOCKMAN_TEST === "true") {
-    return { secretKey: null, publishableKey: null, secretMode: getModeFromKey(undefined), publishableMode: getModeFromKey(undefined) };
+    const secret = process.env.OYSTE_STRIPE_TEST_SECRET_KEY?.trim();
+    const publishable = process.env.OYSTE_STRIPE_TEST_PUBLISHABLE_KEY?.trim();
+    const secretKey = secret && /^(sk|rk)_test_[a-zA-Z0-9]+$/.test(secret) ? secret : null;
+    const publishableKey = publishable && /^pk_test_[a-zA-Z0-9]+$/.test(publishable) ? publishable : null;
+    return { secretKey, publishableKey, secretMode: getModeFromKey(secretKey ?? undefined), publishableMode: getModeFromKey(publishableKey ?? undefined) };
   }
   const secretKey = process.env.STRIPE_SECRET_KEY?.trim();
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
