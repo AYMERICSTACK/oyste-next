@@ -14,7 +14,7 @@ const cookie = (name: string, value: string, expires: number) => ({
   sameSite: "Lax" as const,
 });
 
-test("retire uniquement le contexte ASP.NET éphémère de la session persistée", () => {
+test("conserve le contexte ASP.NET nécessaire à la session persistée", () => {
   const source = {
     cookies: [
       cookie("ASP.NET_SessionId", "volatile-secret", -1),
@@ -31,10 +31,10 @@ test("retire uniquement le contexte ASP.NET éphémère de la session persistée
 
   const result = sanitizeStockmanStorageState(source);
 
-  assert.equal(result.removedVolatileCookies, 1);
+  assert.equal(result.removedVolatileCookies, 0);
   assert.deepEqual(
     result.state.cookies.map((item) => item.name),
-    ["cookie_customer", "cookie_internal"],
+    ["ASP.NET_SessionId", "cookie_customer", "cookie_internal"],
   );
   assert.deepEqual(result.state.origins, source.origins);
   assert.equal(source.cookies.length, 3, "la valeur source ne doit pas être mutée");
@@ -49,7 +49,7 @@ test("la normalisation est idempotente et insensible à la casse", () => {
   const first = sanitizeStockmanStorageState(source);
   const second = sanitizeStockmanStorageState(first.state);
 
-  assert.equal(first.removedVolatileCookies, 1);
+  assert.equal(first.removedVolatileCookies, 0);
   assert.equal(second.removedVolatileCookies, 0);
   assert.deepEqual(second.state, first.state);
 });

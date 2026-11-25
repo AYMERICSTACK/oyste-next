@@ -1,3 +1,10 @@
+import { buildStockmanDraftPreview } from "@/lib/suppliers/stockman/commercial-draft-preview";
+import { BC_CATEGORY, BC_REFERENCES, buildBcFamilyPlan } from "@/lib/suppliers/stockman/bc-family-plan";
+import { getStockmanAvailability } from "@/lib/catalogue/stockman-availability";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { buildStockmanLocalProduct, type StockmanLocalRecord } from "@/lib/catalogue/stockman-local-product";
+import { isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -8,6 +15,7 @@ import { getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import type { StockmanProduct } from "@/lib/suppliers/stockman/types";
 import { resolveStockmanCategory } from "@/lib/suppliers/stockman/category";
 import { buildStockmanSeo } from "@/lib/suppliers/stockman/seo";
+import { getStockmanNeonPrices } from "@/lib/catalogue/stockman-neon-prices";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,9 +71,62 @@ async function authorize(write = false) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const denied = await authorize(false);
   if (denied) return denied;
+
+  const params = new URL(request.url).searchParams;
+  const commercialJob = params.get("commercialJob");
+  if (commercialJob) {
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(commercialJob)) return NextResponse.json({ message: "Audit invalide." }, { status: 400 });
+    const preview = await buildStockmanDraftPreview(commercialJob);
+    if (!preview) return NextResponse.json({ message: "Audit introuvable." }, { status: 404 });
+    return NextResponse.json(preview, { headers: { "Cache-Control": "private, no-store" } });
+  }
+  const preview = params.get("preview");
+  if (preview === "BC_FAMILY") {
+    const codes = ["BC", ...BC_REFERENCES];
+    const identity = { OR: [
+      { code: { in: codes, mode: "insensitive" as const } },
+      { supplierCode: { in: codes, mode: "insensitive" as const } },
+      ...codes.map(reference => ({ sourceData: { path: ["stockman", "reference"], equals: reference } })),
+    ] };
+    const [suppliers, products, variants, drafts, categories, active, prices] = await Promise.all([
+      prisma.supplier.findMany({ where: { OR: [{ name: { equals: "STOCKMAN", mode: "insensitive" } }, { slug: { equals: "stockman", mode: "insensitive" } }] }, select: { id: true } }),
+      prisma.product.findMany({ where: { OR: [identity, { parentCode: { equals: "BC", mode: "insensitive" } }, { slug: "stockman-griffes-accrochage-bc" }] }, select: { id: true, code: true, supplierCode: true } }),
+      prisma.productVariant.findMany({ where: identity, select: { id: true, productId: true, code: true, supplierCode: true } }),
+      prisma.stockmanImportDraft.findMany({ where: { reference: { in: codes, mode: "insensitive" } }, select: { id: true, reference: true, status: true, sourceUrl: true } }),
+      prisma.category.findMany({ where: { id: BC_CATEGORY.id }, select: { id: true, name: true, slug: true, path: true, isActive: true, catalogueVisible: true, parentId: true, parent: { select: { id: true, isActive: true } } } }),
+      prisma.stockmanCatalogReference.findMany({ where: { reference: { in: BC_REFERENCES }, isActive: true }, select: { reference: true } }),
+      getStockmanNeonPrices(BC_REFERENCES),
+    ]);
+    return NextResponse.json(buildBcFamilyPlan({ supplierIds: suppliers.map(row => row.id), products, variants, drafts, categories, activeReferences: active.map(row => row.reference), prices }), { headers: { "Cache-Control": "no-store" } });
+  }
+  if (preview) {
+    const catalogue = JSON.parse((await readFile(path.join(process.cwd(), "data/stockman/catalogue-produits.json"), "utf8")).replace(/^\uFEFF/, "")) as { products: StockmanLocalRecord[] };
+    const requested = preview === "all" ? catalogue.products : catalogue.products.filter(row => row.reference.toUpperCase() === preview.trim().toUpperCase());
+    if (!requested.length) return NextResponse.json({ message: "Référence locale introuvable." }, { status: 404 });
+    const supplierId = await stockmanSupplierId();
+    if (!supplierId) return NextResponse.json({ message: "Fournisseur STOCKMAN introuvable." }, { status: 409 });
+    const [products, prices, availability] = await Promise.all([
+      prisma.product.findMany({ where: { supplierId }, select: { id: true, code: true, supplierCode: true, publicationStatus: true, variants: { select: { id: true, code: true, supplierCode: true } } } }),
+      getStockmanNeonPrices(requested.map(row => row.reference)),
+      getStockmanAvailability(requested.map(row => row.reference)),
+    ]);
+    const equal = (left: string | null, right: string) => left?.trim().toUpperCase() === right.trim().toUpperCase();
+    const rows = requested.map(row => {
+      const matches = products.flatMap<{ productId: string; variantId: string | null; publicationStatus: string }>(product => {
+        const variants = product.variants.filter(v => equal(v.code, row.reference) || equal(v.supplierCode, row.reference));
+        if (variants.length) return variants.map(v => ({ productId: product.id, variantId: v.id, publicationStatus: product.publicationStatus }));
+        return equal(product.code, row.reference) || equal(product.supplierCode, row.reference) ? [{ productId: product.id, variantId: null, publicationStatus: product.publicationStatus }] : [];
+      });
+      const model = buildStockmanLocalProduct(row, catalogue.products);
+      return { reference: row.reference, matches, status: isBlockedStockmanReference(row.reference) ? "BLOCKED" : matches.length > 1 ? "AMBIGUOUS" : matches.length ? "EXISTING" : "REVIEW_GROUPING",
+        salePriceHT: prices.get(row.reference.toUpperCase()) ?? null, stock: availability.get(row.reference.toUpperCase())?.stock ?? null, stockAvailability: availability.get(row.reference.toUpperCase()), freight: "À confirmer", imageCount: model.media?.length ?? 0, documentCount: model.documents?.length ?? 0,
+        proposedStatus: "DRAFT", href: model.href, ...(preview !== "all" ? { preview: model } : {}) };
+    });
+    return NextResponse.json({ mode: "READ_ONLY", writes: 0, references: rows.length, rows, message: "Préparation sans écriture. Les références sans correspondance exigent une validation du regroupement parent/variante, de la catégorie et des sources fraîches avant création." });
+  }
 
   // V2.12.8.4.1 — garde-fou : une simple lecture du BO ne doit JAMAIS
   // supprimer des brouillons. Le référentiel persistant peut être en cours
@@ -192,6 +253,9 @@ export async function POST(request: Request) {
   const denied = await authorize(true);
   if (denied) return denied;
 
+  if (process.env.STOCKMAN_V297_IMPORT_ENABLED === "true") {
+    return NextResponse.json({ message: "Le flux V297 est actif : utiliser le moteur global, pas la création générique de parents." }, { status: 409 });
+  }
   const parsed = createSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json({ message: "Sélection de brouillons invalide." }, { status: 400 });
@@ -274,6 +338,15 @@ export async function POST(request: Request) {
       select: { id: true },
     });
 
+    const existingVariant = await prisma.productVariant.findFirst({
+      where: { OR: [{ code: { equals: draft.reference, mode: "insensitive" } }, { supplierCode: { equals: draft.reference, mode: "insensitive" } }] },
+      select: { productId: true },
+    });
+    if (existingVariant) {
+      results.push({ draftId, reference: draft.reference, productId: existingVariant.productId, status: "existing", message: "Référence déjà présente comme variante : aucun parent créé." });
+      continue;
+    }
+
     if (existing) {
       await prisma.stockmanImportDraft.update({
         where: { id: draft.id },
@@ -292,7 +365,12 @@ export async function POST(request: Request) {
     }
 
     try {
+      if (isBlockedStockmanReference(draft.reference)) throw new Error("Référence STOCKMAN non commercialisée.");
       const live = liveByReference.get(draft.reference.trim().toUpperCase());
+      if (!live || live.reference.trim().toUpperCase() !== draft.reference.trim().toUpperCase()) throw new Error("Preuve commerciale fraîche de la référence exacte requise avant import.");
+      const currentPurchase = live.priceOnRequest ? null : live.purchasePriceExVat;
+      const currentStock = live.stockOnRequest ? null : live.stock;
+      const currentWeight = live.weightKg;
       const categoryResolution = await resolveStockmanCategory({
         sourceUrl: live?.sourceUrl || draft.sourceUrl,
         designation: live?.designation || draft.designation,
@@ -300,8 +378,8 @@ export async function POST(request: Request) {
       });
       const categoryId = categoryResolution?.id ?? null;
       const importedWeightKg =
-        draft.weightKg !== null && Number(draft.weightKg) > 0
-          ? Number(draft.weightKg)
+        currentWeight !== null && Number(currentWeight) > 0
+          ? Number(currentWeight)
           : null;
       const slug = await uniqueSlug(`${draft.designation}-${draft.reference}`);
       const shortDescription = live?.shortDescription?.trim() || null;
@@ -310,9 +388,9 @@ export async function POST(request: Request) {
         reference: draft.reference,
         designation: draft.designation,
         sourceUrl: draft.sourceUrl,
-        purchasePriceExVat: draft.purchasePriceExVat === null ? 0 : Number(draft.purchasePriceExVat),
-        stock: draft.stock ?? 0,
-        weightKg: draft.weightKg === null ? null : Number(draft.weightKg),
+        purchasePriceExVat: currentPurchase === null ? 0 : Number(currentPurchase),
+        stock: currentStock ?? 0,
+        weightKg: currentWeight === null ? null : Number(currentWeight),
         readAt: new Date().toISOString(),
         shortDescription: null,
         detailedDescription: null,
@@ -329,12 +407,16 @@ export async function POST(request: Request) {
           reference: draft.reference,
           designation: draft.designation,
           sourceUrl: draft.sourceUrl,
-          purchasePriceExVat: draft.purchasePriceExVat === null ? null : Number(draft.purchasePriceExVat),
-          purchasePriceUnavailable: draft.purchasePriceExVat === null || Number(draft.purchasePriceExVat) <= 0,
-          stock: draft.stock,
-          stockLabel: draft.stock === null ? "Nous consulter" : String(draft.stock),
-          weightKg: draft.weightKg === null ? null : Number(draft.weightKg),
-          sourceReadAt: draft.sourceReadAt?.toISOString() ?? null,
+          purchasePriceExVat: currentPurchase === null ? null : Number(currentPurchase),
+          purchasePriceUnavailable: currentPurchase === null || Number(currentPurchase) <= 0,
+          salePriceSource: "NEON_STOCKMAN_SALE_PRICE",
+          freightIncludedValidated: false,
+          stock: currentStock,
+          stockOnRequest: currentStock === null,
+          stockLabel: currentStock === null ? "Nous consulter" : String(currentStock),
+          weightKg: currentWeight === null ? null : Number(currentWeight),
+          sourceReadAt: live.readAt,
+          stockReadAt: live.readAt,
           importedFromDraftAt: new Date().toISOString(),
           category: categoryResolution ? {
             id: categoryResolution.id,
@@ -352,7 +434,28 @@ export async function POST(request: Request) {
         },
       };
 
+      // V277_NEON_SALE_PRICE
+      // Le tarif de vente provient de Neon.
+      // Aucun calcul fournisseur ne remplace cette valeur.
+      const neonPrices = await getStockmanNeonPrices([
+        draft.reference,
+      ]);
+      const neonSalePrice = neonPrices.get(
+        draft.reference.trim().toUpperCase()
+      );
+      const validatedSalePrice =
+        neonSalePrice !== undefined &&
+        Number.isFinite(neonSalePrice) &&
+        neonSalePrice > 0
+          ? neonSalePrice
+          : 0;
       const product = await prisma.$transaction(async (tx) => {
+        // Serialize this importer per exact reference, then recheck both identity tables.
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${`stockman-import:${draft.reference.trim().toUpperCase()}`}))`;
+        const identity = { OR: [{ code: { equals: draft.reference, mode: "insensitive" as const } }, { supplierCode: { equals: draft.reference, mode: "insensitive" as const } }] };
+        const parent = await tx.product.findFirst({ where: identity, select: { id: true } });
+        const variant = await tx.productVariant.findFirst({ where: identity, select: { id: true } });
+        if (parent || variant) throw new Error("Référence déjà présente : aucun doublon créé. Actualisez le diagnostic.");
         const createdProduct = await tx.product.create({
           data: {
             id: randomUUID(),
@@ -368,12 +471,10 @@ export async function POST(request: Request) {
             // sur prix de vente, soit PV HT = PA HT / 0,80.
             // Si STOCKMAN ne fournit pas de PA exploitable, le produit reste à 0 :
             // ce 0 est un état technique « Nous consulter », jamais un prix vendable.
-            priceHt: draft.purchasePriceExVat !== null && Number(draft.purchasePriceExVat) > 0
-              ? Math.round((Number(draft.purchasePriceExVat) / 0.8) * 100) / 100
-              : 0,
-            stock: draft.stock ?? 0,
+            priceHt: validatedSalePrice,
+            stock: currentStock ?? 0,
             weightKg: importedWeightKg,
-            shippingMode: "INCLUDED",
+            shippingMode: "QUOTE", // Client freight policy requires explicit validation.
             leadTime: "Départ usine sous 48 h si stock disponible — délai de départ usine, et non délai de livraison.",
             publicationStatus: "DRAFT",
             supplierId,

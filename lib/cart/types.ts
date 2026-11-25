@@ -21,6 +21,7 @@ export type CartItem = {
   packageWidthCm?: number;
   packageHeightCm?: number;
   shippingMode?: "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE";
+  stockmanFreightConfirmed?: boolean;
   pfiShipping?: PfiShippingConfiguration;
   wallPotenceShipping?: WallPotenceShippingConfiguration;
   imageUrl?: string;

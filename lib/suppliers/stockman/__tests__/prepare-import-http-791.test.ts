@@ -150,6 +150,8 @@ function requestFor(reference: string): Request {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "prepare_import",
+        confirmPreparation: true,
+        confirmedReferences: reference,
         items: [
           {
             reference,
@@ -194,6 +196,8 @@ test("prepare_import refuses multiple references without access", async () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "prepare_import",
+          confirmPreparation: true,
+          confirmedReferences: "PS12L29-ION100,PS12L29LI-ION100",
           items: [
             {
               reference: "PS12L29LI-ION100",

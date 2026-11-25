@@ -1,3 +1,10 @@
+import { boundedResourceRead } from "./bounded-read";
+import { isReferenceMedia } from "./media-evidence";
+import { isBlockedStockmanReference } from "./order-policy";
+import { evaluateStockmanPage } from "./page-evaluation";
+import { commercialRows as snapshotCommercialRows } from "./catalog-scanner";
+import { classifyCommercialRow } from "./page-structure";
+import { explicitCompatibility } from "./commercial-evidence";
 import type { BrowserContext } from "playwright";
 import { openStockmanBrowser } from "@/lib/suppliers/stockman/browser";
 import { parseStockmanProduct } from "@/lib/suppliers/stockman/parser";
@@ -78,7 +85,7 @@ async function runStockmanNavigationProbe(
     const requestHeaders: Record<string, string> = response
       ? await response.request().allHeaders().catch(() => ({}))
       : {};
-    const browser = await page.evaluate(() => ({
+    const browser = await evaluateStockmanPage(page, () => ({
       userAgent: navigator.userAgent,
       language: navigator.language,
       platform: navigator.platform,
@@ -198,8 +205,7 @@ async function diagnosticWindow(
   });
 
   // V2.8.4 : photographie ciblée de ce que Playwright voit réellement.
-  const domProbe = await page
-    .evaluate((ref) => {
+  const domProbe = await evaluateStockmanPage(page, (ref) => {
       const clean = (value: string | null | undefined) =>
         (value ?? "")
           .replace(/\u00a0/g, " ")
@@ -270,7 +276,7 @@ async function diagnosticWindow(
       `URL=${page.url()}`,
       `TITLE=${await page.title().catch(() => "")}`,
       `REF=${normalized}`,
-      `READY_STATE=${await page.evaluate(() => document.readyState).catch(() => "?")}`,
+      `READY_STATE=${await evaluateStockmanPage(page, () => document.readyState).catch(() => "?")}`,
       windows.length
         ? `AROUND_REF=${windows.join("\n---\n")}`
         : "AROUND_REF=<référence absente du texte>",
@@ -334,125 +340,15 @@ function designationFromRowText(
   return reference;
 }
 
-async function readStructuredCommercialRow(
+export async function readStructuredCommercialRow(
   page: import("playwright").Page,
   reference: string,
   sourceUrl: string,
   pageTitle?: string | null,
 ): Promise<StockmanProduct | null> {
-  // La référence est affichée dans la ligne commerciale de la variante.
-  // On part de son texte exact puis on remonte au <tr>, ce qui évite de
-  // dépendre de l'index _0/_1/... utilisé dans les IDs Stockman.
-  const exactReferences = page.getByText(reference, { exact: true });
-  const count = await exactReferences.count().catch(() => 0);
-
-  for (let index = 0; index < count; index += 1) {
-    const row = exactReferences.nth(index).locator("xpath=ancestor::tr[1]");
-    if ((await row.count().catch(() => 0)) === 0) continue;
-
-    const stockCell = row
-      .locator(
-        "td[id*='stock_article_td'], td[id*='stock_article'], [id*='stock_article_td']",
-      )
-      .first();
-    const priceCell = row
-      .locator(
-        "td[id*='price_by_qty_td'], td[id*='price_by_qty'], [id*='price_by_qty_td']",
-      )
-      .first();
-
-    if (
-      (await stockCell.count().catch(() => 0)) === 0 ||
-      (await priceCell.count().catch(() => 0)) === 0
-    ) {
-      continue;
-    }
-
-    const [rowText, stockText, priceText] = await Promise.all([
-      row.innerText().catch(() => ""),
-      stockCell.innerText().catch(() => ""),
-      priceCell.innerText().catch(() => ""),
-    ]);
-
-    const stockNumber = numberFromCommercialText(stockText);
-    const stockOnRequest =
-      /nous\s+consulter|date\s+de\s+r[ée]approvisionnement/i.test(stockText);
-    const priceNumber = numberFromCommercialText(priceText);
-    if ((!stockOnRequest && stockNumber === null) || priceNumber === null)
-      continue;
-
-    const weightMatch = rowText.match(/Poids\s*:\s*(\d+(?:[.,]\d+)?)\s*kg/i);
-    const weightKg = weightMatch
-      ? Number(weightMatch[1].replace(",", "."))
-      : null;
-
-    return {
-      reference,
-      designation: designationFromRowText(rowText, reference, pageTitle),
-      purchasePriceExVat: priceNumber,
-      stock: stockNumber === null ? 0 : Math.trunc(stockNumber),
-      stockOnRequest,
-      weightKg:
-        weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
-      sourceUrl,
-      readAt: new Date().toISOString(),
-    };
-  }
-
-  // Fallback : certaines pages n'exposent pas la référence comme un nœud texte
-  // exact. On parcourt alors uniquement les lignes qui possèdent les cellules
-  // commerciales Stockman, puis on vérifie la référence dans le texte de ligne.
-  const commercialRows = page.locator(
-    "tr:has(td[id*='stock_article_td']):has(td[id*='price_by_qty_td'])",
-  );
-  const rowCount = await commercialRows.count().catch(() => 0);
-
-  for (let index = 0; index < rowCount; index += 1) {
-    const row = commercialRows.nth(index);
-    const rowText = await row.innerText().catch(() => "");
-    const tokens = rowText
-      .split(/\s+/)
-      .map((token) => token.replace(/^[^\w.-]+|[^\w./-]+$/g, "").toUpperCase());
-    if (!tokens.includes(reference)) continue;
-
-    const [stockText, priceText] = await Promise.all([
-      row
-        .locator("td[id*='stock_article_td'], [id*='stock_article_td']")
-        .first()
-        .innerText()
-        .catch(() => ""),
-      row
-        .locator("td[id*='price_by_qty_td'], [id*='price_by_qty_td']")
-        .first()
-        .innerText()
-        .catch(() => ""),
-    ]);
-    const stockNumber = numberFromCommercialText(stockText);
-    const stockOnRequest =
-      /nous\s+consulter|date\s+de\s+r[ée]approvisionnement/i.test(stockText);
-    const priceNumber = numberFromCommercialText(priceText);
-    if ((!stockOnRequest && stockNumber === null) || priceNumber === null)
-      continue;
-
-    const weightMatch = rowText.match(/Poids\s*:\s*(\d+(?:[.,]\d+)?)\s*kg/i);
-    const weightKg = weightMatch
-      ? Number(weightMatch[1].replace(",", "."))
-      : null;
-
-    return {
-      reference,
-      designation: designationFromRowText(rowText, reference, pageTitle),
-      purchasePriceExVat: priceNumber,
-      stock: stockNumber === null ? 0 : Math.trunc(stockNumber),
-      stockOnRequest,
-      weightKg:
-        weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
-      sourceUrl,
-      readAt: new Date().toISOString(),
-    };
-  }
-
-  return null;
+  const rows = await snapshotCommercialRows(page);
+  if (!rows.some(row => row.reference.trim().toUpperCase() === reference.trim().toUpperCase())) return null;
+  return parseStockmanProduct({ bodyText: "", reference, sourceUrl, pageTitle, commercialRows: rows });
 }
 
 function commercialReferenceFromRowText(rowText: string) {
@@ -510,64 +406,18 @@ async function readAllStructuredCommercialRows(
     )
     .catch(() => undefined);
 
-  const commercialRows = page.locator(
-    "tr:has(td[id*='stock_article_td']):has(td[id*='price_by_qty_td'])",
-  );
-  const rowCount = await commercialRows.count().catch(() => 0);
+  const snapshots = await snapshotCommercialRows(page);
   const products: StockmanProduct[] = [];
-  const seen = new Set<string>();
-
-  for (let index = 0; index < rowCount; index += 1) {
-    const row = commercialRows.nth(index);
-    const [rowText, stockText, priceText] = await Promise.all([
-      row.innerText().catch(() => ""),
-      row
-        .locator("td[id*='stock_article_td'], [id*='stock_article_td']")
-        .first()
-        .innerText()
-        .catch(() => ""),
-      row
-        .locator("td[id*='price_by_qty_td'], [id*='price_by_qty_td']")
-        .first()
-        .innerText()
-        .catch(() => ""),
-    ]);
-
-    const reference = commercialReferenceFromRowText(rowText);
-    if (!reference || seen.has(reference)) continue;
-
-    const stockNumber = numberFromCommercialText(stockText);
-    const stockOnRequest =
-      /nous\s+consulter|date\s+de\s+r[ée]approvisionnement/i.test(stockText);
-    const priceOnRequest = /nous\s+consulter/i.test(priceText);
-    const priceNumber = numberFromCommercialText(priceText);
-
-    // La présence d'une vraie ligne commerciale suffit à prouver que la variante existe.
-    // "Nous consulter" reste une variante valide, mais son PA est conservé à 0/null côté catalogue.
-    if (
-      (!stockOnRequest && stockNumber === null) ||
-      (!priceOnRequest && priceNumber === null)
-    ) {
-      continue;
-    }
-
-    const weightMatch = rowText.match(/Poids\s*:\s*(\d+(?:[.,]\d+)?)\s*kg/i);
-    const weightKg = weightMatch
-      ? Number(weightMatch[1].replace(",", "."))
-      : null;
-
-    products.push({
-      reference,
-      designation: designationFromRowText(rowText, reference, pageTitle),
-      purchasePriceExVat: priceNumber ?? 0,
-      stock: stockNumber === null ? 0 : Math.trunc(stockNumber),
-      stockOnRequest,
-      weightKg:
-        weightKg !== null && Number.isFinite(weightKg) ? weightKg : null,
-      sourceUrl,
-      readAt: new Date().toISOString(),
-    });
-    seen.add(reference);
+  const references = [...new Set(snapshots.map(row => row.reference.trim().toUpperCase()))];
+  for (const reference of references) {
+    if (isBlockedStockmanReference(reference) || snapshots.some(row => row.reference.trim().toUpperCase() === reference && /produit\s+arr[eê]t[eé]|discontinued/i.test(row.description ?? ""))) continue;
+    const product = parseStockmanProduct({ bodyText: "", reference, sourceUrl, pageTitle, commercialRows: snapshots });
+    const snapshot = snapshots.find(row => row.reference.trim().toUpperCase() === reference)!;
+    const classification = classifyCommercialRow(snapshot, { familyReference: familyReferenceFromPageUrl(sourceUrl, ""), breadcrumb: [] });
+    products.push({ ...product, relationType: classification.relationType,
+      classificationEvidence: classification.evidence,
+      compatibleReferences: classification.relationType === "OPTION" ? explicitCompatibility(snapshot.description ?? "", references) : [],
+      barcode: snapshot.text.match(/Code[- ]?barres?\s*:\s*(\d{8,14})/i)?.[1] ?? null });
   }
 
   return products;
@@ -588,8 +438,7 @@ async function findStockmanDetailUrl(
   page: import("playwright").Page,
   referenceHint: string,
 ) {
-  return page
-    .evaluate((ref) => {
+  return evaluateStockmanPage(page, (ref) => {
       const normalize = (value: string | null | undefined) =>
         (value ?? "")
           .replace(/\u00a0/g, " ")
@@ -642,9 +491,7 @@ async function readStockmanCommercialFamily(
       .locator("body")
       .innerText()
       .catch(() => "");
-    const loggedOut =
-      /connexion|identifiez-vous|mot de passe/i.test(bodyText) &&
-      !/déconnexion|deconnexion/i.test(bodyText);
+    const loggedOut = await isStockmanLoginPage(page);
 
     if (loggedOut) {
       throw new Error(
@@ -666,17 +513,25 @@ async function readStockmanCommercialFamily(
     // Certaines références vivantes pointent encore sur une page catégorie.
     // On suit uniquement un vrai lien produit correspondant à la référence de la fiche.
     if (rows.length === 0) {
-      const initialPath = new URL(page.url()).pathname;
+      const initialUrl = page.url();
+      const initialPath = new URL(initialUrl).pathname;
       const sourcePath = new URL(sourceUrl).pathname;
+
+      const sourceIsProductPage =
+        /\/--1\/[^/]+\.aspx$/i.test(sourcePath);
 
       console.info("[STOCKMAN_V34_NAVIGATION]", JSON.stringify({
         reference: normalizedHint,
         sourcePath,
         initialPath,
+        sourceIsProductPage,
         initialRows: rows.length,
       }));
 
-      const detailUrl = await findStockmanDetailUrl(page, normalizedHint);
+      const detailUrl = sourceIsProductPage
+        ? null
+        : await findStockmanDetailUrl(page, normalizedHint);
+
       if (detailUrl && detailUrl !== page.url()) {
         await page.goto(validateStockmanUrl(detailUrl), {
           waitUntil: "domcontentloaded",
@@ -851,9 +706,7 @@ export async function getStockmanCommercialFamilyDiagnostic(
           .textContent()
           .catch(() => null)
       )?.trim() || "";
-    const loggedOut =
-      /connexion|identifiez-vous|mot de passe/i.test(bodyText) &&
-      !/déconnexion|deconnexion/i.test(bodyText);
+    const loggedOut = await isStockmanLoginPage(page);
 
     if (loggedOut) {
       return {
@@ -877,6 +730,7 @@ export async function getStockmanCommercialFamilyDiagnostic(
 
     if (rows.length === 0) {
       const detailUrl = await findStockmanDetailUrl(page, normalizedHint);
+
       if (detailUrl && detailUrl !== page.url()) {
         followedDetailUrl = validateStockmanUrl(detailUrl);
         await page.goto(followedDetailUrl, {
@@ -950,7 +804,9 @@ export async function getStockmanCommercialFamilyDiagnostic(
 export async function getStockmanCommercialFamily(
   referenceHint: string,
   productUrl: string,
+  options?: { timeoutMs: number },
 ): Promise<StockmanCommercialFamily> {
+  if(options)return boundedResourceRead(openStockmanBrowser,({context})=>readStockmanCommercialFamily(context,referenceHint,productUrl),options.timeoutMs);
   const { browser, context } = await openStockmanBrowser();
   try {
     return await readStockmanCommercialFamily(
@@ -971,8 +827,7 @@ type StockmanNetworkAuditEntry = {
 };
 
 async function isStockmanLoginPage(page: import("playwright").Page) {
-  return page
-    .evaluate(() => {
+  return evaluateStockmanPage(page, () => {
       const clean = (value: string | null | undefined) =>
         (value ?? "").replace(/\s+/g, " ").trim();
       const body = clean(document.body?.innerText);
@@ -986,7 +841,7 @@ async function isStockmanLoginPage(page: import("playwright").Page) {
         ),
       );
       const connectedMarker =
-        /déconnexion|deconnexion|sign out|logout|bonjour\s+[A-ZÀ-Ÿ]|hello\s+[A-Z]/i.test(
+        /d[eé]connexion|deconnexion|sign out|logout|bonjour\s+[A-Za-zÀ-ÿ]|hello\s+[A-Z]/i.test(
           body,
         );
       const loginUrl = /\b(?:login|connexion|connect)\b/i.test(url);
@@ -1009,8 +864,7 @@ async function buildSessionAudit(
   const cookies = await context
     .cookies(["https://www.stockman.fr/"])
     .catch(() => []);
-  const storage = await page
-    .evaluate(() => ({
+  const storage = await evaluateStockmanPage(page, () => ({
       localStorageKeys: Object.keys(window.localStorage),
       sessionStorageKeys: Object.keys(window.sessionStorage),
       hasPasswordInput: Boolean(
@@ -1058,8 +912,7 @@ async function enrichmentDomDiagnostic(
   page: import("playwright").Page,
   reference: string,
 ) {
-  const payload = await page
-    .evaluate((ref) => {
+  const payload = await evaluateStockmanPage(page, (ref) => {
       const clean = (value: string | null | undefined) =>
         (value ?? "")
           .replace(/\u00a0/g, " ")
@@ -1198,8 +1051,7 @@ async function enrichStockmanProduct(
   // RC4.2 V2.9.8 : l'enrichissement est lu dans le DOM réellement rendu par la
   // session revendeur. On ne dépend plus d'une structure de balises précise :
   // Stockman mélange h*, div, td et strong suivant les familles de produits.
-  const enrichment = await page
-    .evaluate(
+  const enrichment = await evaluateStockmanPage(page,
       (input) => {
         const reference = input.reference;
         const designation = input.designation;
@@ -2083,15 +1935,12 @@ async function enrichStockmanProduct(
         weightKg: product.weightKg,
       },
     )
-    .catch(() => ({
-      shortDescription: null,
-      detailedDescription: null,
-      images: [],
-      documents: [],
-      features: [],
-    }));
+    ;
 
-  const merged = { ...product, ...enrichment };
+  const merged = { ...product, ...enrichment,
+    images: enrichment.images.filter(image => isReferenceMedia(image.url, product.reference)),
+    documents: enrichment.documents.filter(document => isReferenceMedia(document.url, product.reference)),
+  };
 
   if (!merged.images.length || !merged.detailedDescription) {
     const diagnostic = await enrichmentDomDiagnostic(page, product.reference);
@@ -2204,8 +2053,7 @@ async function readStockmanProduct(
     // visible dans une carte produit (ex. EFT260), mais prix/stock ne sont présents
     // que sur la fiche détaillée. On suit automatiquement le lien de la référence
     // dans le même contexte Playwright authentifié, puis on relit le tableau.
-    const detailUrl = await page
-      .evaluate((ref) => {
+    const detailUrl = await evaluateStockmanPage(page, (ref) => {
         const normalize = (value: string | null | undefined) =>
           (value ?? "")
             .replace(/\u00a0/g, " ")
@@ -2307,6 +2155,7 @@ async function readStockmanProduct(
         reference: normalizedReference,
         sourceUrl: page.url(),
         pageTitle: currentPageTitle,
+        commercialRows: await snapshotCommercialRows(page),
       });
       return await enrichStockmanProduct(page, parsedProduct);
     } catch (error) {

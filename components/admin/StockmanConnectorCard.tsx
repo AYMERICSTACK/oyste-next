@@ -190,7 +190,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
                 <p className="mt-2 text-[10px] leading-4 text-slate-400">Empreintes SHA-256 tronquées : elles permettent uniquement de comparer les environnements sans afficher les secrets.</p>
               </div>
             ) : null}
-            {(!sessionReady || authJobId) ? (
+            {(window.location.hostname === "localhost" || !sessionReady || authJobId) ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="font-black text-amber-900">Connexion revendeur requise</p>
                 <p className="mt-1 text-[11px] leading-5 text-amber-800">OYSTE peut ouvrir Chromium sur ce poste. Connectez-vous manuellement à Stockman : aucun mot de passe n’est enregistré par OYSTE.</p>

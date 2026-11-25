@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canonicalizeStockmanUrl, stockmanQueueIdentity, stockmanTaxonomyIdentity } from "../url";
+import { canonicalizeStockmanUrl, isStockmanNotFoundPath, stockmanQueueIdentity, stockmanTaxonomyIdentity } from "../url";
 
 test("canonicalise les variantes de contexte vers la même ressource", () => {
   const expected = "https://www.stockman.fr/fr/emballage--7/produit--P476.aspx";
@@ -41,4 +41,10 @@ test("préserve le chemin français de la fiche AC20 LONG", () => {
   assert.equal(canonicalizeStockmanUrl(french), french);
   assert.equal(canonicalizeStockmanUrl(withoutFrenchPrefix), withoutFrenchPrefix);
   assert.notEqual(stockmanQueueIdentity(french), stockmanQueueIdentity(withoutFrenchPrefix));
+});
+
+test("repère les redirections vers la page 404 STOCKMAN", () => {
+  assert.equal(isStockmanNotFoundPath("/404.aspx"), true);
+  assert.equal(isStockmanNotFoundPath("/fr/404.aspx/"), true);
+  assert.equal(isStockmanNotFoundPath("/outillage/item--KIT404.aspx"), false);
 });

@@ -15,7 +15,7 @@ describe("STOCKMAN - politique prepare_import", () => {
       "utf8",
     );
 
-    const policyCall = source.indexOf("if (!stockmanImportPreparationEnabled())");
+    const policyCall = source.indexOf("if (!stockmanImportPreparationEnabled(parsed.data.items))");
     const supplierLookup = source.indexOf("const supplier = await prisma.supplier.findFirst", policyCall);
     const draftWrite = source.indexOf("prisma.stockmanImportDraft.upsert", policyCall);
 

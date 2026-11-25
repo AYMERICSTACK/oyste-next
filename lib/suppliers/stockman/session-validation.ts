@@ -46,7 +46,7 @@ export function assertValidStockmanCommercialAccess(
   ) {
     throw new Error(
       [
-        "La session assainie ne restitue pas l’accès revendeur sur la fiche témoin.",
+        "La session rechargée ne restitue pas l’accès revendeur sur la fiche témoin.",
         `fiche=${access.referenceFound ? "oui" : "non"}`,
         `stock=${access.stockFound ? "oui" : "non"}`,
         `prix=${access.priceFound ? "oui" : "non"}`,
@@ -72,8 +72,8 @@ export async function validateSanitizedStockmanSession<
     assertValidStockmanCommercialAccess(access);
 
     // STOCKMAN peut renouveler ses cookies persistants pendant la validation.
-    // On conserve cet état post-validation, puis on retire à nouveau uniquement
-    // la session ASP.NET volatile avant toute persistance.
+    // On conserve cet état post-validation, y compris la session ASP.NET
+    // necessaire a l acces revendeur. Le stockage Neon reste chiffre.
     const refreshedState = await context.storageState();
     const persistedState = sanitizeStockmanStorageState(refreshedState).state;
 

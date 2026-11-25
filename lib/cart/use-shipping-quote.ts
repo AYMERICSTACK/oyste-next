@@ -6,7 +6,7 @@ import { calculateCartShipping } from "@/lib/shipping";
 import type { ShippingCartResult } from "@/lib/shipping/types";
 
 export function useShippingQuote(items: CartItem[], postcode: string, country = "FR") {
-  const local = useMemo(() => calculateCartShipping(items, postcode), [items, postcode]);
+  const local = useMemo(() => calculateCartShipping(items, postcode, country), [items, postcode, country]);
   const [remote, setRemote] = useState<ShippingCartResult | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -17,6 +17,7 @@ export function useShippingQuote(items: CartItem[], postcode: string, country = 
       return;
     }
 
+    setRemote(null);
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
       setLoading(true);

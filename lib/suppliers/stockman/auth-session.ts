@@ -123,7 +123,7 @@ export async function inspectSavedStockmanSession() {
 
   try {
     const context = await browser.newContext({
-      storageState: persistedState ?? getStockmanAuthFile(),
+      storageState: getStockmanAuthFile(),
     });
     try {
       const page = await context.newPage();

@@ -96,6 +96,18 @@ export default function StockmanImportDraftReviewCard() {
     });
   }
 
+  async function previewCatalogue(reference: string) {
+    setMessage("Préparation en lecture seule…");
+    try {
+      const response = await fetch(`/api/admin/suppliers/stockman/import-drafts?preview=${encodeURIComponent(reference)}`, { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Diagnostic indisponible");
+      const counts: Record<string, number> = {};
+      for (const row of data.rows) counts[row.status] = (counts[row.status] || 0) + 1;
+      setMessage(`${data.references} référence(s) contrôlée(s) · ${JSON.stringify(counts)} · Aucune écriture. Transport à confirmer. Détail disponible en JSON.`);
+    } catch (error) { setMessage(error instanceof Error ? error.message : "Diagnostic indisponible"); }
+  }
+
   async function createSelected() {
     const draftIds = [...selected];
     if (!draftIds.length) return;
@@ -154,6 +166,12 @@ export default function StockmanImportDraftReviewCard() {
       </div>
 
       <div className="p-5 md:p-6">
+        <div className="mb-4 flex flex-wrap gap-3 text-sm font-bold text-cyan-800">
+          <button onClick={() => void previewCatalogue("BC10")}>Préparer BC10 sans écriture</button>
+          <Link href="/catalogue/stockman/BC10" target="_blank">Voir la fiche BC10</Link>
+          <button onClick={() => void previewCatalogue("all")}>Diagnostiquer le catalogue</button>
+          <a href="/api/admin/suppliers/stockman/import-drafts?preview=all" target="_blank" rel="noreferrer">Détail JSON</a>
+        </div>
         <div className="grid gap-3 sm:grid-cols-3">
           <Metric label="À valider" value={prepared.length} />
           <Metric label="Sélectionnés" value={selected.size} />

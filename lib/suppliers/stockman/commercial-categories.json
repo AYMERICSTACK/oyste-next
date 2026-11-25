@@ -1,0 +1,966 @@
+[
+  {
+    "id": "17",
+    "label": "Transpalettes",
+    "aliases": [
+      "transpalettes--17",
+      "pallet-trucks--17"
+    ],
+    "sources": [
+      "https://www.stockman.fr/transpalettes--17.aspx",
+      "https://www.stockman.fr/pallet-trucks--17.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "2",
+        "label": "accessoires et options transpalettes",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/accessoires-et-options-transpalettes--2.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/accessories-and-spare-parts--2.aspx"
+        ]
+      },
+      {
+        "id": "119",
+        "label": "chariots retractables",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/chariots-retractables--119.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/reach-trucks-warehouse-equipment--119.aspx"
+        ]
+      },
+      {
+        "id": "118",
+        "label": "destockage",
+        "sources": [
+          "https://www.stockman.fr/transpalettes--17/destockage--118.aspx",
+          "https://www.stockman.fr/en/pallet-trucks--17/clearance--118.aspx"
+        ]
+      },
+      {
+        "id": "117",
+        "label": "nacelles magasinage",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/nacelles-magasinage--117.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/aerial-work-platform-warehouse-equipment--117.aspx"
+        ]
+      },
+      {
+        "id": "120",
+        "label": "preparateurs de commande",
+        "sources": [
+          "https://www.stockman.fr/fr/transpalettes--17/preparateurs-de-commande--120.aspx",
+          "https://www.stockman.fr/en/pallet-trucks--17/order-pickers-warehouse-equipment--120.aspx"
+        ]
+      },
+      {
+        "id": "121",
+        "label": "tracteurs",
+        "sources": [
+          "https://www.stockman.fr/fr/transpalettes--17/tracteurs--121.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/trucks-warehouse-equipment--121.aspx"
+        ]
+      },
+      {
+        "id": "104",
+        "label": "transpalette tout terrain",
+        "sources": [
+          "https://www.stockman.fr/transpalettes--17/transpalette-tout-terrain--104.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/rough-terrain-pallet-truck--104.aspx"
+        ]
+      },
+      {
+        "id": "107",
+        "label": "transpalettes grande stabilite et basculeurs",
+        "sources": [
+          "https://www.stockman.fr/fr/transpalettes--17/transpalettes-grande-stabilite-et-basculeurs--107.aspx",
+          "https://www.stockman.fr/pallet-trucks--17/skid-lifter-and-pallet-tilter-trucks--107.aspx"
+        ]
+      },
+      {
+        "id": "108",
+        "label": "transpalettes haute levee acier",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/transpalettes-haute-levee-acier--108.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/scissor-lift-pallet-trucks--108.aspx"
+        ]
+      },
+      {
+        "id": "109",
+        "label": "transpalettes haute levee galva et inox",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/transpalettes-haute-levee-galva-et-inox--109.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/galvanized-stainless-steel-scissor-lift-pallet-trucks--109.aspx"
+        ]
+      },
+      {
+        "id": "110",
+        "label": "transpalettes manuels",
+        "sources": [
+          "https://www.stockman.fr/fr/transpalettes--17/transpalettes-manuels--110.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/manual-pallet-trucks--110.aspx"
+        ]
+      },
+      {
+        "id": "111",
+        "label": "transpalettes manuels courts et longs",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/transpalettes-manuels-courts-et-longs--111.aspx",
+          "https://www.stockman.fr/pallet-trucks--17/short-and-long-manual-pallet-trucks--111.aspx"
+        ]
+      },
+      {
+        "id": "112",
+        "label": "transpalettes manuels galvanises et inox",
+        "sources": [
+          "https://www.stockman.fr/transpalettes--17/transpalettes-manuels-galvanises-et-inox--112.aspx",
+          "https://www.stockman.fr/pallet-trucks--17/galvanized-stainless-steel-pallet-trucks--112.aspx"
+        ]
+      },
+      {
+        "id": "113",
+        "label": "transpalettes manuels specifiques",
+        "sources": [
+          "https://www.stockman.fr/transpalettes--17/transpalettes-manuels-specifiques--113.aspx",
+          "https://www.stockman.fr/pallet-trucks--17/specific-manual-pallet-trucks--113.aspx"
+        ]
+      },
+      {
+        "id": "114",
+        "label": "transpalettes peseurs",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/transpalettes-peseurs--114.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/weighing-scale-pallet-trucks--114.aspx"
+        ]
+      },
+      {
+        "id": "116",
+        "label": "verins et treteau de securite",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes--17/verins-et-treteau-de-securite--116.aspx",
+          "https://www.stockman.fr/fr/pallet-trucks--17/trailer-stabilizer-jack-and-safety-trestle--116.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "16",
+    "label": "Tables élévatrices",
+    "aliases": [
+      "tables-elevatrices--16",
+      "lift-tables--16"
+    ],
+    "sources": [
+      "https://www.stockman.fr/tables-elevatrices--16.aspx",
+      "https://www.stockman.fr/lift-tables--16.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "60",
+        "label": "options et accessoires pour tables elevatrices",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/options-et-accessoires-pour-tables-elevatrices--60.aspx",
+          "https://www.stockman.fr/en/lift-tables--16/options-and-accessories-for-lift-tables--60.aspx"
+        ]
+      },
+      {
+        "id": "87",
+        "label": "tables elevatrices a niveau constant",
+        "sources": [
+          "https://www.stockman.fr/en/tables-elevatrices--16/tables-elevatrices-a-niveau-constant--87.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/self-leveling-lift-tables--87.aspx"
+        ]
+      },
+      {
+        "id": "88",
+        "label": "tables elevatrices de mise a niveau",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-de-mise-a-niveau--88.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/tilting-lift-tables--88.aspx"
+        ]
+      },
+      {
+        "id": "89",
+        "label": "tables elevatrices de precision",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-de-precision--89.aspx",
+          "https://www.stockman.fr/lift-tables--16/scissor-lift-tables--89.aspx"
+        ]
+      },
+      {
+        "id": "90",
+        "label": "tables elevatrices electriques fixes double ciseaux",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-electriques-fixes-double-ciseaux--90.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/stationary-electric-scissor-lift-tables--90.aspx"
+        ]
+      },
+      {
+        "id": "186",
+        "label": "tables elevatrices electriques fixes double ciseaux horizontaux",
+        "sources": [
+          "https://www.stockman.fr/fr/tables-elevatrices--16/tables-elevatrices-electriques-fixes-double-ciseaux-horizontaux--186.aspx",
+          "https://www.stockman.fr/lift-tables--16/stationary-electric-horizontal-double-scissor-lift-tables--186.aspx"
+        ]
+      },
+      {
+        "id": "91",
+        "label": "tables elevatrices electriques fixes quadruple ciseaux",
+        "sources": [
+          "https://www.stockman.fr/en/tables-elevatrices--16/tables-elevatrices-electriques-fixes-quadruple-ciseaux--91.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/stationary-electric-scissor-lift-tables--91.aspx"
+        ]
+      },
+      {
+        "id": "92",
+        "label": "tables elevatrices electriques fixes simple ciseaux",
+        "sources": [
+          "https://www.stockman.fr/en/tables-elevatrices--16/tables-elevatrices-electriques-fixes-simple-ciseaux--92.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/stationary-electric-scissor-lift-tables--92.aspx"
+        ]
+      },
+      {
+        "id": "93",
+        "label": "tables elevatrices electriques fixes triple ciseaux",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-electriques-fixes-triple-ciseaux--93.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/stationary-electric-scissor-lift-tables--93.aspx"
+        ]
+      },
+      {
+        "id": "94",
+        "label": "tables elevatrices en u et en e",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-en-u-et-en-e--94.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/u-e-shaped-lift-table--94.aspx"
+        ]
+      },
+      {
+        "id": "95",
+        "label": "tables elevatrices extra plates",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-extra-plates--95.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/low-profile-lift-table--95.aspx"
+        ]
+      },
+      {
+        "id": "144",
+        "label": "tables elevatrices inclinables",
+        "sources": [
+          "https://www.stockman.fr/fr/tables-elevatrices--16/tables-elevatrices-inclinables--144.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/tilting-scissor-lift-tables--144.aspx"
+        ]
+      },
+      {
+        "id": "96",
+        "label": "tables elevatrices inox",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-inox--96.aspx",
+          "https://www.stockman.fr/en/lift-tables--16/stainless-steel-lift-table--96.aspx"
+        ]
+      },
+      {
+        "id": "97",
+        "label": "tables elevatrices manuelles",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-manuelles--97.aspx",
+          "https://www.stockman.fr/en/lift-tables--16/manual-lift-tables--97.aspx"
+        ]
+      },
+      {
+        "id": "98",
+        "label": "tables elevatrices semi electriques et motorisees",
+        "sources": [
+          "https://www.stockman.fr/fr/tables-elevatrices--16/tables-elevatrices-semi-electriques-et-motorisees--98.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/semi-electric-motorized-lift-tables--98.aspx"
+        ]
+      },
+      {
+        "id": "175",
+        "label": "tables elevatrices tout terrain",
+        "sources": [
+          "https://www.stockman.fr/tables-elevatrices--16/tables-elevatrices-tout-terrain--175.aspx",
+          "https://www.stockman.fr/fr/lift-tables--16/--175.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "12",
+    "label": "Gerbeurs et élévateurs lève-charge",
+    "aliases": [
+      "gerbeurs-et-elevateurs-leve-charge--12",
+      "stackers--12"
+    ],
+    "sources": [
+      "https://www.stockman.fr/gerbeurs-et-elevateurs-leve-charge--12.aspx",
+      "https://www.stockman.fr/stackers--12.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "181",
+        "label": "accessoires de gerbeurs et elevateurs leve charge",
+        "sources": [
+          "https://www.stockman.fr/gerbeurs-et-elevateurs-leve-charge--12/accessoires-de-gerbeurs-et-elevateurs-leve-charge--181.aspx",
+          "https://www.stockman.fr/fr/stackers--12/accessories-for-stackers-and-lift-trucks--181.aspx"
+        ]
+      },
+      {
+        "id": "130",
+        "label": "elevateurs leve charge manuels",
+        "sources": [
+          "https://www.stockman.fr/gerbeurs-et-elevateurs-leve-charge--12/elevateurs-leve-charge-manuels--130.aspx",
+          "https://www.stockman.fr/fr/stackers--12/manual-material-lift--130.aspx"
+        ]
+      },
+      {
+        "id": "40",
+        "label": "gerbeurs electriques",
+        "sources": [
+          "https://www.stockman.fr/en/gerbeurs-et-elevateurs-leve-charge--12/gerbeurs-electriques--40.aspx",
+          "https://www.stockman.fr/fr/stackers--12/electric-stackers--40.aspx"
+        ]
+      },
+      {
+        "id": "133",
+        "label": "gerbeurs embarques autonomes",
+        "sources": [
+          "https://www.stockman.fr/gerbeurs-et-elevateurs-leve-charge--12/gerbeurs-embarques-autonomes--133.aspx",
+          "https://www.stockman.fr/fr/stackers--12/--133.aspx"
+        ]
+      },
+      {
+        "id": "42",
+        "label": "gerbeurs manuels acier",
+        "sources": [
+          "https://www.stockman.fr/gerbeurs-et-elevateurs-leve-charge--12/gerbeurs-manuels-acier--42.aspx",
+          "https://www.stockman.fr/en/stackers--12/steel-manual-stackers--42.aspx"
+        ]
+      },
+      {
+        "id": "43",
+        "label": "gerbeurs manuels aluminium",
+        "sources": [
+          "https://www.stockman.fr/gerbeurs-et-elevateurs-leve-charge--12/gerbeurs-manuels-aluminium--43.aspx",
+          "https://www.stockman.fr/fr/stackers--12/aluminium-manual-stackers--43.aspx"
+        ]
+      },
+      {
+        "id": "45",
+        "label": "gerbeurs semi electriques",
+        "sources": [
+          "https://www.stockman.fr/en/gerbeurs-et-elevateurs-leve-charge--12/gerbeurs-semi-electriques--45.aspx",
+          "https://www.stockman.fr/fr/stackers--12/semi-electric-stackers--45.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "6",
+    "label": "Diables et chariots de manutention",
+    "aliases": [
+      "diables-et-chariots-de-manutention--6",
+      "sack-trucks-trolleys--6"
+    ],
+    "sources": [
+      "https://www.stockman.fr/diables-et-chariots-de-manutention--6.aspx",
+      "https://www.stockman.fr/sack-trucks-trolleys--6.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "185",
+        "label": "accessoires et options de tracteurs pousseurs electriques",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/accessoires-et-options-de-tracteurs-pousseurs-electriques--185.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/accessories-and-options-for-electric-push-tractors--185.aspx"
+        ]
+      },
+      {
+        "id": "10",
+        "label": "chariots et diables porte futs",
+        "sources": [
+          "https://www.stockman.fr/en/diables-et-chariots-de-manutention--6/chariots-et-diables-porte-futs--10.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/drum-dollies-trolleys--10.aspx"
+        ]
+      },
+      {
+        "id": "11",
+        "label": "chariots et servantes",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/chariots-et-servantes--11.aspx",
+          "https://www.stockman.fr/en/sack-trucks-trolleys--6/platform-and-shelf-trolleys--11.aspx"
+        ]
+      },
+      {
+        "id": "12",
+        "label": "chariots porte bac et roulpalette",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/chariots-porte-bac-et-roulpalette--12.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/euro-containers-dollies-and-dolly-skates--12.aspx"
+        ]
+      },
+      {
+        "id": "14",
+        "label": "chariots porte panneaux",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/chariots-porte-panneaux--14.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/board-trolleys--14.aspx"
+        ]
+      },
+      {
+        "id": "128",
+        "label": "diables a pneus",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/diables-a-pneus--128.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/tire-hand-truck--128.aspx"
+        ]
+      },
+      {
+        "id": "29",
+        "label": "diables acier",
+        "sources": [
+          "https://www.stockman.fr/en/diables-et-chariots-de-manutention--6/diables-acier--29.aspx",
+          "https://www.stockman.fr/sack-trucks-trolleys--6/steel-sack-truck--29.aspx"
+        ]
+      },
+      {
+        "id": "30",
+        "label": "diables aluminium et inox",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/diables-aluminium-et-inox--30.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/aluminium-and-stainless-steel-sack-truck--30.aspx"
+        ]
+      },
+      {
+        "id": "31",
+        "label": "diables chariots aluminium et acier",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/diables-chariots-aluminium-et-acier--31.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/aluminium-and-steel-sack-truck-trolleys--31.aspx"
+        ]
+      },
+      {
+        "id": "32",
+        "label": "diables leve charge encombrante",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/diables-leve-charge-encombrante--32.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/furniture-movers--32.aspx"
+        ]
+      },
+      {
+        "id": "33",
+        "label": "diables monte escalier electriques",
+        "sources": [
+          "https://www.stockman.fr/en/diables-et-chariots-de-manutention--6/diables-monte-escalier-electriques--33.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/electric-stair-climber-sack-trucks--33.aspx"
+        ]
+      },
+      {
+        "id": "132",
+        "label": "diables porte bouteilles",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/diables-porte-bouteilles--132.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/bottle-hand-trucks--132.aspx"
+        ]
+      },
+      {
+        "id": "69",
+        "label": "plateaux roulants",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/plateaux-roulants--69.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/dollies--69.aspx"
+        ]
+      },
+      {
+        "id": "102",
+        "label": "tracteurs pousseurs electriques",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-de-manutention--6/tracteurs-pousseurs-electriques--102.aspx",
+          "https://www.stockman.fr/fr/sack-trucks-trolleys--6/electric-tow-tug--102.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "18",
+    "label": "Diables et chariots motorisés ergonomiques",
+    "aliases": [
+      "diables-et-chariots-motorises-ergonomiques--18",
+      "motorized-ergonomic-hand-trucks-and-trolleys--18"
+    ],
+    "sources": [
+      "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18.aspx",
+      "https://www.stockman.fr/motorized-ergonomic-hand-trucks-and-trolleys--18.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "150",
+        "label": "diables gerbeurs motorises",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/diables-gerbeurs-motorises--150.aspx",
+          "https://www.stockman.fr/motorized-ergonomic-hand-trucks-and-trolleys--18/powered-hand-trucks-stackers--150.aspx"
+        ]
+      },
+      {
+        "id": "124",
+        "label": "diables monte escaliers aluminium a chenilles",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/diables-monte-escaliers-aluminium-a-chenilles--124.aspx",
+          "https://www.stockman.fr/fr/motorized-ergonomic-hand-trucks-and-trolleys--18/electric-stair-climber-hand-trucks-with-rubber-tracks--124.aspx"
+        ]
+      },
+      {
+        "id": "123",
+        "label": "diables monte escaliers electriques aluminium",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/diables-monte-escaliers-electriques-aluminium--123.aspx",
+          "https://www.stockman.fr/fr/motorized-ergonomic-hand-trucks-and-trolleys--18/electric-aluminum-stair-climbers-hand-trucks--123.aspx"
+        ]
+      },
+      {
+        "id": "125",
+        "label": "diablesgerbeurs monte escaliers electriques aluminium",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/diablesgerbeurs-monte-escaliers-electriques-aluminium--125.aspx",
+          "https://www.stockman.fr/motorized-ergonomic-hand-trucks-and-trolleys--18/electric-aluminum-stair-climber-hand-truck-stacker--125.aspx"
+        ]
+      },
+      {
+        "id": "126",
+        "label": "options et accessoires diables electriques et ergonomiques",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/options-et-accessoires-diables-electriques-et-ergonomiques--126.aspx",
+          "https://www.stockman.fr/fr/motorized-ergonomic-hand-trucks-and-trolleys--18/options-and-accessories--126.aspx"
+        ]
+      },
+      {
+        "id": "127",
+        "label": "plateforme motorisee avec elevation electrique",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/plateforme-motorisee-avec-elevation-electrique--127.aspx",
+          "https://www.stockman.fr/fr/motorized-ergonomic-hand-trucks-and-trolleys--18/motorized-scissor-platform-trolley--127.aspx"
+        ]
+      },
+      {
+        "id": "70",
+        "label": "plateformes motorisees",
+        "sources": [
+          "https://www.stockman.fr/diables-et-chariots-motorises-ergonomiques--18/plateformes-motorisees--70.aspx",
+          "https://www.stockman.fr/fr/motorized-ergonomic-hand-trucks-and-trolleys--18/motorized-platform-trolley--70.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "label": "Accessoires pour chariot élévateur",
+    "aliases": [
+      "accessoires-pour-chariot-elevateur--2",
+      "forklift-attachments-accessories--2"
+    ],
+    "sources": [
+      "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2.aspx",
+      "https://www.stockman.fr/forklift-attachments-accessories--2.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "6",
+        "label": "bennes a dechets et godets",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/bennes-a-dechets-et-godets--6.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/tipping-skips-and-scoops--6.aspx"
+        ]
+      },
+      {
+        "id": "16",
+        "label": "consommables pour accessoires de chariots elevateurs",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/consommables-pour-accessoires-de-chariots-elevateurs--16.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/forklift-spare-parts-and-accessories--16.aspx"
+        ]
+      },
+      {
+        "id": "35",
+        "label": "eperons pour charge cylindrique",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/eperons-pour-charge-cylindrique--35.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/forklift-booms--35.aspx"
+        ]
+      },
+      {
+        "id": "37",
+        "label": "etrave a neige",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/etrave-a-neige--37.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/snow-plow--37.aspx"
+        ]
+      },
+      {
+        "id": "134",
+        "label": "gueuses de controle",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/gueuses-de-controle--134.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/weights-for-lifting-tests--134.aspx"
+        ]
+      },
+      {
+        "id": "62",
+        "label": "outils de cerclage manuels feuillards textile et plastique",
+        "sources": [
+          "https://www.stockman.fr/en/accessoires-pour-chariot-elevateur--2/outils-de-cerclage-manuels-feuillards-textile-et-plastique--62.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/polyester-and-polypropylene-strapping-tools--62.aspx"
+        ]
+      },
+      {
+        "id": "67",
+        "label": "pinces de levage",
+        "sources": [
+          "https://www.stockman.fr/fr/accessoires-pour-chariot-elevateur--2/pinces-de-levage--67.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/plate-clamps--67.aspx"
+        ]
+      },
+      {
+        "id": "68",
+        "label": "pinces pour bordure et leve palettes",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/pinces-pour-bordure-et-leve-palettes--68.aspx",
+          "https://www.stockman.fr/forklift-attachments-accessories--2/lifters-and-pallet-crane-forks--68.aspx"
+        ]
+      },
+      {
+        "id": "73",
+        "label": "potences fixes et telescopiques",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/potences-fixes-et-telescopiques--73.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/hoisting-hooks-and-extendable-jibs--73.aspx"
+        ]
+      },
+      {
+        "id": "74",
+        "label": "presses hydrauliques",
+        "sources": [
+          "https://www.stockman.fr/en/accessoires-pour-chariot-elevateur--2/presses-hydrauliques--74.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/hydraulic-workshop-press--74.aspx"
+        ]
+      },
+      {
+        "id": "77",
+        "label": "protecteur bout de fourche",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/protecteur-bout-de-fourche--77.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/fork-protection--77.aspx"
+        ]
+      },
+      {
+        "id": "80",
+        "label": "rallonges de fourches",
+        "sources": [
+          "https://www.stockman.fr/accessoires-pour-chariot-elevateur--2/rallonges-de-fourches--80.aspx",
+          "https://www.stockman.fr/fr/forklift-attachments-accessories--2/fork-extensions--80.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "9",
+    "label": "Équipement d’atelier",
+    "aliases": [
+      "equipement-datelier--9",
+      "workshop-equipment--9"
+    ],
+    "sources": [
+      "https://www.stockman.fr/equipement-datelier--9.aspx",
+      "https://www.stockman.fr/workshop-equipment--9.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "179",
+        "label": "accessoires de grues datelier",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/accessoires-de-grues-datelier--179.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/workshop-crane-accessories--179.aspx"
+        ]
+      },
+      {
+        "id": "143",
+        "label": "grue datelier grande capacite porte a faux motorisees",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/grue-datelier-grande-capacite-porte-a-faux-motorisees--143.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/motorized-counterbalance-shop-crane--143.aspx"
+        ]
+      },
+      {
+        "id": "46",
+        "label": "grues datelier manuelles encadrantes",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/grues-datelier-manuelles-encadrantes--46.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/euro-shop-crane--46.aspx"
+        ]
+      },
+      {
+        "id": "47",
+        "label": "grues datelier manuelles pliables",
+        "sources": [
+          "https://www.stockman.fr/fr/equipement-datelier--9/grues-datelier-manuelles-pliables--47.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/foldable-shop-crane--47.aspx"
+        ]
+      },
+      {
+        "id": "48",
+        "label": "grues datelier porte a faux manuelles",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/grues-datelier-porte-a-faux-manuelles--48.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/counterbalance-shop-crane--48.aspx"
+        ]
+      },
+      {
+        "id": "154",
+        "label": "grues datelier porte a faux motorisees a mat fixe",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/grues-datelier-porte-a-faux-motorisees-a-mat-fixe--154.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/fixed-mast-motorized-cantilever-workshop-cranes--154.aspx"
+        ]
+      },
+      {
+        "id": "49",
+        "label": "grues datelier porte a faux rotatives",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/grues-datelier-porte-a-faux-rotatives--49.aspx",
+          "https://www.stockman.fr/workshop-equipment--9/pivoting-counterbalance-shop-crane--49.aspx"
+        ]
+      },
+      {
+        "id": "50",
+        "label": "grues datelier porte a faux rotatives motorisees",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/grues-datelier-porte-a-faux-rotatives-motorisees--50.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/motorized-pivoting-counterbalance-shop-crane--50.aspx"
+        ]
+      },
+      {
+        "id": "180",
+        "label": "grues repliables et transformables miload",
+        "sources": [
+          "https://www.stockman.fr/en/equipement-datelier--9/grues-repliables-et-transformables-miload--180.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/miload-folding-and-convertible-cranes--180.aspx"
+        ]
+      },
+      {
+        "id": "74",
+        "label": "presses hydrauliques",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/presses-hydrauliques--74.aspx",
+          "https://www.stockman.fr/en/workshop-equipment--9/hydraulic-workshop-press--74.aspx"
+        ]
+      },
+      {
+        "id": "75",
+        "label": "presses hydrauliques motorisees de precision",
+        "sources": [
+          "https://www.stockman.fr/en/equipement-datelier--9/presses-hydrauliques-motorisees-de-precision--75.aspx",
+          "https://www.stockman.fr/fr/workshop-equipment--9/motorized-hydraulic-workshop-press--75.aspx"
+        ]
+      },
+      {
+        "id": "76",
+        "label": "presses hydropneumatiques",
+        "sources": [
+          "https://www.stockman.fr/equipement-datelier--9/presses-hydropneumatiques--76.aspx",
+          "https://www.stockman.fr/en/workshop-equipment--9/hydro-pneumatic-workshop-press--76.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "19",
+    "label": "Transpalettes électriques",
+    "aliases": [
+      "transpalettes-electriques--19",
+      "electric-pallet-trucks--19"
+    ],
+    "sources": [
+      "https://www.stockman.fr/transpalettes-electriques--19.aspx",
+      "https://www.stockman.fr/electric-pallet-trucks--19.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "148",
+        "label": "transpalettes electriques a conducteur accompagnant",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes-electriques--19/transpalettes-electriques-a-conducteur-accompagnant--148.aspx",
+          "https://www.stockman.fr/fr/electric-pallet-trucks--19/electric-pedestrian-pallet-trucks--148.aspx"
+        ]
+      },
+      {
+        "id": "147",
+        "label": "transpalettes electriques autoportes",
+        "sources": [
+          "https://www.stockman.fr/fr/transpalettes-electriques--19/transpalettes-electriques-autoportes--147.aspx",
+          "https://www.stockman.fr/fr/electric-pallet-trucks--19/electric-stand-on-pallet-trucks--147.aspx"
+        ]
+      },
+      {
+        "id": "140",
+        "label": "transpalettes electriques compacts",
+        "sources": [
+          "https://www.stockman.fr/transpalettes-electriques--19/transpalettes-electriques-compacts--140.aspx",
+          "https://www.stockman.fr/fr/electric-pallet-trucks--19/compact-electric-pallet-truck--140.aspx"
+        ]
+      },
+      {
+        "id": "138",
+        "label": "transpalettes electriques lithium",
+        "sources": [
+          "https://www.stockman.fr/transpalettes-electriques--19/transpalettes-electriques-lithium--138.aspx",
+          "https://www.stockman.fr/fr/electric-pallet-trucks--19/electric-lithium-pallet-trucks--138.aspx"
+        ]
+      },
+      {
+        "id": "139",
+        "label": "transpalettes electriques lithium peseurs",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes-electriques--19/transpalettes-electriques-lithium-peseurs--139.aspx",
+          "https://www.stockman.fr/fr/electric-pallet-trucks--19/weighing-scale-lithium-electric-pallet-truck--139.aspx"
+        ]
+      },
+      {
+        "id": "162",
+        "label": "transpalettes electriques tout terrain",
+        "sources": [
+          "https://www.stockman.fr/en/transpalettes-electriques--19/transpalettes-electriques-tout-terrain--162.aspx",
+          "https://www.stockman.fr/fr/electric-pallet-trucks--19/electric-lithium-pallet-trucks--162.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "5",
+    "label": "Crics et équipement poids lourd",
+    "aliases": [
+      "crics-et-equipement-poids-lourd--5",
+      "lifting-jacks-heavy-duty-equipment--5"
+    ],
+    "sources": [
+      "https://www.stockman.fr/crics-et-equipement-poids-lourd--5.aspx",
+      "https://www.stockman.fr/lifting-jacks-heavy-duty-equipment--5.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "9",
+        "label": "chandelles",
+        "sources": [
+          "https://www.stockman.fr/crics-et-equipement-poids-lourd--5/chandelles--9.aspx",
+          "https://www.stockman.fr/en/lifting-jacks-heavy-duty-equipment--5/jack-stands--9.aspx"
+        ]
+      },
+      {
+        "id": "21",
+        "label": "crics a patte",
+        "sources": [
+          "https://www.stockman.fr/crics-et-equipement-poids-lourd--5/crics-a-patte--21.aspx",
+          "https://www.stockman.fr/fr/lifting-jacks-heavy-duty-equipment--5/hydraulic-toe-jacks--21.aspx"
+        ]
+      },
+      {
+        "id": "22",
+        "label": "crics bouteille",
+        "sources": [
+          "https://www.stockman.fr/fr/crics-et-equipement-poids-lourd--5/crics-bouteille--22.aspx",
+          "https://www.stockman.fr/fr/lifting-jacks-heavy-duty-equipment--5/bottle-jacks--22.aspx"
+        ]
+      },
+      {
+        "id": "23",
+        "label": "crics forestiers",
+        "sources": [
+          "https://www.stockman.fr/fr/crics-et-equipement-poids-lourd--5/crics-forestiers--23.aspx",
+          "https://www.stockman.fr/fr/lifting-jacks-heavy-duty-equipment--5/mechanical-toe-jacks--23.aspx"
+        ]
+      },
+      {
+        "id": "24",
+        "label": "crics grande stabilite",
+        "sources": [
+          "https://www.stockman.fr/crics-et-equipement-poids-lourd--5/crics-grande-stabilite--24.aspx",
+          "https://www.stockman.fr/fr/lifting-jacks-heavy-duty-equipment--5/forklift-jacks--24.aspx"
+        ]
+      },
+      {
+        "id": "81",
+        "label": "rampe de surelevation",
+        "sources": [
+          "https://www.stockman.fr/crics-et-equipement-poids-lourd--5/rampe-de-surelevation--81.aspx",
+          "https://www.stockman.fr/fr/lifting-jacks-heavy-duty-equipment--5/ramps--81.aspx"
+        ]
+      },
+      {
+        "id": "116",
+        "label": "verins et treteau de securite",
+        "sources": [
+          "https://www.stockman.fr/en/crics-et-equipement-poids-lourd--5/verins-et-treteau-de-securite--116.aspx",
+          "https://www.stockman.fr/fr/lifting-jacks-heavy-duty-equipment--5/trailer-stabilizer-jack-and-safety-trestle--116.aspx"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "label": "Coins roulants et rouleurs",
+    "aliases": [
+      "coins-roulants-et-rouleurs--3",
+      "load-moving-skates--3"
+    ],
+    "sources": [
+      "https://www.stockman.fr/coins-roulants-et-rouleurs--3.aspx",
+      "https://www.stockman.fr/load-moving-skates--3.aspx"
+    ],
+    "subcategories": [
+      {
+        "id": "4",
+        "label": "barre de levier",
+        "sources": [
+          "https://www.stockman.fr/fr/coins-roulants-et-rouleurs--3/barre-de-levier--4.aspx",
+          "https://www.stockman.fr/fr/load-moving-skates--3/roller-crowbar--4.aspx"
+        ]
+      },
+      {
+        "id": "7",
+        "label": "cales et rouleurs a chenille",
+        "sources": [
+          "https://www.stockman.fr/fr/coins-roulants-et-rouleurs--3/cales-et-rouleurs-a-chenille--7.aspx",
+          "https://www.stockman.fr/fr/load-moving-skates--3/leveling-plates-and-chain-rollers-skates--7.aspx"
+        ]
+      },
+      {
+        "id": "15",
+        "label": "coins roulants",
+        "sources": [
+          "https://www.stockman.fr/coins-roulants-et-rouleurs--3/coins-roulants--15.aspx",
+          "https://www.stockman.fr/fr/load-moving-skates--3/corner-moving-skates--15.aspx"
+        ]
+      },
+      {
+        "id": "53",
+        "label": "kits roulage",
+        "sources": [
+          "https://www.stockman.fr/coins-roulants-et-rouleurs--3/kits-roulage--53.aspx",
+          "https://www.stockman.fr/fr/load-moving-skates--3/load-skate-kits--53.aspx"
+        ]
+      },
+      {
+        "id": "84",
+        "label": "rouleurs a timon",
+        "sources": [
+          "https://www.stockman.fr/coins-roulants-et-rouleurs--3/rouleurs-a-timon--84.aspx",
+          "https://www.stockman.fr/fr/load-moving-skates--3/steerable-load-skates--84.aspx"
+        ]
+      },
+      {
+        "id": "85",
+        "label": "rouleurs avec galets",
+        "sources": [
+          "https://www.stockman.fr/coins-roulants-et-rouleurs--3/rouleurs-avec-galets--85.aspx",
+          "https://www.stockman.fr/fr/load-moving-skates--3/fixed-and-swivel-casters-load-skates--85.aspx"
+        ]
+      }
+    ]
+  }
+]

@@ -1,13 +1,15 @@
+import {resolutionFailure} from "@/lib/suppliers/stockman/global-import/runtime-errors";
 import { stockmanImportPreparationEnabled } from "@/lib/suppliers/stockman/prepare-import-policy";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { prisma } from "@/lib/db/prisma";
-import { getStockmanDiscoveryJob, startStockmanDiscoveryJob } from "@/lib/suppliers/stockman/discovery-jobs";
+import { getStockmanDiscoveryJob, presentStockmanDiscoveryJob, startStockmanDiscoveryJob, StockmanDiscoveryConflict } from "@/lib/suppliers/stockman/discovery-jobs";
 import { diagnoseStockmanNavigation, getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import { auditStockmanUnresolved } from "@/lib/suppliers/stockman/unresolved-audit";
 import { auditStockmanDuplicateStructure } from "@/lib/suppliers/stockman/duplicate-structure-audit";
+import { resolveStockmanCommercialScope } from "@/lib/suppliers/stockman/commercial-scope";
 import { isKnownFalseStockmanReference } from "@/lib/suppliers/stockman/reference-hygiene";
 import { stockmanPreparationHttpStatus, type StockmanProductReadErrorKind } from "@/lib/suppliers/stockman/product-read-error";
 
@@ -18,6 +20,9 @@ export const maxDuration = 60;
 const scanSchema = z.object({
   action: z.literal("scan"),
   seedUrl: z.string().url().optional(),
+  commercialScope: z.array(z.string().regex(/^\d+(?::\d+)?$/)).min(1).max(150).optional(),
+  excludedReferences: z.array(z.string().trim().min(1).max(31)).max(500).optional(),
+  scopeMode: z.enum(["audit", "commercial"]).optional(),
   maxBrowsePages: z.number().int().min(1).max(5_000).optional(),
   maxProductPages: z.number().int().min(1).max(10_000).optional(),
 });
@@ -108,25 +113,33 @@ function linkedSourceData(
   } as Prisma.InputJsonValue;
 }
 
-export async function GET(request: Request) {
-  const denied = await authorize(false);
-  if (denied) return denied;
+export async function GET(request:Request){try{const denied=await authorize(false);if(denied)return denied;return await prisma.$transaction(async tx=>{await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8s'");return readDiscovery(request,tx);},{isolationLevel:"RepeatableRead",maxWait:5000,timeout:12000});}catch(error){const {status,...body}=resolutionFailure(error);return NextResponse.json(body,{status,headers:{"Cache-Control":"no-store"}});}}
+async function readDiscovery(request:Request,db:Prisma.TransactionClient){
 
   const url = new URL(request.url);
+  if (url.searchParams.get("syncHistory") === "1") {
+    const jobId = url.searchParams.get("jobId");
+    const history = await db.auditLog.findMany({
+      where: { entityType: "StockmanCommercialSync", ...(jobId ? { entityId: jobId } : {}) },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 20,
+      select: { id: true, entityId: true, createdAt: true, metadata: true },
+    });
+    return NextResponse.json({ history }, { headers: { "Cache-Control": "no-store" } });
+  }
   if (url.searchParams.get("latest") === "1") {
-    const active = await prisma.stockmanDiscoveryJob.findFirst({ where: { status: { in: ["QUEUED", "RUNNING", "CANCEL_REQUESTED"] } }, orderBy: { createdAt: "desc" } });
-    const durable = active ?? await prisma.stockmanDiscoveryJob.findFirst({ orderBy: { createdAt: "desc" } });
+    const active = await db.stockmanDiscoveryJob.findFirst({ where: { status: { in: ["QUEUED", "RUNNING", "CANCEL_REQUESTED"] } }, orderBy: { createdAt: "desc" } });
+    const durable = active ?? await db.stockmanDiscoveryJob.findFirst({ orderBy: { createdAt: "desc" } });
     if (durable) {
-      const job = await getStockmanDiscoveryJob(durable.id);
+      const job = presentStockmanDiscoveryJob(durable);
       return NextResponse.json({ restored: Boolean(job?.result), source: "durable", job, scan: job?.result, snapshotFinishedAt: job?.finishedAt }, { headers: { "Cache-Control": "no-store" } });
     }
-    const snapshot = await prisma.stockmanCatalogSnapshot.findFirst({ orderBy: { finishedAt: "desc" } });
+    const snapshot = await db.stockmanCatalogSnapshot.findFirst({ orderBy: { finishedAt: "desc" } });
     if (!snapshot) return NextResponse.json({ restored: false }, { headers: { "Cache-Control": "no-store" } });
 
     // V2.12.8.2 — le snapshot persistant peut encore contenir des faux
     // tokens issus d'anciens scans. On les purge à la restauration, sans
     // rescanner l'intranet. La règle est centralisée dans reference-hygiene.
-    const persistedCandidates = await prisma.stockmanCatalogReference.findMany({
+    const persistedCandidates = await db.stockmanCatalogReference.findMany({
       where: { isActive: true },
       select: { reference: true },
     });
@@ -136,8 +149,8 @@ export async function GET(request: Request) {
     // Historical restoration is read-only: ghost tokens are hidden, not deleted.
 
     const [references, importDrafts] = await Promise.all([
-      prisma.stockmanCatalogReference.findMany({ where: { isActive: true }, orderBy: { reference: "asc" } }),
-      prisma.stockmanImportDraft.findMany({ where: { status: "PREPARED" }, select: { reference: true } }),
+      db.stockmanCatalogReference.findMany({ where: { isActive: true }, orderBy: { reference: "asc" } }),
+      db.stockmanImportDraft.findMany({ where: { status: "PREPARED" }, select: { reference: true } }),
     ]);
     const prepared = new Set(importDrafts.map((item) => item.reference.trim().toUpperCase()));
     const matches = references.filter((item) => !isKnownFalseStockmanReference(item.reference)).map((item) => {
@@ -159,11 +172,11 @@ export async function GET(request: Request) {
       };
     });
     const unresolvedItems = matches.filter((item) => item.catalogueState !== "present");
-    const unresolvedAudit = unresolvedItems.length ? await auditStockmanUnresolved(unresolvedItems) : null;
-    const duplicateRefs = unresolvedAudit?.rows
+    const unresolvedAudit: Awaited<ReturnType<typeof auditStockmanUnresolved>> | null = null;
+    const duplicateRefs = (unresolvedAudit as Awaited<ReturnType<typeof auditStockmanUnresolved>> | null)?.rows
       .filter((row) => row.decision === "existing" && (row.candidates?.length ?? 0) > 1)
       .map((row) => row.reference) ?? [];
-    const duplicateStructureAudit = duplicateRefs.length ? await auditStockmanDuplicateStructure(duplicateRefs) : null;
+    const duplicateStructureAudit = null;
     const count = (kind: string) => matches.filter((item) => item.missingKind === kind).length;
     const scan = {
       startedAt: snapshot.startedAt.toISOString(), finishedAt: snapshot.finishedAt.toISOString(),
@@ -173,7 +186,7 @@ export async function GET(request: Request) {
       matches, warnings: [`V2.12.8.2 : audit restauré depuis PostgreSQL/Neon sans rescanner l’intranet STOCKMAN. La complétude du scan historique n’étant pas persistée, ce résultat restauré est volontairement marqué incomplet. ${ghostReferences.length} référence(s) fantôme(s) purgée(s).`],
       differential: { presentInOyste: matches.filter(i => i.catalogueState === "present").length, toImport: matches.filter(i => i.catalogueState === "to_import").length, toReview: matches.filter(i => i.catalogueState === "to_review").length, disappearedFromStockman: snapshot.disappearedCount, preparedForImport: matches.filter(i => i.importPrepared).length },
     };
-    return NextResponse.json({ restored: true, restoredAt: new Date().toISOString(), snapshotFinishedAt: snapshot.finishedAt.toISOString(), ghostReferencesHidden: ghostReferences, scan, unresolvedAudit, duplicateStructureAudit }, { headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ restored: true, restoredAt: new Date().toISOString(), snapshotFinishedAt: snapshot.finishedAt.toISOString(), ghostReferencesHidden: ghostReferences, scan, unresolvedAudit, duplicateStructureAudit, auditsDeferred:true }, { headers: { "Cache-Control": "no-store" } });
   }
 
   const jobId = url.searchParams.get("jobId")?.trim();
@@ -182,7 +195,8 @@ export async function GET(request: Request) {
   // Chaque poll fait avancer au plus un lot borné. L'état reste en base et un
   // cron reprend le même travail si le navigateur BO est fermé.
   // Status reads stay fast and read-only; the durable cron owns execution.
-  const job = await getStockmanDiscoveryJob(jobId);
+  const stored = await db.stockmanDiscoveryJob.findUnique({where:{id:jobId}});
+  const job = stored ? presentStockmanDiscoveryJob(stored) : null;
   if (!job) return NextResponse.json({ message: "Ce scan n’existe plus ou a expiré." }, { status: 404 });
   return NextResponse.json(job, { headers: { "Cache-Control": "no-store" } });
 }
@@ -203,17 +217,25 @@ export async function POST(request: Request) {
     const parsed = scanSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ message: "Paramètres de scan invalides." }, { status: 400 });
 
-    const job = await startStockmanDiscoveryJob({
-      ...parsed.data,
-      // V2.12.3 : le bouton d'audit doit parcourir l'intranet, pas seulement
-      // l'échantillon historique limité à 120 pages.
-      maxBrowsePages: parsed.data.maxBrowsePages ?? 5_000,
-      maxProductPages: parsed.data.maxProductPages ?? 10_000,
-    });
-    return NextResponse.json(
-      { jobId: job!.jobId, status: job!.status, progress: job!.progress },
-      { status: 202, headers: { "Cache-Control": "no-store" } },
-    );
+    try {
+      if (parsed.data.commercialScope) resolveStockmanCommercialScope(parsed.data.commercialScope);
+    } catch {
+      return NextResponse.json({ message: "Le périmètre commercial sélectionné est invalide." }, { status: 400 });
+    }
+    try {
+      const job = await startStockmanDiscoveryJob({
+        ...parsed.data,
+        maxBrowsePages: parsed.data.maxBrowsePages ?? 5_000,
+        maxProductPages: parsed.data.maxProductPages ?? 10_000,
+      });
+      return NextResponse.json(
+        { jobId: job!.jobId, status: job!.status, progress: job!.progress },
+        { status: 202, headers: { "Cache-Control": "no-store" } },
+      );
+    } catch (error) {
+      if (error instanceof StockmanDiscoveryConflict) return NextResponse.json({ message: error.message }, { status: 409 });
+      throw error;
+    }
   }
 
 
@@ -261,9 +283,26 @@ export async function POST(request: Request) {
     const parsed = prepareImportSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ message: "Les produits à préparer sont invalides." }, { status: 400 });
 
+        // STOCKMAN_ADMIN_CONFIRMATION_V1
+    const expectedConfirmation = parsed.data.items
+      .map((item) => item.reference.trim().toUpperCase())
+      .sort()
+      .join(",");
+
+    if (
+      body?.confirmPreparation !== true ||
+      typeof body?.confirmedReferences !== "string" ||
+      body.confirmedReferences !== expectedConfirmation
+    ) {
+      return NextResponse.json({
+        message: "Confirmation explicite requise pour ce lot.",
+        prepared: 0,
+      }, { status: 409 });
+    }
+
     // STOCKMAN_PREPARE_IMPORT_POLICY_V1
     // Fail closed : aucune approbation metier tracable n'est encore disponible.
-    if (!stockmanImportPreparationEnabled()) {
+    if (!stockmanImportPreparationEnabled(parsed.data.items)) {
       return NextResponse.json({
         message: "Preparation STOCKMAN suspendue : approbation metier explicite requise.",
         prepared: 0,
@@ -363,7 +402,7 @@ export async function POST(request: Request) {
           designation: product.designation || item.designation,
           category: item.category ?? null,
           sourceUrl: product.sourceUrl,
-          purchasePriceExVat: product.purchasePriceExVat,
+          purchasePriceExVat: product.priceOnRequest ? null : product.purchasePriceExVat,
           stock: product.stockOnRequest ? null : product.stock,
           weightKg: product.weightKg,
           status: "PREPARED",
@@ -373,7 +412,7 @@ export async function POST(request: Request) {
           designation: product.designation || item.designation,
           category: item.category ?? null,
           sourceUrl: product.sourceUrl,
-          purchasePriceExVat: product.purchasePriceExVat,
+          purchasePriceExVat: product.priceOnRequest ? null : product.purchasePriceExVat,
           stock: product.stockOnRequest ? null : product.stock,
           weightKg: product.weightKg,
           status: "PREPARED",

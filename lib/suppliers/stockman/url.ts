@@ -84,6 +84,10 @@ export function stockmanUrlLanguage(value: string) {
   return /^\/en(?:\/|$)/i.test(url.pathname) ? "en" : "fr";
 }
 
+export function isStockmanNotFoundPath(pathname: string) {
+  return /(?:^|\/)404\.aspx\/?$/i.test(pathname);
+}
+
 export function stockmanQueueIdentity(value: string) {
   return canonicalizeStockmanUrl(value);
 }

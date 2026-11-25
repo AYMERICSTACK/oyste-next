@@ -3,6 +3,9 @@ import { z } from "zod";
 import type { Prisma } from "@/generated/prisma/client";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { prisma } from "@/lib/db/prisma";
+import { auditStockmanMargin, confirmedStockmanFreight } from "@/lib/suppliers/stockman/margin-audit";
+import { getStockmanNeonPrices } from "@/lib/catalogue/stockman-neon-prices";
+import { isStockmanSupplier } from "@/lib/suppliers/stockman/order-policy";
 import { getStockmanProducts } from "@/lib/suppliers/stockman/client";
 import {
   calculateSellingPriceHT,
@@ -112,19 +115,24 @@ async function buildSupplierPreview(supplierId: string, rule: SupplierPricingRul
     select: {
       id: true,
       name: true,
+      slug: true,
       products: {
         select: {
           id: true,
           code: true,
           name: true,
+          supplierCode: true,
           priceHt: true,
+          shippingMode: true,
           sourceData: true,
           variants: {
             select: {
               id: true,
               code: true,
               name: true,
+              supplierCode: true,
               priceHt: true,
+              shippingMode: true,
               sourceData: true,
             },
             orderBy: { code: "asc" },
@@ -146,6 +154,7 @@ async function buildSupplierPreview(supplierId: string, rule: SupplierPricingRul
     currentSellingPriceHT: number;
     proposedSellingPriceHT: number;
     currentMarginRate: number | null;
+    stockmanMargin?: ReturnType<typeof auditStockmanMargin>;
   }> = [];
 
   let missingPurchasePrice = 0;
@@ -160,7 +169,8 @@ async function buildSupplierPreview(supplierId: string, rule: SupplierPricingRul
     blocking: boolean;
   }> = [];
 
-  const isStockman = supplier.name.trim().toLocaleLowerCase("fr") === "stockman";
+  const isStockman = isStockmanSupplier(supplier.name) || isStockmanSupplier(supplier.slug);
+  const prices = isStockman ? await getStockmanNeonPrices(supplier.products.flatMap(p => [p.supplierCode || "", p.code, ...p.variants.flatMap(v => [v.supplierCode || "", v.code])])) : null;
   const stockmanRefs = isStockman
     ? await prisma.stockmanCatalogReference.findMany({
         select: { targetType: true, targetId: true, isActive: true, sourceUrl: true, reference: true },
@@ -215,7 +225,19 @@ async function buildSupplierPreview(supplierId: string, rule: SupplierPricingRul
     return { reason: "Anomalie réelle à contrôler", detail: ref.reference, classification: "real_anomaly" as const, blocking: true };
   }
 
-  for (const product of supplier.products) {
+  if (prices) {
+    const rows = supplier.products.flatMap<{ id: string; code: string; supplierCode: string | null; name: string; sourceData: Prisma.JsonValue; shippingMode: string | null; targetType: "product" | "variant" }>(p => p.variants.length ? p.variants.map(v => ({ ...v, shippingMode: v.shippingMode ?? p.shippingMode, targetType: "variant" as const })) : [{ ...p, targetType: "product" as const }]);
+    for (const row of rows) {
+      const purchasePriceHT = stockmanPurchasePriceUnavailable(row.sourceData) ? null : extractPurchasePriceFromSourceData(row.sourceData);
+      const salePriceHT = prices.get(row.supplierCode?.trim().toUpperCase() || "") ?? prices.get(row.code.trim().toUpperCase()) ?? null;
+      const stockmanMargin = auditStockmanMargin({ purchasePriceHT, salePriceHT, ...confirmedStockmanFreight(row.sourceData, row.shippingMode) });
+      if (purchasePriceHT === null) missingPurchasePrice++;
+      if (purchasePriceHT === null || salePriceHT === null) missingLines.push({ id: row.id, code: row.code, name: row.name, targetType: row.targetType, reason: salePriceHT === null ? "Tarif de vente Neon manquant" : "Prix d’achat manquant", detail: null, classification: "real_anomaly", blocking: true });
+      lines.push({ id: row.id, code: row.code, name: row.name, targetType: row.targetType, purchasePriceHT: purchasePriceHT ?? 0, currentSellingPriceHT: salePriceHT ?? 0, proposedSellingPriceHT: stockmanMargin.referencePriceHT ?? 0, currentMarginRate: stockmanMargin.marginRate, stockmanMargin });
+    }
+  }
+
+  for (const product of prices ? [] : supplier.products) {
     const purchasePrice = extractPurchasePriceFromSourceData(product.sourceData);
     if (purchasePrice !== null) {
       const proposed = calculateSellingPriceHT(purchasePrice, rule);
@@ -273,6 +295,7 @@ async function buildSupplierPreview(supplierId: string, rule: SupplierPricingRul
 
   return {
     supplier: { id: supplier.id, name: supplier.name },
+    readOnly: isStockman,
     rule,
     affectedCount: lines.length,
     missingPurchasePrice,
@@ -802,6 +825,13 @@ export async function POST(request: Request) {
           ? "Tous les prix d’achat Stockman exploitables sont déjà renseignés."
           : `${result.updated} prix d’achat récupéré(s) · ${result.skipped} référence(s) sans tarif fournisseur ignorée(s) · ${result.failed} échec(s) technique(s) · ${result.remaining} encore à récupérer.`,
     });
+  }
+
+  if (parsed.data.action !== "preview") {
+    const supplier = await prisma.supplier.findUnique({ where: { id: supplierId }, select: { name: true, slug: true } });
+    if (isStockmanSupplier(supplier?.name) || isStockmanSupplier(supplier?.slug)) {
+      return NextResponse.json({ message: "STOCKMAN utilise les tarifs de vente Neon. La formule est réservée au contrôle des marges." }, { status: 409 });
+    }
   }
 
   if (parsed.data.action === "save_rule") {

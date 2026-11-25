@@ -2,18 +2,19 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import type { Prisma } from "@/generated/prisma/client";
+import { getStockmanNeonPrices } from "@/lib/catalogue/stockman-neon-prices";
+import { auditStockmanMargin, confirmedStockmanFreight } from "@/lib/suppliers/stockman/margin-audit";
+import { isBlockedStockmanReference, stockmanShippingMode } from "@/lib/suppliers/stockman/order-policy";
 import { resolveStockmanCategory } from "@/lib/suppliers/stockman/category";
 
 const VERSION = "V2.12.9";
 const EXPECTED_LEAD_TIME_MARKER = "depart usine sous 48 h";
-const STOCKMAN_MARGIN_DIVISOR = 0.8;
 type JsonObject = Record<string, unknown>;
 function normalized(value: string | null | undefined) { return String(value || "").toLocaleLowerCase("fr").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim(); }
 function hasStockmanLeadTime(value: string | null | undefined) { return normalized(value).includes(EXPECTED_LEAD_TIME_MARKER); }
 function asObject(value: unknown): JsonObject | null { return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : null; }
 function stockmanMeta(sourceData: Prisma.JsonValue | null) { return asObject(asObject(sourceData)?.stockman) ?? {}; }
 function numberOrNull(value: unknown) { const n = Number(value); return value !== null && value !== undefined && Number.isFinite(n) ? n : null; }
-function centsEqual(a: number, b: number) { return Math.abs(Math.round(a * 100) - Math.round(b * 100)) <= 1; }
 
 async function supplierId() {
   return prisma.supplier.findFirst({ where: { OR: [{ name: { equals: "STOCKMAN", mode: "insensitive" } }, { slug: { equals: "stockman", mode: "insensitive" } }] }, select: { id: true, name: true } });
@@ -24,20 +25,34 @@ async function buildAudit() {
   const products = await prisma.product.findMany({
     where: { supplierId: supplier.id },
     select: {
-      id: true, code: true, name: true, description: true, detailedDescription: true, priceHt: true, stock: true, weightKg: true,
+      id: true, code: true, supplierCode: true, name: true, description: true, detailedDescription: true, stock: true, weightKg: true,
       shippingMode: true, leadTime: true, publicationStatus: true, categoryId: true, imageReference: true, sourceData: true,
       category: { select: { name: true, path: true } }, media: { where: { type: "IMAGE" }, select: { id: true }, take: 1 },
       documents: { select: { id: true }, take: 1 }, features: { select: { id: true }, take: 1 },
-      variants: { select: { id: true, priceHt: true, shippingMode: true, leadTime: true } },
+      variants: { select: { id: true, code: true, supplierCode: true, sourceData: true, shippingMode: true, leadTime: true } },
     }, orderBy: { code: "asc" },
   });
+  const reference = (row: { supplierCode: string | null; code: string }) => (row.supplierCode || row.code).trim().toUpperCase();
+  const prices = await getStockmanNeonPrices(products.flatMap(p => [p, ...p.variants].flatMap(row => [reference(row), row.code])));
+  const salePrice = (row: { supplierCode: string | null; code: string }) => prices.get(reference(row)) ?? prices.get(row.code.trim().toUpperCase()) ?? null;
+  const purchase = (meta: JsonObject) => meta.priceOnRequest === true || meta.purchasePriceUnavailable === true ? null : numberOrNull(meta.purchasePriceExVat);
   const rows = products.map((product) => {
     const blockers: string[] = []; const warnings: string[] = []; const meta = stockmanMeta(product.sourceData);
-    const purchasePriceHT = numberOrNull(meta.purchasePriceExVat);
-    const priceOnRequest = meta.purchasePriceUnavailable === true || purchasePriceHT === null || purchasePriceHT <= 0;
+    const purchasePriceHT = purchase(meta);
+    const priceOnRequest = product.variants.length ? product.variants.some(v => salePrice(v) === null) : salePrice(product) === null;
     const stockOnRequest = meta.stockLabel === "Nous consulter" || meta.stock === null;
-    const productPriceHT = Number(product.priceHt);
-    const expectedSellingPriceHT = purchasePriceHT && purchasePriceHT > 0 ? Math.round((purchasePriceHT / STOCKMAN_MARGIN_DIVISOR) * 100) / 100 : null;
+    const commercialLines = product.variants.length ? product.variants : [product];
+    const margins = commercialLines.map(row => {
+      const details = stockmanMeta(row.sourceData);
+      const mode = stockmanShippingMode(row.sourceData, row.shippingMode ?? product.shippingMode);
+      const salePriceHT = salePrice(row);
+      const margin = auditStockmanMargin({ purchasePriceHT: purchase(details), salePriceHT,
+        ...confirmedStockmanFreight(row.sourceData, row.shippingMode ?? product.shippingMode) });
+      return { reference: reference(row), salePriceHT, shippingMode: mode, ...margin };
+    });
+    const listedPrices = margins.flatMap(row => row.salePriceHT === null ? [] : [row.salePriceHT]);
+    const productPriceHT = listedPrices.length ? Math.min(...listedPrices) : 0;
+    const expectedSellingPriceHT = margins.length === 1 ? margins[0].referencePriceHT : null;
     if (!product.code.trim()) blockers.push("Référence absente");
     if (!product.name.trim()) blockers.push("Nom absent");
     if (!product.categoryId) blockers.push("Catégorie absente");
@@ -46,20 +61,19 @@ async function buildAudit() {
     if (!product.documents.length) warnings.push("Aucun document technique");
     if (!product.features.length) warnings.push("Aucune caractéristique structurée");
     if (product.weightKg === null || Number(product.weightKg) <= 0) warnings.push("Poids non exploitable / à confirmer");
-    if (product.shippingMode !== "INCLUDED") blockers.push("Livraison non incluse");
+    if (margins.some(row => row.shippingMode === "QUOTE")) blockers.push("Transport sur devis ou inclusion non justifiée");
+    if (margins.some(row => isBlockedStockmanReference(row.reference))) blockers.push("Une référence STOCKMAN est arrêtée");
     if (!hasStockmanLeadTime(product.leadTime)) blockers.push("Délai STOCKMAN non appliqué");
-    if (expectedSellingPriceHT !== null) {
-      if (!(productPriceHT > 0)) blockers.push("PA disponible mais PV HT nul : vente interdite");
-      else if (!centsEqual(productPriceHT, expectedSellingPriceHT)) blockers.push(`PV HT incorrect : attendu ${expectedSellingPriceHT.toFixed(2)} € (PA / 0,80)`);
-    } else if (productPriceHT > 0) blockers.push("PV HT présent sans PA STOCKMAN exploitable");
-    else warnings.push("Prix STOCKMAN « Nous consulter » : fiche sur devis, jamais vendable à 0 €");
-    if (product.variants.some((variant) => variant.shippingMode && variant.shippingMode !== "INCLUDED")) blockers.push("Une variante n’est pas en livraison incluse");
+    if (priceOnRequest) blockers.push("Prix de vente Neon manquant pour une référence");
+    if (margins.some(row => row.status === "negative" || (row.marginAfterFreightHT !== null && row.marginAfterFreightHT < 0))) blockers.push("Marge négative à valider");
+    if (margins.some(row => row.status === "below_reference")) warnings.push("Taux de marque sous le contrôle historique de 20 %");
+    if (margins.some(row => row.status === "missing_data")) warnings.push("Marge produit impossible à calculer");
+    if (margins.some(row => row.marginAfterFreightHT === null)) warnings.push("Marge après transport impossible à calculer");
     if (product.variants.some((variant) => variant.leadTime && !hasStockmanLeadTime(variant.leadTime))) blockers.push("Une variante n’a pas le délai STOCKMAN");
-    if (product.variants.some((variant) => Number(variant.priceHt) <= 0)) warnings.push("Une ou plusieurs variantes sont « Nous consulter » / sur devis");
     if (stockOnRequest) warnings.push("Stock STOCKMAN « Nous consulter » : disponibilité sur demande");
-    const marginRuleValid = expectedSellingPriceHT === null ? productPriceHT === 0 : centsEqual(productPriceHT, expectedSellingPriceHT);
+    const marginRuleValid = margins.every(row => row.status === "meets_reference");
     return { id: product.id, code: product.code, name: product.name, status: product.publicationStatus, importedFromDraft: typeof meta.importedFromDraftAt === "string",
-      category: product.category?.path || product.category?.name || null, purchasePriceHT, productPriceHT, expectedSellingPriceHT, marginRuleValid, priceOnRequest,
+      category: product.category?.path || product.category?.name || null, purchasePriceHT, productPriceHT, expectedSellingPriceHT, marginRuleValid, priceOnRequest, margins,
       stock: product.stock, stockOnRequest, weightKg: product.weightKg === null ? null : Number(product.weightKg), hasImage: Boolean(product.media.length || product.imageReference?.trim()),
       hasDocument: Boolean(product.documents.length), hasFeatures: Boolean(product.features.length), variants: product.variants.length, blockers, warnings, eligible: blockers.length === 0 };
   });

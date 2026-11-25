@@ -29,6 +29,8 @@ import {
   getDatabaseStockmanFamilyVariants,
 } from "@/lib/catalogue/database-repository";
 import { getImportedProductImagesExact } from "@/lib/catalogue/media";
+import { applyStockmanSalePrices } from "@/lib/catalogue/stockman-detail-prices";
+import { applyStockmanAvailability } from "@/lib/catalogue/stockman-availability";
 
 export async function generateMetadata({
   params,
@@ -85,7 +87,8 @@ export default async function CatalogProductPage({
     ? { variants: [], optionSchema: [] }
     : await getDatabaseStockmanFamilyVariants(product.id);
 
-  const variants = resolvePresentedVariants(product,stockmanFamily.variants);
+  const pricedProduct = await applyStockmanSalePrices({ ...product, variants: resolvePresentedVariants(product, stockmanFamily.variants) });
+  const variants = pricedProduct.variants ?? [];
 
   const effectiveOptionSchema = product.optionSchema?.length
     ? product.optionSchema
@@ -95,8 +98,15 @@ export default async function CatalogProductPage({
   // séparément. Toutes les zones de la fiche doivent utiliser cette vue résolue,
   // pas seulement le sélecteur de variantes.
   const variantCount = Math.max(1, variants.length);
-  const resolvedProduct = {
+  // OYSTE_STOCKMAN_SELECTOR_STOCK_V1
+  // Disponibilite issue des observations persistantes, sans synchronisation.
+  const stockmanAvailabilityResult = await applyStockmanAvailability({
     ...product,
+    variants,
+  });
+  const variantsWithAvailability = stockmanAvailabilityResult.variants ?? variants;
+  const resolvedProduct = {
+    ...pricedProduct,
     variants,
     variantCount,
     optionSchema: effectiveOptionSchema,
@@ -104,7 +114,7 @@ export default async function CatalogProductPage({
 
   // OYSTE_DETAIL_VARIANT_PRICE_V2
   // Prix des variantes existantes, sans modification de Neon.
-  const parentPrice = product.minPriceHT ?? product.priceHT;
+  const parentPrice = pricedProduct.minPriceHT ?? pricedProduct.priceHT;
 
   const validVariantPrices = variants
     .map(variant => variant.priceHT)
@@ -130,7 +140,7 @@ export default async function CatalogProductPage({
           minimumFractionDigits: 0,
           maximumFractionDigits: 2
         })} € HT`
-      : formatPriceRange(product);
+      : formatPriceRange(pricedProduct);
   const experienceType = getProductExperienceType(resolvedProduct);
   const isConfigurable = experienceType === "CONFIGURABLE";
   const configuratorHref = getProductConfiguratorHref(resolvedProduct);
@@ -215,7 +225,7 @@ export default async function CatalogProductPage({
           supplier={product.manufacturer}
           productWeightKg={product.weightKg}
           productShippingMode={product.shippingMode}
-          variants={variants}
+          variants={variantsWithAvailability}
           optionSchema={effectiveOptionSchema}
           initialVariantCode={initialVariantCode}
           isConfiguratorProduct={isConfigurable}

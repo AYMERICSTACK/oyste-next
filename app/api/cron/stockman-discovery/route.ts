@@ -1,3 +1,5 @@
+import { applyNextScheduledStockmanSync } from "@/lib/suppliers/stockman/scheduled-commercial-sync";
+import { startDueStockmanCommercialRead } from "@/lib/suppliers/stockman/scheduled-commercial-read";
 import { NextResponse } from "next/server";
 import { runStockmanDiscoveryWorkCycle } from "@/lib/suppliers/stockman/discovery-jobs";
 
@@ -14,5 +16,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ message: "Non autorisé." }, { status: 401 });
   }
   const batches = await runStockmanDiscoveryWorkCycle();
-  return NextResponse.json({ processed: batches > 0, batches }, { headers: { "Cache-Control": "no-store" } });
+  const appliedCommercialSync = batches === 0 && await applyNextScheduledStockmanSync();
+  const scheduledCommercialRead = batches === 0 && !appliedCommercialSync && await startDueStockmanCommercialRead();
+  return NextResponse.json({ processed: batches > 0, batches, scheduledCommercialRead, appliedCommercialSync }, { headers: { "Cache-Control": "no-store" } });
 }

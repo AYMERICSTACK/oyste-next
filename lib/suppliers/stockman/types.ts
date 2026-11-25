@@ -5,6 +5,10 @@ import type {
 } from "@/lib/suppliers/stockman/page-structure";
 
 export type StockmanProduct = {
+  relationType?: StockmanRelationType;
+  classificationEvidence?: string[];
+  compatibleReferences?: string[];
+  barcode?: string | null;
   reference: string;
   designation: string;
   purchasePriceExVat: number;
@@ -129,6 +133,7 @@ export type StockmanMatchSuggestion = {
 
 export type StockmanCatalogMatch = {
   commercialText?: string;
+  compatibleReferences?: string[];
   supplierData?: { purchasePriceExVat: number | null; stock: number | null; weightKg: number | null; barcode: string | null };
   reference: string;
   designation: string;
@@ -166,6 +171,7 @@ export type StockmanCatalogScanDiagnostics = {
   productPageRedirects: number;
   productPagesWithReferences: number;
   productPagesWithoutReferences: number;
+  globalCoverage?: boolean;
   extractedOccurrences: number;
   duplicateReferences: number;
   extractedFromRows: number;
@@ -329,6 +335,9 @@ export type StockmanProductPageTrace = {
   subcategory: string | null;
   familyReference: string | null;
   familyTitle: string | null;
+  familyDescription?: string | null;
+  familyTechnicalText?: string | null;
+  familyTechnicalAssets?: string[];
   commercialRows: Array<StockmanCommercialRowSnapshot & {
     relationType: StockmanRelationType;
     classificationEvidence: string[];
@@ -379,8 +388,22 @@ export type StockmanCatalogDiscovery = {
   pageTraces?: StockmanProductPageTrace[];
   productLinkTraces?: StockmanProductLinkTrace[];
   warnings: string[];
+  commercialScope?: StockmanCommercialScopeReport;
   livingReference?: StockmanLivingReferenceStats;
   differential?: StockmanCatalogueDifferential;
+};
+
+export type StockmanCommercialScopeReport = {
+  keys: string[];
+  mode: "audit" | "commercial";
+  excluded: string[];
+  baselineFinishedAt?: string;
+  newReferences: string[];
+  changedReferences: string[];
+  reportedStopped: string[];
+  missingFromScope: string[];
+  verifiedAt: string;
+  pricesAndStocks: Array<{ reference: string; sourceUrl: string; price: number | null; stock: number | null; priceState?: string; stockState?: string; stockAvailabilityText?: string; readAt?: string }>;
 };
 
 export type StockmanDiscoveryJobPhase = "queued" | "catalogue" | "products" | "matching" | "completed" | "failed";
@@ -393,6 +416,7 @@ export type StockmanDiscoveryJobProgress = {
   productUrlsFound: number;
   productPagesProcessed: number;
   referencesFound: number;
+  uniqueReferencesFound?: number;
   failures: number;
   updatedAt: string;
   activity?: "browse" | "products" | "mixed" | "matching" | "reconciling" | "cooldown" | "idle";

@@ -27,6 +27,7 @@ async function resolveSendcloudLine(product: ShippingProductInput, postcode: str
   if (product.pfiShipping || product.wallPotenceShipping) return null;
 
   const supplier = String(product.supplier || "").trim().toUpperCase();
+  if (supplier === "STOCKMAN") return null;
   const isKito = supplier === "KITO";
   const sendcloudEligibleMode = product.shippingMode === "QUOTE" || (isKito && product.shippingMode === "MESSAGERIE");
   if (!sendcloudEligibleMode) return null;
@@ -89,7 +90,7 @@ export async function calculateCartShippingWithSendcloud(
   postcode?: string,
   country = "FR",
 ): Promise<ShippingCartResult> {
-  const base = calculateCartShipping(products, postcode);
+  const base = calculateCartShipping(products, postcode, country);
   if (!isFrenchPostcode(postcode)) return base;
 
   const normalizedPostcode = postcode!.trim();

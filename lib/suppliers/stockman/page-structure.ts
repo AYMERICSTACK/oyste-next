@@ -24,6 +24,12 @@ export type StockmanCommercialRowSnapshot = {
   reference: string;
   text: string;
   badgeTexts: string[];
+  optionImageEvidence?: string[];
+  description?: string;
+  stockText?: string;
+  priceText?: string;
+  barcode?: string | null;
+  weightKg?: number | null;
   sectionLabels: string[];
   ancestorClass: string;
   dataAttributes: string[];
@@ -55,6 +61,9 @@ export function classifyCommercialRow(
   row: StockmanCommercialRowSnapshot,
   context: { familyReference: string | null; breadcrumb: string[] },
 ): StockmanClassification {
+  if (row.optionImageEvidence?.length) return {
+    relationType: "OPTION", confidence: "EXPLICIT", evidence: row.optionImageEvidence.map(value => `option-image:${value}`),
+  };
   const markers: Array<{ pattern: RegExp; relationType: StockmanRelationType }> = [
     { pattern: /\baccessoires?\b/, relationType: "ACCESSORY" },
     { pattern: /\boptions?\b/, relationType: "OPTION" },
@@ -76,11 +85,27 @@ export function classifyCommercialRow(
       context.familyReference
       && row.reference.trim().toUpperCase() === context.familyReference.trim().toUpperCase(),
     );
+    // Variante de couleur prouvee par le code fournisseur ET sa designation.
+    // Ne jamais assimiler les autres articles de la page a des variantes.
+    const familyCode = context.familyReference?.trim().toUpperCase() ?? "";
+    const articleCode = row.reference.trim().toUpperCase();
+    const colorMatch = familyCode && articleCode.startsWith(familyCode)
+      ? /^(BLEU|GRIS|JAUNE|ORANGE|ROUGE|VERT|NOIR|BLANC)$/.exec(
+          articleCode.slice(familyCode.length),
+        )
+      : null;
+    if (colorMatch && new RegExp(`\\b${colorMatch[1].toLowerCase()}\\b`).test(normalize(row.description ?? ""))) {
+      return {
+        relationType: "PRIMARY_VARIANT",
+        confidence: "EXPLICIT",
+        evidence: ["reference-family-color-suffix", "designation-confirms-color"],
+      };
+    }
     if (!sameAsFamily && !row.isPrimaryFamilyTable) return { relationType: "UNKNOWN", confidence: "UNKNOWN", evidence: ["commercial-table-without-family-scope"] };
     return {
-      relationType: sameAsFamily ? "PRIMARY" : "PRIMARY_VARIANT",
-      confidence: "STRUCTURAL",
-      evidence: ["commercial-table", sameAsFamily ? "reference-equals-family" : "reference-in-family-table"],
+      relationType: sameAsFamily ? "PRIMARY" : "UNKNOWN",
+      confidence: sameAsFamily ? "STRUCTURAL" : "UNKNOWN",
+      evidence: ["commercial-table", sameAsFamily ? "reference-equals-family" : "family-membership-does-not-prove-variant"],
     };
   }
 

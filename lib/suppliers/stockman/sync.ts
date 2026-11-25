@@ -1,3 +1,4 @@
+import { isBlockedStockmanReference } from "./order-policy";
 import { prisma } from "@/lib/db/prisma";
 import { resolveStockmanCategory } from "@/lib/suppliers/stockman/category";
 import { buildStockmanSeo } from "@/lib/suppliers/stockman/seo";
@@ -55,8 +56,8 @@ function syncedSourceData(
       sourceUrl: product.sourceUrl,
       syncedAt: syncedAt.toISOString(),
       readAt: product.readAt,
-      ...(fields.includes("price") ? { purchasePriceExVat: product.purchasePriceExVat } : {}),
-      ...(fields.includes("stock") ? { stock: product.stock } : {}),
+      ...(fields.includes("price") ? { purchasePriceExVat: product.priceOnRequest ? null : product.purchasePriceExVat, priceOnRequest: product.priceOnRequest === true, purchasePriceUnavailable: product.priceOnRequest === true } : {}),
+      ...(fields.includes("stock") ? { stockReadAt: product.readAt, stock: product.stockOnRequest ? null : product.stock, stockOnRequest: product.stockOnRequest === true, stockLabel: product.stockOnRequest ? "Nous consulter" : String(product.stock) } : {}),
       ...(fields.includes("weight") ? { weightKg: stockmanUsableWeight(product.weightKg) } : {}),
       ...(includeFeatures ? { features: product.features ?? [] } : {}),
     },
@@ -271,6 +272,7 @@ export async function syncStockmanProduct(
   if (!fields.length) throw new Error("Sélectionnez au moins une donnée à synchroniser.");
 
   const reference = product.reference.trim().toUpperCase();
+  if (isBlockedStockmanReference(reference)) throw new Error("Référence STOCKMAN non commercialisée : " + reference);
   const syncedAt = new Date();
   const variant = expected?.targetType === "variant"
     ? await prisma.productVariant.findUnique({
@@ -302,7 +304,9 @@ export async function syncStockmanProduct(
       purchasePriceExVat: sourceNumber(variant.sourceData, "purchasePriceExVat"),
     };
     const changedFields = changedFieldsFor(previous, product, fields);
-    const metadataChanged = sourceString(variant.sourceData, "sourceUrl") !== product.sourceUrl;
+    const metadataChanged = sourceString(variant.sourceData, "sourceUrl") !== product.sourceUrl
+      || (fields.includes("stock") && (stockmanObject(variant.sourceData).stockOnRequest !== (product.stockOnRequest === true) || sourceString(variant.sourceData, "stockReadAt") !== product.readAt))
+      || (fields.includes("price") && stockmanObject(variant.sourceData).priceOnRequest !== (product.priceOnRequest === true));
     const categoryResolution = applyEnrichment
       ? await resolveStockmanCategory({
           sourceUrl: product.sourceUrl,
@@ -316,7 +320,7 @@ export async function syncStockmanProduct(
         await tx.productVariant.update({
           where: { id: variant.id },
           data: {
-            ...(fields.includes("stock") ? { stock: product.stock } : {}),
+            ...(fields.includes("stock") ? { stock: product.stockOnRequest ? 0 : product.stock } : {}),
             ...(fields.includes("weight") ? { weightKg: stockmanUsableWeight(product.weightKg) } : {}),
             sourceData: syncedSourceData(variant.sourceData, product, syncedAt, fields, applyEnrichment),
           },
@@ -393,7 +397,9 @@ export async function syncStockmanProduct(
     purchasePriceExVat: sourceNumber(existing.sourceData, "purchasePriceExVat"),
   };
   const changedFields = changedFieldsFor(previous, product, fields);
-  const metadataChanged = sourceString(existing.sourceData, "sourceUrl") !== product.sourceUrl;
+  const metadataChanged = sourceString(existing.sourceData, "sourceUrl") !== product.sourceUrl
+    || (fields.includes("stock") && (stockmanObject(existing.sourceData).stockOnRequest !== (product.stockOnRequest === true) || sourceString(existing.sourceData, "stockReadAt") !== product.readAt))
+    || (fields.includes("price") && stockmanObject(existing.sourceData).priceOnRequest !== (product.priceOnRequest === true));
   const categoryResolution = applyEnrichment
     ? await resolveStockmanCategory({
         sourceUrl: product.sourceUrl,
@@ -438,7 +444,7 @@ export async function syncStockmanProduct(
       await tx.product.update({
         where: { id: existing.id },
         data: {
-          ...(fields.includes("stock") ? { stock: product.stock } : {}),
+          ...(fields.includes("stock") ? { stock: product.stockOnRequest ? 0 : product.stock } : {}),
           ...(fields.includes("weight") ? { weightKg: stockmanUsableWeight(product.weightKg) } : {}),
           ...(categoryResolution ? { categoryId: categoryResolution.id } : {}),
           ...(enrichment?.shortDescription && !current.description?.trim()

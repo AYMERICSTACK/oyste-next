@@ -1,4 +1,5 @@
 "use client";
+import StockmanGlobalImportCard from "@/components/admin/StockmanGlobalImportCard";
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -26,10 +27,12 @@ import type { AdminSupplier } from "@/lib/admin/suppliers-data";
 import type { StockmanConnectionStatus } from "@/lib/suppliers/stockman/types";
 import StockmanConnectorCard from "@/components/admin/StockmanConnectorCard";
 import StockmanBulkSyncCard from "@/components/admin/StockmanBulkSyncCard";
+import StockmanWatchCard from "@/components/admin/StockmanWatchCard";
+import StockmanPilotageCard from "@/components/admin/StockmanPilotageCard";
 import StockmanCatalogDiscoveryCard from "@/components/admin/StockmanCatalogDiscoveryCard";
-import StockmanImportDraftReviewCard from "@/components/admin/StockmanImportDraftReviewCard";
 import SupplierPricingManager from "@/components/admin/SupplierPricingManager";
 import StockmanPublicationAuditCard from "@/components/admin/StockmanPublicationAuditCard";
+import StockmanPriceDiagnosticCard from "@/components/admin/StockmanPriceDiagnosticCard";
 import StockmanMiloadCategoryRepairCard from "@/components/admin/StockmanMiloadCategoryRepairCard";
 import AdeiLeadTimeSyncCard from "@/components/admin/AdeiLeadTimeSyncCard";
 import AssetUploadButton from "@/components/admin/AssetUploadButton";
@@ -346,7 +349,10 @@ export default function SuppliersWorkspace({
 
       <div className="min-w-0 bg-slate-50/60 p-3 md:p-5 xl:p-6">
         {tab === "overview" ? (
-          <SupplierOverview supplier={selected} isStockman={isStockman} stockmanStatus={stockmanStatus} onNavigate={setTab} />
+          <div className="space-y-5">
+            {isStockman ? <StockmanPilotageCard /> : null}
+            <SupplierOverview supplier={selected} isStockman={isStockman} stockmanStatus={stockmanStatus} onNavigate={setTab} />
+          </div>
         ) : null}
 
         {tab === "profile" ? (
@@ -387,6 +393,7 @@ export default function SuppliersWorkspace({
               <>
                 <StockmanMiloadCategoryRepairCard />
                 <StockmanPublicationAuditCard />
+                <StockmanPriceDiagnosticCard />
               </>
             ) : null}
           </div>
@@ -395,12 +402,15 @@ export default function SuppliersWorkspace({
         {isStockman && tab === "import" ? (
           <div className="space-y-5">
             <StockmanCatalogDiscoveryCard enabled={stockmanStatus.configured} />
-            <StockmanImportDraftReviewCard />
+            <StockmanGlobalImportCard />
           </div>
         ) : null}
 
         {isStockman && tab === "sync" ? (
-          <StockmanBulkSyncCard enabled={stockmanStatus.configured} />
+          <div className="space-y-5">
+            <StockmanWatchCard onOpenDiscovery={() => setTab("import")} />
+            <StockmanBulkSyncCard enabled={stockmanStatus.configured} />
+          </div>
         ) : null}
 
         {isAdei && tab === "sync" ? (

@@ -39,6 +39,7 @@ type PricingLine = {
   currentSellingPriceHT: number;
   proposedSellingPriceHT: number;
   currentMarginRate: number | null;
+  stockmanMargin?: { grossMarginHT: number | null; marginAfterFreightHT: number | null; status: string };
 };
 
 type MissingPricingLine = {
@@ -53,6 +54,7 @@ type MissingPricingLine = {
 };
 
 type Preview = {
+  readOnly?: boolean;
   supplier: { id: string; name: string };
   rule: Rule;
   affectedCount: number;
@@ -128,41 +130,11 @@ export default function SupplierPricingManager({
   } | null>(null);
   const [message, setMessage] = useState("");
   const [showMissingPrices, setShowMissingPrices] = useState(false);
-  const [commercialWorking, setCommercialWorking] = useState(false);
-  const [commercialMessage, setCommercialMessage] = useState("");
 
   const selected = useMemo(
     () => suppliers.find((supplier) => supplier.id === selectedId) ?? null,
     [selectedId, suppliers],
   );
-
-  async function finalizeStockmanCommercialRules() {
-    if (!selected || selected.name.trim().toLocaleUpperCase("fr") !== "STOCKMAN") return;
-    const confirmation = window.prompt(
-      "Finalisation commerciale STOCKMAN\n\n" +
-      "Cette action applique à tous les produits et variantes STOCKMAN :\n" +
-      "• Livraison incluse\n" +
-      "• Départ usine sous 48 h si stock disponible\n" +
-      "• Mention explicite : délai de départ usine, pas délai de livraison\n\n" +
-      "Tapez exactement STOCKMAN 48H pour confirmer.",
-    );
-    if (confirmation !== "STOCKMAN 48H") return;
-
-    setCommercialWorking(true);
-    setCommercialMessage("");
-    try {
-      const response = await fetch("/api/admin/suppliers/stockman/commercial-finalization", {
-        method: "POST",
-      });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.error || "Finalisation commerciale impossible.");
-      setCommercialMessage(payload.message || "Règles commerciales STOCKMAN appliquées.");
-    } catch (error) {
-      setCommercialMessage(error instanceof Error ? error.message : "Finalisation commerciale impossible.");
-    } finally {
-      setCommercialWorking(false);
-    }
-  }
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -702,36 +674,12 @@ export default function SupplierPricingManager({
               </button>
             </div>
 
-            {selected?.name.trim().toLocaleUpperCase("fr") === "STOCKMAN" ? (
-        <section className="rounded-[1.4rem] border border-emerald-200 bg-emerald-50/60 p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-black text-slate-950">Finalisation commerciale STOCKMAN · V2.11.2</p>
-              <p className="mt-1 max-w-4xl text-xs font-bold leading-5 text-slate-600">
-                Applique en masse la règle validée : livraison incluse et départ usine sous 48 h si stock disponible.
-                La mention précise qu’il s’agit du délai de départ usine, et non du délai de livraison.
-              </p>
-              {commercialMessage ? <p className="mt-2 text-xs font-black text-emerald-700">{commercialMessage}</p> : null}
-            </div>
-            <button
-              type="button"
-              onClick={() => void finalizeStockmanCommercialRules()}
-              disabled={commercialWorking}
-              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-xs font-black text-white hover:bg-emerald-500 disabled:opacity-40"
-            >
-              {commercialWorking ? <Loader2 size={15} className="animate-spin" /> : <CheckCircle2 size={15} />}
-              Appliquer livraison incluse + 48 h
-            </button>
-          </div>
-        </section>
-      ) : null}
-
       {preview ? (
               <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
                 <div className="border-b border-slate-200 bg-slate-50 px-4 py-4 md:px-5">
                   <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                     <div>
-                      <p className="text-sm font-black text-slate-950">Arbitrage · {preview.supplier.name}</p>
+                      <p className="text-sm font-black text-slate-950">{preview.readOnly ? "Contrôle des marges" : "Arbitrage"} · {preview.supplier.name}</p>
                       <p className="mt-1 text-xs font-bold text-slate-500">
                         {preview.affectedCount} prix calculable(s) · {preview.validNoPriceCount} sans tarif légitime(s) · {preview.blockingMissingPurchasePrice} anomalie(s) à traiter
                       </p>
@@ -757,7 +705,7 @@ export default function SupplierPricingManager({
                       <button
                         type="button"
                         onClick={() => void applyCalculatedArbitrage()}
-                        disabled={working !== null || preview.affectedCount === 0 || preview.blockingMissingPurchasePrice > 0}
+                        disabled={preview.readOnly || working !== null || preview.affectedCount === 0 || preview.blockingMissingPurchasePrice > 0}
                         className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-[10px] font-black text-white shadow-sm hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-40"
                       >
                         {working === "apply" ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
@@ -870,7 +818,7 @@ export default function SupplierPricingManager({
                               </div>
                             </td>
                             <td className="px-4 py-4 text-xs font-black text-slate-950">{money(line.purchasePriceHT)}</td>
-                            <td className="px-4 py-4 text-xs font-bold text-slate-600">{money(line.currentSellingPriceHT)}</td>
+                            <td className="px-4 py-4 text-xs font-bold text-slate-600">{preview.readOnly && line.currentSellingPriceHT <= 0 ? "À confirmer" : money(line.currentSellingPriceHT)}</td>
                             <td className="px-4 py-4">
                               <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ${
                                 line.currentMarginRate !== null && line.currentMarginRate >= Number(marginRate.replace(",", "."))
@@ -879,8 +827,9 @@ export default function SupplierPricingManager({
                               }`}>
                                 {marginLabel(line.currentMarginRate)}
                               </span>
+                              {line.stockmanMargin && <p className="mt-1 text-xs">Marge produit {line.stockmanMargin.grossMarginHT === null ? "à calculer" : money(line.stockmanMargin.grossMarginHT)} · Après transport {line.stockmanMargin.marginAfterFreightHT === null ? "à calculer" : money(line.stockmanMargin.marginAfterFreightHT)}</p>}
                             </td>
-                            <td className="px-4 py-4 text-xs font-black text-[#007f8f]">{money(line.proposedSellingPriceHT)}</td>
+                            <td className="px-4 py-4 text-xs font-black text-[#007f8f]">{preview.readOnly && line.proposedSellingPriceHT <= 0 ? "—" : money(line.proposedSellingPriceHT)}</td>
                             <td className="px-4 py-4">
                               <p className="text-sm font-black text-slate-950">{money(retained)}</p>
                               {decision.mode === "manual" ? (
@@ -903,7 +852,7 @@ export default function SupplierPricingManager({
                                 </ChoiceButton>
                                 <ChoiceButton
                                   active={decision.mode === "calculated"}
-                                  disabled={purchasePriceNeedsReview}
+                                  disabled={preview.readOnly || purchasePriceNeedsReview}
                                   title={purchasePriceNeedsReview ? "Prix d’achat à vérifier avant d’utiliser le calcul automatique." : undefined}
                                   onClick={() => updateDecision(line, { mode: "calculated" })}
                                 >
@@ -911,6 +860,7 @@ export default function SupplierPricingManager({
                                 </ChoiceButton>
                                 <ChoiceButton
                                   active={decision.mode === "manual"}
+                                  disabled={preview.readOnly}
                                   onClick={() => updateDecision(line, { mode: "manual" })}
                                 >
                                   Manuel
@@ -928,13 +878,13 @@ export default function SupplierPricingManager({
                   <div className="flex items-start gap-3 text-xs font-bold leading-5 text-slate-500">
                     <ShieldCheck size={18} className="mt-0.5 shrink-0 text-[#007f8f]" />
                     <p>
-                      Rien n’est écrit tant que vous ne validez pas. Les fiches STOCKMAN à 0 € sont déjà présélectionnées sur « Calculé ». Vous pouvez appliquer directement les prix depuis le bouton vert en haut ou utiliser cet arbitrage ligne par ligne.
+                      {preview.readOnly ? "Tarifs de vente Neon conservés. La colonne calculée sert au contrôle historique du taux de marque." : "Aucun prix n’est modifié avant validation de l’arbitrage."}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={() => void applyArbitrage()}
-                    disabled={working !== null || preview.lines.length === 0}
+                    disabled={preview.readOnly || working !== null || preview.lines.length === 0}
                     className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3 text-xs font-black text-white disabled:opacity-40"
                   >
                     {working === "apply" ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}

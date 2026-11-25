@@ -29,3 +29,12 @@ export function stockmanPriceUnknown(value: unknown): boolean {
 export function stockmanFreightValidated(sourceData: unknown, shippingMode: unknown): boolean {
   return shippingMode === "INCLUDED" && stockmanSource(sourceData).freightIncludedValidated === true;
 }
+
+export function isStockmanSupplier(value: unknown): boolean {
+  return typeof value === "string" && value.trim().toUpperCase() === "STOCKMAN";
+}
+
+export function stockmanShippingMode(sourceData: unknown, mode: unknown): "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE" {
+  if (mode === "MESSAGERIE" || mode === "AFFRETEMENT") return mode;
+  return stockmanFreightValidated(sourceData, mode) ? "INCLUDED" : "QUOTE";
+}

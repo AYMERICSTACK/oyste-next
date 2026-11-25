@@ -1,3 +1,4 @@
+import { isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
 import { z } from "zod";
 import { publicUrlSchema } from "@/lib/cms-validation";
 import type { CatalogueProduct, CatalogueVariant } from "./repository";
@@ -36,5 +37,9 @@ export function resolvePresentedVariants(product:CatalogueProduct,family:Catalog
  const base=product.baseVariants || product.variants || [];
  const single:CatalogueVariant={id:product.id,code:product.code,supplierCode:product.supplierCode,name:product.name,label:product.name,priceHT:product.priceHT,delay:product.delay,stock:product.stock,weightKg:product.weightKg,shippingMode:product.shippingMode,imageRef:product.imageRef,features:product.features,options:{}};
  const source=product.includeSupplierFamilyVariants ? [...(family.length>1?family:[single]),...base] : base.length?base:family.length>1?family:[single];
- return applyVariantPresentation([...new Map(source.map(item=>[item.id,item])).values()],product.variantPresentation);
+ const disabledIds = new Set((product.variantPresentation || []).filter(item => item.enabled === false).map(item => item.id));
+ const disabledCodes = new Set(base.filter(item => disabledIds.has(item.id)).map(item => item.code.trim().toUpperCase()));
+ const allowed = source.filter(item => !disabledCodes.has(item.code.trim().toUpperCase()) &&
+   (product.manufacturer?.trim().toUpperCase() !== "STOCKMAN" || !isBlockedStockmanReference(item.supplierCode || item.code)));
+ return applyVariantPresentation([...new Map(allowed.map(item=>[item.id,item])).values()],product.variantPresentation);
 }

@@ -1,3 +1,6 @@
+import { applyStockmanSalePricesToCatalogue } from "./stockman-detail-prices";
+import { stockmanShippingMode } from "@/lib/suppliers/stockman/order-policy";
+import { stockmanSource, stockmanStockUnknown, stockmanPriceUnknown, isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
 import { getStockmanCategoryProducts } from "./stockman-category-products";
 import { applyProductPresentation, productPresentationSchema } from "./product-presentation";
 import "server-only";
@@ -104,15 +107,16 @@ function mapVariant(
     supplierCode: variant.supplierCode || "",
     name: variant.name,
     label: variant.label || variant.name,
-    priceHT: Number(variant.priceHt),
+    priceHT: stockmanPriceUnknown(variant.sourceData) ? null : Number(variant.priceHt),
     delay: variant.leadTime || "",
-    stock: variant.stock,
+    stock: stockmanStockUnknown(variant.sourceData) ? null : variant.stock,
     weightKg: variant.weightKg === null ? null : Number(variant.weightKg),
     packageLengthCm: variant.packageLengthCm === null ? null : Number(variant.packageLengthCm),
     packageWidthCm: variant.packageWidthCm === null ? null : Number(variant.packageWidthCm),
     packageHeightCm: variant.packageHeightCm === null ? null : Number(variant.packageHeightCm),
     shippingMode: variant.shippingMode ?? undefined,
     imageRef: variant.imageReference || "",
+    mediaImages: asRecord(variant.sourceData).v297 ? (Array.isArray(stockmanSource(variant.sourceData).images) ? (stockmanSource(variant.sourceData).images as unknown[]).filter((url): url is string => typeof url === "string" && /^https:\/\/(?:www\.)?stockman\.fr\//i.test(url)) : []) : undefined,
     features: variant.features.map(mapFeature),
     options: asStringRecord(variant.options),
   };
@@ -136,6 +140,7 @@ function resolvedPublicSlug(id: string | null, categories?: Map<string, Presenta
   return current.slug;
 }
 function publicProduct(product: DatabaseProduct, categories: Map<string, PresentationCategory>): boolean {
+  if (product.supplier?.name?.trim().toUpperCase() === "STOCKMAN" && isBlockedStockmanReference(product.supplierCode || product.code)) return false;
   if (product.supplier?.presentationConfigured && !product.supplier.isActive) return false;
   const visited = new Set<string>();
   const override=productPresentationSchema.safeParse(product.presentation?.value).data;
@@ -167,7 +172,8 @@ function mapDatabaseProduct(product: DatabaseProduct, categoryMap?: Map<string, 
         .map((item: string) => item.trim())
         .filter(Boolean);
 
-  const variants = product.variants.map(mapVariant);
+  const isStockman = product.supplier?.name?.trim().toUpperCase() === "STOCKMAN";
+  const variants = product.variants.filter(variant => product.supplier?.name?.trim().toUpperCase() !== "STOCKMAN" || !isBlockedStockmanReference(variant.supplierCode || variant.code)).map(v => ({ ...mapVariant(v), ...(isStockman ? { shippingMode: stockmanShippingMode(v.sourceData, v.shippingMode || product.shippingMode) } : {}) }));
 
   const mapped: CatalogueProduct = {
     categoryId: product.categoryId || undefined,
@@ -205,16 +211,16 @@ function mapDatabaseProduct(product: DatabaseProduct, categoryMap?: Map<string, 
       isPublic: document.isPublic,
       sortOrder: document.sortOrder,
     })),
-    priceHT: source.virtualPresentation && Number(product.priceHt) === 0 ? null : Number(product.priceHt),
+    priceHT: stockmanPriceUnknown(product.sourceData) || (source.virtualPresentation && Number(product.priceHt) === 0) ? null : Number(product.priceHt),
     minPriceHT: product.minPriceHt === null ? null : Number(product.minPriceHt),
     maxPriceHT: product.maxPriceHt === null ? null : Number(product.maxPriceHt),
     delay: product.leadTime || "",
-    stock: source.virtualPresentation && product.stock === 0 ? null : product.stock,
+    stock: stockmanStockUnknown(product.sourceData) || product.variants.some(variant => stockmanStockUnknown(variant.sourceData)) || (source.virtualPresentation && product.stock === 0) ? null : product.stock,
     weightKg: product.weightKg === null ? null : Number(product.weightKg),
     packageLengthCm: product.packageLengthCm === null ? null : Number(product.packageLengthCm),
     packageWidthCm: product.packageWidthCm === null ? null : Number(product.packageWidthCm),
     packageHeightCm: product.packageHeightCm === null ? null : Number(product.packageHeightCm),
-    shippingMode: product.shippingMode ?? undefined,
+    shippingMode: isStockman ? stockmanShippingMode(product.sourceData, product.shippingMode) : product.shippingMode ?? undefined,
     imageRef: product.imageReference || "",
     features: product.features.map(mapFeature),
     variantCount: variants.length || 1,
@@ -428,108 +434,16 @@ export async function getDatabaseStockmanFamilyVariants(productId: string): Prom
   variants: CatalogueVariant[];
   optionSchema: CatalogueOption[];
 }> {
+  // Sharing a supplier URL does not prove a parent/variant relationship.
+  // Only persisted variants and their explicit presentation are commercial.
   const product = await prisma.product.findUnique({
-    where: { id: productId },
-    select: {
-      id: true,
-      code: true,
-      supplierCode: true,
-      name: true,
-      priceHt: true,
-      stock: true,
-      weightKg: true,
-      shippingMode: true,
-      leadTime: true,
-      imageReference: true,
-      sourceData: true,
-    },
+    where: { id: productId }, include: catalogueProductInclude,
   });
-
-  if (!product) return { variants: [], optionSchema: [] };
-
-  const source = asRecord(product.sourceData);
-  const stockman = asRecord((source.stockman as Prisma.JsonValue | null) ?? null);
-  const sourceUrl = typeof stockman.sourceUrl === "string" ? stockman.sourceUrl.trim() : "";
-  if (!sourceUrl) return { variants: [], optionSchema: [] };
-
-  const drafts = await prisma.stockmanImportDraft.findMany({
-    where: { sourceUrl },
-    orderBy: { reference: "asc" },
-  });
-
-  if (drafts.length <= 1) return { variants: [], optionSchema: [] };
-
-  const commonPrefixTokens = commonTokenPrefix(
-    drafts.map((draft) => draft.designation),
-  );
-
-  const references = drafts.map((draft) => draft.reference.trim()).filter(Boolean);
-  const products = await prisma.product.findMany({
-    where: {
-      OR: [
-        { supplierCode: { in: references } },
-        { code: { in: references } },
-      ],
-    },
-    select: {
-      id: true,
-      code: true,
-      supplierCode: true,
-      name: true,
-      priceHt: true,
-      stock: true,
-      weightKg: true,
-      shippingMode: true,
-      leadTime: true,
-      imageReference: true,
-    },
-  });
-
-  const byReference = new Map<string, (typeof products)[number]>();
-  for (const sibling of products) {
-    byReference.set(sibling.code.trim().toUpperCase(), sibling);
-    if (sibling.supplierCode) {
-      byReference.set(sibling.supplierCode.trim().toUpperCase(), sibling);
-    }
-  }
-
-  const variants: CatalogueVariant[] = drafts.map((draft) => {
-    const reference = draft.reference.trim();
-    const existing = byReference.get(reference.toUpperCase());
-    const options = stockmanFamilyOptions(
-      draft.designation,
-      commonPrefixTokens,
-    );
-
-    return {
-      id: existing?.id || `stockman-family-${reference}`,
-      code: reference,
-      supplierCode: reference,
-      name: existing?.name || draft.designation,
-      label: draft.designation,
-      priceHT: existing ? Number(existing.priceHt) : 0,
-      delay: existing?.leadTime || "",
-      stock: existing?.stock ?? draft.stock ?? 0,
-      weightKg: existing?.weightKg === null || existing?.weightKg === undefined
-        ? (draft.weightKg === null ? null : Number(draft.weightKg))
-        : Number(existing.weightKg),
-      shippingMode: existing?.shippingMode ?? "QUOTE",
-      imageRef: existing?.imageReference || reference,
-      features: [],
-      options,
-    };
-  });
-
-  const uniqueVariants = Array.from(
-    new Map(variants.map((variant) => [variant.code.toUpperCase(), variant])).values(),
-  );
-
-  const optionSchema = buildFamilyOptionSchema(uniqueVariants);
-
-  return {
-    variants: keepOnlySchemaOptions(uniqueVariants, optionSchema),
-    optionSchema,
-  };
+  if (!product || product.publicationStatus !== "PUBLISHED") return { variants: [], optionSchema: [] };
+  const presented = mapDatabaseProduct(product);
+  const variants = presented.variants || [];
+  const optionSchema = buildFamilyOptionSchema(variants);
+  return { variants: keepOnlySchemaOptions(variants, optionSchema), optionSchema };
 }
 
 export async function getDatabaseProductsByCategory(
@@ -627,7 +541,7 @@ export async function getDatabaseProductsByCategory(
     )
   ];
 
-  return filterProductsByFamily(unifiedProducts, familySlug);
+  return applyStockmanSalePricesToCatalogue(filterProductsByFamily(unifiedProducts, familySlug));
 }
 
 export async function getDatabaseProductBySlug(
@@ -688,14 +602,14 @@ export async function getDatabaseFeaturedProducts(
     "acces-hauteur",
   ];
 
-  if(mapped.some(product=>product.presentationManagedKeys?.includes("featured") || product.presentationManagedKeys?.includes("sortOrder"))) return mapped.slice(0,limit);
+  if(mapped.some(product=>product.presentationManagedKeys?.includes("featured") || product.presentationManagedKeys?.includes("sortOrder"))) return applyStockmanSalePricesToCatalogue(mapped.slice(0, limit));
   const selected = priority.flatMap((slug) =>
     mapped
       .filter((product: CatalogueProduct) => product.categorySlug === slug)
       .slice(0, 2),
   );
 
-  return selected.slice(0, limit);
+  return applyStockmanSalePricesToCatalogue(selected.slice(0, limit));
 }
 
 export async function getDatabaseProductsByCodes(codes: string[]) {
@@ -705,11 +619,11 @@ export async function getDatabaseProductsByCodes(codes: string[]) {
     categoryMapForPresentation(),
   ]);
   const byCode=new Map(products.filter(product => publicProduct(product,categories)).map(product=>[product.code.toLowerCase(),mapDatabaseProduct(product,categories)]));
-  return codes.flatMap(code=>byCode.has(code.toLowerCase())?[byCode.get(code.toLowerCase())!]:[]);
+  return applyStockmanSalePricesToCatalogue(codes.flatMap(code => byCode.has(code.toLowerCase()) ? [byCode.get(code.toLowerCase())!] : []));
 }
 export async function getDatabaseProductsBySupplier(slug: string) {
   const [products, categories] = await Promise.all([
     prisma.product.findMany({ where: { publicationStatus: "PUBLISHED", supplier: { slug, isActive: true } }, include: catalogueProductInclude }), categoryMapForPresentation(),
   ]);
-  return products.filter(product => publicProduct(product, categories)).map(product => mapDatabaseProduct(product, categories));
+  return applyStockmanSalePricesToCatalogue(products.filter(product => publicProduct(product, categories)).map(product => mapDatabaseProduct(product, categories)));
 }

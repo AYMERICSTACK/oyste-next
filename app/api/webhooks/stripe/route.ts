@@ -30,6 +30,9 @@ function validSignature(payload: string, header: string, secret: string) {
 type StripeEvent = { type?: string; data?: { object?: StripeCheckoutSession } };
 
 export async function POST(request: Request) {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") {
+    return NextResponse.json({ message: "Webhook Stripe désactivé en recette." }, { status: 503 });
+  }
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
   if (!secret) return NextResponse.json({ message: "Webhook Stripe non configuré." }, { status: 503 });
 

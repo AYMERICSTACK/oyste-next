@@ -1,3 +1,4 @@
+import {isNeonFailure,ResolutionError} from "./global-import/runtime-errors";
 import { access } from "node:fs/promises";
 import path from "node:path";
 
@@ -60,7 +61,7 @@ export async function openStockmanBrowser(): Promise<{
   context: BrowserContext;
 }> {
   const authFile = getStockmanAuthFile();
-  const persistedState = await loadStockmanSessionState();
+  const persistedState = await loadStockmanSessionState().catch(error=>{if(isNeonFailure(error))throw new ResolutionError("NEON_UNAVAILABLE","Lecture Neon de la session interrompue ; aucune erreur fournisseur enregistrée.",503);throw new ResolutionError("SESSION_READ_UNAVAILABLE","Lecture de la session fournisseur indisponible ; vérifier la configuration avant de reprendre.",503);});
   const hasLocalFile = await stockmanAuthFileExists();
 
   if (!persistedState && !hasLocalFile) {
@@ -73,9 +74,11 @@ export async function openStockmanBrowser(): Promise<{
 
   const browser = await launchStockmanBrowser();
 
-  const context = await browser.newContext({
-    storageState: persistedState ?? authFile,
-  });
-
-  return { browser, context };
+  try {
+    const context = await browser.newContext({ storageState: persistedState ?? authFile });
+    return { browser, context };
+  } catch (error) {
+    await browser.close().catch(() => undefined);
+    throw error;
+  }
 }

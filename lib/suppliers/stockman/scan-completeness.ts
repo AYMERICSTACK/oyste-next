@@ -1,5 +1,6 @@
 export type StockmanCompletenessInput = {
   scanComplete?: boolean;
+  globalCoverage?: boolean;
   browseLimitReached?: boolean;
   productLimitReached?: boolean;
   queueLimitReached?: boolean;
@@ -8,12 +9,14 @@ export type StockmanCompletenessInput = {
   navigationErrors?: number;
   productErrors?: number;
   productPageFailures?: number;
+  productPagesWithoutReferences?: number;
   browseQueueRemaining?: number;
   globalIncidentActive?: boolean;
 };
 
 export function hasProvenCompleteStockmanScan(diagnostics: StockmanCompletenessInput) {
   return diagnostics.scanComplete === true
+    && diagnostics.globalCoverage !== false
     && diagnostics.browseLimitReached === false
     && diagnostics.productLimitReached === false
     && diagnostics.queueLimitReached === false
@@ -22,6 +25,7 @@ export function hasProvenCompleteStockmanScan(diagnostics: StockmanCompletenessI
     && diagnostics.navigationErrors === 0
     && diagnostics.productErrors === 0
     && diagnostics.productPageFailures === 0
+    && (diagnostics.productPagesWithoutReferences ?? 0) === 0
     && diagnostics.browseQueueRemaining === 0
     && diagnostics.globalIncidentActive !== true;
 }
@@ -37,6 +41,7 @@ export function stockmanPartialReasons(diagnostics: StockmanCompletenessInput) {
   if ((diagnostics.productErrors ?? 0) > 0 || (diagnostics.productPageFailures ?? 0) > 0) {
     reasons.push(`${Math.max(diagnostics.productErrors ?? 0, diagnostics.productPageFailures ?? 0)} erreur(s) de fiche produit`);
   }
+  if ((diagnostics.productPagesWithoutReferences ?? 0) > 0) reasons.push(`${diagnostics.productPagesWithoutReferences} fiche(s) sans référence extraite`);
   if ((diagnostics.browseQueueRemaining ?? 0) > 0) reasons.push(`${diagnostics.browseQueueRemaining} page(s) browse encore en attente`);
   if (diagnostics.globalIncidentActive) reasons.push("Incident global HTTP 500 Stockman actif");
   if (diagnostics.scanComplete !== true && reasons.length === 0) reasons.push("Preuve stricte de couverture globale absente");

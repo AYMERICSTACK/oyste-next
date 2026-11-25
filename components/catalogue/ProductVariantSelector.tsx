@@ -1,4 +1,6 @@
 "use client";
+// OYSTE_STOCKMAN_LIVE_BUTTON_V1
+import { currentStockmanAvailability, stockmanAvailabilityLabel } from "@/lib/suppliers/stockman/availability";
 import { useCommercialTexts } from "@/components/layout/CommercialTextProvider";
 
 import { formatCmuText, formatTechnicalValue } from "@/lib/catalogue/format-cmu-display";
@@ -126,7 +128,6 @@ function getOysteStockmanHandling(name: string): string | null {
     ? "Livraison : timon non monté au-delà de 3 unités commandées."
     : null;
 }
-
 export default function ProductVariantSelector({
   productName,
   productCode,
@@ -143,6 +144,7 @@ export default function ProductVariantSelector({
   familyLabel,
   galleryImages = [],
   mediaManaged = false,
+  preferVariantMedia = false,
   variantGalleryImages = {},
   documentCount = 0,
   recommendationCandidates = [],
@@ -162,6 +164,7 @@ export default function ProductVariantSelector({
   familyLabel?: string;
   galleryImages?: string[];
   mediaManaged?: boolean;
+  preferVariantMedia?: boolean;
   variantGalleryImages?: Record<string, string[]>;
   documentCount?: number;
   recommendationCandidates?: CapacityRecommendation[];
@@ -198,7 +201,6 @@ export default function ProductVariantSelector({
   }, [initialOptions]);
 
   const selectedVariant = findMatchingVariant(variants, selectedOptions);
-
   const rawOysteVariantName =
     selectedVariant?.label || selectedVariant?.name || productName;
   const stockmanForDisplay =
@@ -209,7 +211,6 @@ export default function ProductVariantSelector({
   const stockmanHandlingNote = stockmanForDisplay
     ? getOysteStockmanHandling(rawOysteVariantName)
     : null;
-
   const variantTechnicalLines = useMemo(
     () => Object.entries(selectedVariant?.options || {}).map(([label, value]) => ({ label, value })),
     [selectedVariant],
@@ -261,18 +262,28 @@ export default function ProductVariantSelector({
 
     return () => controller.abort();
   }, [productCode, selectedVariant?.code, selectedVariant?.options, supplier]);
+  const isStockman = supplier?.trim().toUpperCase() === "STOCKMAN";
+  const [stockClock, setStockClock] = useState(() => Date.now());
+  const stockSnapshot = selectedVariant?.stockAvailability;
+  useEffect(() => {
+    if (!isStockman) return;
+    const refresh = () => setStockClock(Date.now());
+    refresh();
+    const remaining = Date.parse(stockSnapshot?.expiresAt || "") - Date.now();
+    const timer = Number.isFinite(remaining) && remaining > 0
+      ? window.setTimeout(refresh, Math.min(remaining + 1, 2147483647)) : undefined;
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.clearTimeout(timer); window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", refresh); };
+  }, [isStockman, stockSnapshot?.expiresAt, selectedVariant?.code]);
+  const availability = currentStockmanAvailability(stockSnapshot, stockClock);
+  const effectiveStock = isStockman ? availability.stock : selectedVariant?.stock;
   const leadTimeInfo = getSupplierLeadTimeInfo({
     supplier,
-    stock: selectedVariant?.stock,
+    stock: effectiveStock,
     configuredDelay: selectedVariant?.delay,
     isConfiguratorProduct,
   });
-  // OYSTE_STOCKMAN_DELAY_GUARD_V1
-  // Un delai STOCKMAN non confirme ne doit pas permettre
-  // une commande directe.
-  const stockmanDelayUnconfirmed =
-    stockmanForDisplay && leadTimeInfo.label === "Délai à confirmer";
-
   const resolvedImageUrl = getProductImageUrl(
     selectedVariant?.imageRef || productCode,
     selectedVariant?.code || productCode,
@@ -291,6 +302,7 @@ export default function ProductVariantSelector({
   // variante 8 t). La galerie produit générale ne sert que de repli lorsqu'il
   // n'existe aucun média exact pour la variante.
   const images = useMemo(() => {
+    if (preferVariantMedia && selectedVariantImages.length) return selectedVariantImages;
     if (mediaManaged) return galleryImages;
     if (selectedVariantImages.length) {
       return Array.from(new Set(selectedVariantImages.filter(Boolean))).slice(0, 8);
@@ -301,7 +313,7 @@ export default function ProductVariantSelector({
       : [resolvedImageUrl];
 
     return Array.from(new Set(ordered.filter(Boolean))).slice(0, 8);
-  }, [galleryImages, isGenericFallback, resolvedImageUrl, selectedVariantImages, mediaManaged]);
+  }, [galleryImages, isGenericFallback, resolvedImageUrl, selectedVariantImages, mediaManaged, preferVariantMedia]);
 
   const preferredImage = images[0] || (mediaManaged ? "" : resolvedImageUrl);
 
@@ -386,6 +398,8 @@ export default function ProductVariantSelector({
   const kitoChainSupplementHT = extraKitoLiftM > 0 && kitoChainPricing
     ? Math.round(extraKitoLiftM * kitoChainPricing.sellingPricePerMeterHT * 100) / 100
     : 0;
+  const selectedShippingMode = selectedVariant?.shippingMode ?? productShippingMode;
+  const stockmanQuoteOnly = isStockman && ((!selectedShippingMode || selectedShippingMode === "QUOTE") || availability.status !== "known" || (availability.stock ?? 0) <= 0);
   const displayedPriceHT = (selectedVariant?.priceHT || 0) + kitoChainSupplementHT;
   const cartTechnicalLines = needsDynamicKitoLift && effectiveKitoLiftM !== null
     ? [...variantTechnicalLines, { label: "Hauteur de levage", value: `${effectiveKitoLiftM} m` }]
@@ -505,6 +519,7 @@ export default function ProductVariantSelector({
             </span>
           </div>
 
+          {isStockman && <p role="status" aria-live="polite" className="mt-3 text-sm font-bold text-slate-600">{stockmanAvailabilityLabel(availability)}</p>}
           {hasOptions || dynamicKitoHeightControl ? (
             <div className="mt-5 rounded-2xl border border-[#007f8f]/20 bg-[#007f8f]/5 p-4">
               <div className="flex items-start gap-3">
@@ -566,7 +581,7 @@ export default function ProductVariantSelector({
                 ))}
               </div>
 
-              {selectedVariant ? <p className="mt-4 text-xs font-bold text-slate-500">{commerce.content018}{selectedVariant.code} {commerce.content019}{stockLabel(selectedVariant.stock)}{selectedVariant.weightKg ? ` · ${selectedVariant.weightKg} kg` : ""}</p> : null}
+              {selectedVariant ? <p className="mt-4 text-xs font-bold text-slate-500">{commerce.content018}{selectedVariant.code} {!isStockman ? <>{commerce.content019}{stockLabel(selectedVariant.stock)}</> : null}{selectedVariant.weightKg ? ` · ${selectedVariant.weightKg} kg` : ""}</p> : null}
               {hasIncludedDirectionLimit ? <p className="mt-3 flex items-center gap-2 text-sm font-black text-emerald-700"><CheckCircle2 size={17} /> {commerce.content020}</p> : null}
             </div>
           ) : null}
@@ -594,13 +609,15 @@ export default function ProductVariantSelector({
             </div>
           </div>
 
+          {isStockman && availability.checkedAt && <p className="mt-2 text-xs text-slate-500">Lecture fournisseur : <time dateTime={availability.checkedAt}>{new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Paris" }).format(new Date(availability.checkedAt))}</time> (heure de Paris). Stock indicatif, sous réserve de confirmation.</p>}
+          {stockmanQuoteOnly && <p className="mt-4 text-sm font-bold text-amber-800">Données de disponibilité ou prix livré à confirmer — Nous consulter.</p>}
           <div className="mt-5 grid gap-3">
             {isConfiguratorProduct ? (
               <Button href={configuratorHref} className="w-full justify-center py-4 text-base">
                 {commerce.content023}<ArrowRight size={18} />
               </Button>
-            ) : (!stockmanDelayUnconfirmed && (selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
-              <AddToCartButton
+            ) : (!stockmanQuoteOnly && (selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
+              <AddToCartButton label="Ajouter au panier"
                 name={formatCmuText(cleanOysteVariantName)}
                 code={selectedVariant?.code || productCode}
                 family={familyLabel}
@@ -641,8 +658,8 @@ export default function ProductVariantSelector({
             <a href={configuratorHref} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white">
               {commerce.content028}<ArrowRight size={17} />
             </a>
-          ) : (!stockmanDelayUnconfirmed && (selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
-            <AddToCartButton
+          ) : (!stockmanQuoteOnly && (selectedVariant?.priceHT || 0) > 0 && dynamicKitoPricingReady ? (
+            <AddToCartButton label="Ajouter au panier"
               name={formatCmuText(cleanOysteVariantName)}
               code={selectedVariant?.code || productCode}
               family={familyLabel}

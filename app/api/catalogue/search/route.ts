@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
     ])
   ]);
 
-  const stockmanResults = searchStockmanProducts(
+  const stockmanResults = await searchStockmanProducts(
     query,
     existingCodes,
     12

@@ -1,4 +1,5 @@
-import { formatStockmanSellingPrice } from "@/lib/catalogue/stockman-selling-prices";
+import { isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
+import { getStockmanNeonPrices, formatStockmanNeonPrice } from "@/lib/catalogue/stockman-neon-prices";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -45,6 +46,7 @@ export default async function StockmanCatalogue({
   const category = params.category || "all";
 
   const filtered = data.products.filter(product => {
+    if (isBlockedStockmanReference(product.reference)) return false;
     if (
       category !== "all" &&
       product.category !== category
@@ -78,6 +80,10 @@ export default async function StockmanCatalogue({
   const visible = filtered.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
+  );
+
+  const neonPrices = await getStockmanNeonPrices(
+    visible.map(product => product.reference)
   );
 
   function href(page: number) {
@@ -161,7 +167,7 @@ export default async function StockmanCatalogue({
                 code={product.reference}
                 name={product.title}
                 family={product.category}
-                price={formatStockmanSellingPrice(product.reference)}
+                price={formatStockmanNeonPrice(neonPrices.get(product.reference.trim().toUpperCase()))}
                 description={product.title}
                 href={
                   "/catalogue/stockman/" +

@@ -14,8 +14,8 @@ test("occurrences distinctes et données commerciales propres à chaque ligne", 
   const rows = ["PRIMARY", "ACCESSORY"].map((kind, index) => ({ reference: "X123", text: "X123 Produit Poids : 13 kg Stock : 9 Prix Unitaire HT : 146 € HT Code-barres : 1234567890123", badgeTexts: index ? ["ACCESSOIRE"] : [], sectionLabels: [], ancestorClass: "", dataAttributes: [], isCommercialTable: true, isPrimaryFamilyTable: true, rowIndex: index }));
   const references = deduplicatePageReferences(extractReferencesFromStructuredRows(rows, context));
   assert.equal(references.length, 2);
-  assert.deepEqual(references.map((item) => item.relationType), ["PRIMARY_VARIANT", "ACCESSORY"]);
-  assert.deepEqual(references[0].supplierData, { purchasePriceExVat: 146, stock: 9, weightKg: 13, barcode: "1234567890123" });
+  assert.deepEqual(references.map((item) => item.relationType), ["UNKNOWN", "ACCESSORY"]);
+  assert.deepEqual(references[0].supplierData, { purchasePriceExVat: 146, stock: 9, priceState: "NUMERIC", stockState: "NUMERIC", weightKg: 13, barcode: "1234567890123" });
 });
 
 const completeDiagnostics = { scanComplete: true, browseLimitReached: false, productLimitReached: false, queueLimitReached: false, discardedUrls: 0, unvisitedUrls: 0, navigationErrors: 0, productErrors: 0, productPageFailures: 0, productPageAttempts: 1, uniqueProductUrls: 1, productPagesOpened: 1, browseQueueRemaining: 0 };
@@ -121,7 +121,7 @@ test("création atomique réutilise un job compatible, matching et réconciliati
     { nodeType: "PRODUCT", state: "DONE", attempts: 1, trace: { requestedUrl: "url", finalUrl: "url", extractedReferences: references.map((item) => item.reference), relatedProducts: [] } },
   ]);
   replace(prisma.stockmanDiscoveryResult, "findMany", async () => references.map((payload) => ({ payload })));
-  replace(prisma.stockmanDiscoveryResult, "count", async () => references.length);
+  replace(prisma, "$queryRaw", async () => [{ occurrences: references.length + 1, distinct_refs: references.length }]);
   replace(prisma.product, "findMany", async () => []);
   replace(prisma.productVariant, "findMany", async () => []);
   replace(prisma.stockmanImportDraft, "findMany", async () => []);
@@ -139,6 +139,8 @@ test("création atomique réutilise un job compatible, matching et réconciliati
     assert.equal(await runNextStockmanDiscoveryBatch(job.id), true);
     assert.equal(job.diagnostics.matching.nextIndex, expected);
     assert.equal(job.diagnostics.matching.matches.length, expected);
+    assert.equal(job.progress.referencesFound, 106);
+    assert.equal(job.progress.uniqueReferencesFound, 105);
   }
   assert.equal(await runNextStockmanDiscoveryBatch(job.id), true);
   assert.equal(job.phase, "RECONCILING");
@@ -165,4 +167,36 @@ test("les cellules numériques adjacentes ne sont pas concaténées en faux prix
   const base = { reference: "X123", badgeTexts: [], sectionLabels: [], ancestorClass: "", dataAttributes: [], isCommercialTable: true, rowIndex: 0 };
   assert.equal(extractReferencesFromStructuredRows([{ ...base, text: "X123 Produit Poids : 13 kg 9 146 € HT" }], context)[0].supplierData?.purchasePriceExVat, null);
   assert.equal(extractReferencesFromStructuredRows([{ ...base, text: "X123 Produit Prix Unitaire HT : 1 146,00 € HT" }], context)[0].supplierData?.purchasePriceExVat, 1146);
+  const unavailable = extractReferencesFromStructuredRows([{ ...base, text: "X123 Produit", priceText: "Nous consulter", stockText: "0" }], context)[0].supplierData;
+  assert.equal(unavailable?.priceState, "ON_REQUEST");
+  assert.equal(unavailable?.stockState, "NUMERIC");
+  assert.equal(unavailable?.stock, 0);
+});
+
+test("un audit ciblé attend la fin du scan global et n’amorce que sa sous-catégorie", async (t) => {
+  const [{ prisma }, , { startStockmanDiscoveryJob, StockmanDiscoveryConflict }] = await modules;
+  const replace = (target: any, key: string, fn: (...args: any[]) => any) => {
+    const original = target[key]; target[key] = fn; t.after(() => { target[key] = original; });
+  };
+  let active = [{ id: "global", status: "RUNNING", options: { seedUrl: "https://www.stockman.fr/" } }];
+  let job: any;
+  const seeds: Array<{ canonicalUrl: string; nodeType: string }> = [];
+  replace(prisma, "$transaction", async (fn: any) => fn(prisma));
+  replace(prisma, "$executeRaw", async () => 0);
+  replace(prisma.stockmanDiscoveryJob, "findMany", async () => active);
+  replace(prisma.stockmanDiscoveryJob, "create", async ({ data }: any) => (job = { ...data, id: "scope", status: "QUEUED", createdAt: new Date() }));
+  replace(prisma.stockmanDiscoveryJob, "findUnique", async () => job);
+  replace(prisma.stockmanDiscoveryQueueItem, "createMany", async ({ data }: any) => { seeds.push(...data); return { count: data.length }; });
+
+  await assert.rejects(startStockmanDiscoveryJob({ commercialScope: ["18:124"] }), StockmanDiscoveryConflict);
+  assert.equal(Boolean(job), false);
+  assert.equal(seeds.length, 0);
+
+  active = [];
+  const created = await startStockmanDiscoveryJob({ commercialScope: ["18:124"], excludedReferences: [" ab12 ", "AB12"] });
+  assert.equal(created?.jobId, "scope");
+  assert.deepEqual(job.options.commercialScope, ["18:124"]);
+  assert.deepEqual(job.options.excludedReferences, ["AB12"]);
+  assert.equal(seeds.length, 2);
+  assert.ok(seeds.every((seed) => seed.nodeType === "BROWSE" && seed.canonicalUrl.endsWith("--124.aspx")));
 });

@@ -1,3 +1,4 @@
+import { isStockmanSupplier } from "../suppliers/stockman/order-policy";
 import type { ShippingCartResult, ShippingLineResult, ShippingProductInput } from "./types";
 import { isStockmannSupplier } from "./stockmann";
 import { calculateMessagerie, getMessagerieWeight } from "./messagerie";
@@ -12,6 +13,16 @@ import { calculateAdeiOfficialTransport, getAdeiTransportSource } from "./adei-o
 const CONFIGURATOR_FAMILIES = /^(PFI|PFT|PMI|PMT|PMA|PMAM|PORT)/i;
 
 export function resolveShippingLine(product: ShippingProductInput, postcode?: string): ShippingLineResult {
+  if (!isStockmanSupplier(product.supplier)) return resolveBaseShippingLine(product, postcode);
+  const included = product.shippingMode === "INCLUDED" && product.stockmanFreightConfirmed === true;
+  const calculated = (product.shippingMode === "MESSAGERIE" || product.shippingMode === "AFFRETEMENT") && /^\d{5}$/.test(normalizePostcode(postcode));
+  const mode = included ? "INCLUDED" : calculated ? product.shippingMode : "QUOTE";
+  const line = resolveBaseShippingLine({ ...product, kind: "catalogue", shippingMode: mode, pfiShipping: undefined, wallPotenceShipping: undefined }, postcode);
+  if (included || (calculated && line.amountHT !== null && line.amountHT > 0)) return line;
+  return { mode: "quote", label: "Transport sur devis", description: "Le transport STOCKMAN doit être confirmé.", amountHT: null, reason: "Aucun transport inclus validé ni tarif de transport exploitable." };
+}
+
+function resolveBaseShippingLine(product: ShippingProductInput, postcode?: string): ShippingLineResult {
   const quantity = Math.max(1, product.quantity || 1);
 
   if (product.pfiShipping) {
@@ -144,8 +155,8 @@ export function resolveShippingLine(product: ShippingProductInput, postcode?: st
   return { mode: "quote", label: "Transport sur devis", description: "Le transport sera confirmé après étude de la commande.", amountHT: null, weightKg: totalWeight, reason: "Le montant sera précisé dans la confirmation de commande." };
 }
 
-export function calculateCartShipping(products: ShippingProductInput[], postcode?: string): ShippingCartResult {
-  const lines = products.map((product) => resolveShippingLine(product, postcode));
+export function calculateCartShipping(products: ShippingProductInput[], postcode?: string, country = "FR"): ShippingCartResult {
+  const lines = products.map(product => resolveShippingLine(product, isStockmanSupplier(product.supplier) && country.toUpperCase() !== "FR" ? undefined : postcode));
   const hasQuote = lines.some((line) => line.amountHT === null);
   const confirmedAmountHT = lines.reduce((sum, line) => sum + (line.amountHT || 0), 0);
   const modeCounts = lines.reduce<Record<ShippingLineResult["mode"], number>>(

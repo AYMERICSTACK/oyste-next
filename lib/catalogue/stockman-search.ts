@@ -1,4 +1,5 @@
-import { formatStockmanSellingPrice } from "@/lib/catalogue/stockman-selling-prices";
+import { isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
+import { getStockmanNeonPrices, formatStockmanNeonPrice } from "@/lib/catalogue/stockman-neon-prices";
 
 import "server-only";
 import fs from "node:fs";
@@ -49,11 +50,11 @@ function normalize(value: string) {
     .trim();
 }
 
-export function searchStockmanProducts(
+export async function searchStockmanProducts(
   query: string,
   existingCodes: string[],
   limit = 12
-): StockmanSearchResult[] {
+): Promise<StockmanSearchResult[]> {
   const normalized = normalize(query);
 
   if (normalized.length < 2) return [];
@@ -70,7 +71,7 @@ export function searchStockmanProducts(
     "TOTEMPALAN"
   ]);
 
-  return getProducts()
+  const matches = getProducts().filter(product => !isBlockedStockmanReference(product.reference))
     .filter(product =>
       !excludedReferences.has(product.reference.trim().toUpperCase())
     )
@@ -88,8 +89,13 @@ export function searchStockmanProducts(
 
       return text.includes(normalized);
     })
-    .slice(0, limit)
-    .map(product => ({
+    .slice(0, limit);
+
+  const prices = await getStockmanNeonPrices(
+    matches.map(product => product.reference)
+  );
+
+  return matches.map(product => ({
       id: "stockman-" + product.reference,
       name: product.title,
       code: product.reference,
@@ -97,7 +103,7 @@ export function searchStockmanProducts(
       href: "/catalogue/stockman/" +
         encodeURIComponent(product.reference),
       image: product.imageUrl,
-      price: formatStockmanSellingPrice(product.reference),
+      price: formatStockmanNeonPrice(prices.get(product.reference.trim().toUpperCase())),
       configurable: false
     }));
 }

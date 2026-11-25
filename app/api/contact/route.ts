@@ -32,6 +32,7 @@ async function sendResendEmail(payload: {
   html: string;
   replyTo?: string;
 }) {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") return;
   const apiKey = process.env.RESEND_API_KEY;
 
   if (!apiKey) {

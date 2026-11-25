@@ -22,11 +22,11 @@ function row(reference: string, overrides: Partial<StockmanCommercialRowSnapshot
   };
 }
 
-test("classe les références d'une table familiale en principale et variantes", () => {
+test("classe la référence principale et conserve les autres à vérifier", () => {
   const context = { familyReference: "CL", breadcrumb: ["Produits", "Palans", "Pinces"] };
   assert.equal(classifyCommercialRow(row("CL"), context).relationType, "PRIMARY");
   for (const reference of ["CL05", "CL10", "CL20", "CL30"]) {
-    assert.equal(classifyCommercialRow(row(reference), context).relationType, "PRIMARY_VARIANT");
+    assert.equal(classifyCommercialRow(row(reference), context).relationType, "UNKNOWN");
   }
 });
 
@@ -38,7 +38,7 @@ test("une fiche mono-référence conserve sa référence commerciale", () => {
   assert.equal(classification.relationType, "PRIMARY");
 });
 
-test("les familles multi-références restent génériques et structurelles", () => {
+test("les familles multi-références restent à vérifier sans preuve métier", () => {
   const cases = [
     ["C30-Pinces", ["C3014", "C3015", "C3016"]],
     ["C50-Pinces", ["C5004", "C5005", "C5006"]],
@@ -48,7 +48,7 @@ test("les familles multi-références restent génériques et structurelles", ()
     for (const reference of references) {
       assert.equal(
         classifyCommercialRow(row(reference), { familyReference, breadcrumb: [] }).relationType,
-        "PRIMARY_VARIANT",
+        "UNKNOWN",
       );
     }
   }
@@ -127,10 +127,10 @@ test("la structure taxonomique classe les liens sans vocabulaire métier", () =>
 test("badge local prévaut sur une section contradictoire", () => {
   assert.equal(classifyCommercialRow(row("X01", { badgeTexts: ["Pièces détachées"], sectionLabels: ["Options"] }), { familyReference: "FAM", breadcrumb: [] }).relationType, "SPARE_PART");
 });
-test("PTE15NPRO conserve ses variantes prouvées, options et accessoires séparément", () => {
+test("PTE15NPRO conserve les configurations à vérifier, options et accessoires séparément", () => {
   const context = { familyReference: "PTE15NPRO", breadcrumb: [] };
   for (const reference of ["PTE15NPRO800", "PTE15NPRO1500", "PTE15NPRO1800", "PTE15NPRO-20AH"]) {
-    assert.equal(classifyCommercialRow(row(reference), context).relationType, "PRIMARY_VARIANT");
+    assert.equal(classifyCommercialRow(row(reference), context).relationType, "UNKNOWN");
     assert.equal(classifyCommercialRow(row(reference, { isPrimaryFamilyTable: false }), context).relationType, "UNKNOWN");
   }
   assert.equal(classifyCommercialRow(row("SUPPORT01", { badgeTexts: ["ACCESSOIRE"] }), context).relationType, "ACCESSORY");

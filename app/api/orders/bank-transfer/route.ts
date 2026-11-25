@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentCustomer } from "@/lib/auth/session";
 import { prisma } from "@/lib/db/prisma";
+import { isStockmanSupplier } from "@/lib/suppliers/stockman/order-policy";
 import { calculateCartShippingWithSendcloud } from "@/lib/shipping/sendcloud-cart";
 import { resolveSecureCheckoutItems } from "@/lib/orders/secure-checkout-items";
 import { calculateKitoOrderAdjustment } from "@/lib/pricing/kito-order-adjustment";
@@ -63,6 +64,7 @@ const schema = z.object({
   cgvVersion: z.literal(CGV_VERSION),
 });
 async function sendEmail(to: string, subject: string, html: string) {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") return false;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return false;
   const response = await fetch("https://api.resend.com/emails", {
@@ -107,6 +109,9 @@ export async function POST(request: Request) {
       data.address.postalCode,
       data.address.country,
     );
+    if (shipping.hasQuote && secureItems.some(item => isStockmanSupplier(item.supplier))) {
+      return NextResponse.json({ message: "Le virement sera disponible après confirmation du transport STOCKMAN." }, { status: 409 });
+    }
     const grossSubtotalHt = secureItems.reduce(
       (sum, item) => sum + item.unitPriceHT * item.quantity,
       0,

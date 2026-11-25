@@ -27,6 +27,23 @@ import type {
   StockmanDuplicateStructureAudit,
 } from "@/lib/suppliers/stockman/types";
 
+import { defaultStockmanCommercialScope, resolveStockmanCommercialScope, stockmanCommercialCategories } from "@/lib/suppliers/stockman/commercial-scope";
+
+const preferencesKey = "oyste-stockman-commercial-scope-v1";
+const syncLabels: Record<string, string> = {
+  APPLIQUE: "Mise à jour appliquée", AUCUNE_MODIFICATION: "Aucune modification",
+  MARGE_NEGATIVE: "Marge négative", MARGE_SOUS_REPERE: "Marge sous le repère",
+  ECART_ACHAT_A_VERIFIER: "Écart d’achat à vérifier", REFERENCE_ARRETEE: "Référence arrêtée",
+  STOCKS_CONTRADICTOIRES: "Stocks contradictoires", ACHATS_CONTRADICTOIRES: "Prix d’achat contradictoires",
+  STOCK_NON_PROUVE: "Stock sans preuve", ACHAT_OU_UNITE_NON_PROUVES: "Achat ou unité sans preuve",
+  LECTURE_NON_PROUVEE_OU_PERIMEE: "Lecture non vérifiée ou périmée",
+  CIBLE_AMBIGUE_OU_PARENT_A_VARIANTES: "Lien OYSTE à vérifier",
+  PRIX_VENTE_ABSENT: "Prix de vente absent", NOUVELLE_REFERENCE_A_QUALIFIER: "Nouvelle référence à qualifier",
+  RATTACHEMENT_A_VERIFIER: "Rattachement à vérifier", STOCK_PARENT_RECALCULE: "Stock du parent recalculé",
+  ACHAT_SUR_DEMANDE: "Achat sur demande", CIBLE_OYSTE_ABSENTE: "Fiche OYSTE absente",
+};
+const syncLabel = (value: string) => syncLabels[value] ?? value.toLowerCase().replaceAll("_", " ");
+
 type MissingFilter = `missing:${StockmanMissingKind}`;
 type CatalogueFilter = `catalogue:${StockmanCatalogueState}`;
 type Filter =
@@ -42,7 +59,81 @@ export default function StockmanCatalogDiscoveryCard({
 }) {
   const [persistentSessionReady, setPersistentSessionReady] = useState(false);
   const effectiveEnabled = enabled || persistentSessionReady;
-  const [seedUrl, setSeedUrl] = useState("https://www.stockman.fr/");
+  const [scopeKeys, setScopeKeys] = useState(defaultStockmanCommercialScope);
+  const [exclusions, setExclusions] = useState("");
+  const [sharedWritable, setSharedWritable] = useState(false);
+  const [sharedVersion, setSharedVersion] = useState<string | null>(null);
+  const [sharedMessage, setSharedMessage] = useState("");
+  const [savingSharedScope, setSavingSharedScope] = useState(false);
+  const [syncHistory, setSyncHistory] = useState<Array<{ id: string; entityId: string; createdAt: string; metadata?: { entries?: Array<{ reference?: string; outcome: string; anomalies?: string[] }>; next?: number; total?: number } }>>([]);
+  const [syncHistoryMessage, setSyncHistoryMessage] = useState("");
+  async function loadSyncHistory() {
+    setSyncHistoryMessage("Lecture en cours…");
+    try {
+      const response = await fetch("/api/admin/suppliers/stockman/discovery?syncHistory=1", { cache: "no-store" });
+      if (!response.ok) throw new Error("Historique indisponible.");
+      const data = await response.json();
+      setSyncHistory(data.history);
+      setSyncHistoryMessage(data.history.length ? "" : "Aucune synchronisation planifiée enregistrée.");
+    } catch { setSyncHistoryMessage("Historique indisponible."); }
+  }
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(preferencesKey) ?? "null");
+      if (!saved || !Array.isArray(saved.keys)) return;
+      const keys = saved.keys.length ? resolveStockmanCommercialScope(saved.keys).keys : [];
+      setScopeKeys(keys);
+      if (typeof saved.exclusions === "string") setExclusions(saved.exclusions);
+    } catch { /* ignore invalid saved preferences */ }
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    void fetch("/api/admin/suppliers/stockman/commercial-scope", { cache: "no-store" }).then(async (response) => {
+      if (!response.ok) return;
+      const data = await response.json();
+      if (!mounted) return;
+      setSharedWritable(data.writable === true);
+      if (data.scope) {
+        setScopeKeys(data.scope.keys);
+        setExclusions(data.scope.exclusions.join(", "));
+        setSharedVersion(data.scope.version);
+      }
+    }).catch(() => { if (mounted) setSharedMessage("Périmètre partagé indisponible."); });
+    return () => { mounted = false; };
+  }, []);
+  async function saveSharedScope() {
+    setSavingSharedScope(true);
+    try {
+      const response = await fetch("/api/admin/suppliers/stockman/commercial-scope", {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keys: scopeKeys, exclusions: exclusions.split(/[\s,;]+/).filter(Boolean), version: sharedVersion }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || "Enregistrement impossible.");
+      setSharedVersion(data.scope.version);
+      setSharedMessage("Périmètre partagé enregistré.");
+    } catch (error) {
+      setSharedMessage(error instanceof Error ? error.message : "Enregistrement impossible.");
+    } finally { setSavingSharedScope(false); }
+  }
+  function saveScope(keys: string[], references = exclusions) {
+    setScopeKeys(keys);
+    setExclusions(references);
+    try { localStorage.setItem(preferencesKey, JSON.stringify({ keys, exclusions: references })); }
+    catch { /* the current session can still audit its selected scope */ }
+  }
+  function toggleCategory(id: string, selected: boolean) {
+    const next = scopeKeys.filter((key) => key !== id && !key.startsWith(id + ":"));
+    saveScope(selected ? [...next, id] : next);
+  }
+  function toggleSubcategory(id: string, subId: string, selected: boolean) {
+    const category = stockmanCommercialCategories.find((item) => item.id === id);
+    const full = scopeKeys.includes(id);
+    const next = scopeKeys.filter((key) => key !== id && key !== id + ":" + subId);
+    if (full) for (const item of category?.subcategories ?? []) if (item.id !== subId) next.push(id + ":" + item.id);
+    if (selected) next.push(id + ":" + subId);
+    saveScope(next);
+  }
   const [scan, setScan] = useState<StockmanCatalogDiscovery | null>(null);
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState<StockmanDiscoveryJobProgress | null>(
@@ -1105,7 +1196,7 @@ export default function StockmanCatalogDiscoveryCard({
     }
   }
 
-  async function runScan(resumeJobId?: string) {
+  async function runScan(resumeJobId?: string, keys = scopeKeys, scopeMode: "audit" | "commercial" = "audit") {
     setLoading(true);
     setMessage(null);
     setPersistentAuditDate(null);
@@ -1120,7 +1211,10 @@ export default function StockmanCatalogDiscoveryCard({
         : await fetch("/api/admin/suppliers/stockman/discovery", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "scan", seedUrl }),
+            body: JSON.stringify({
+              action: "scan", commercialScope: keys, scopeMode,
+              excludedReferences: exclusions.split(/[\s,;]+/).filter(Boolean),
+            }),
           });
       const payload = response
         ? await response.json().catch(() => ({}))
@@ -3571,38 +3665,100 @@ export default function StockmanCatalogDiscoveryCard({
             ) : null}
           </div>
 
-          <label className="block">
-            <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.15em] text-slate-500">
-              URL de départ
-            </span>
-            <input
-              value={seedUrl}
-              onChange={(event) => setSeedUrl(event.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold outline-none focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50"
-            />
-          </label>
-          <button
-            type="button"
-            onClick={() => void runScan()}
-            disabled={
-              !effectiveEnabled ||
-              loading ||
-              linking ||
-              restoringPersistentAudit
-            }
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3.5 text-xs font-black text-white disabled:opacity-50"
-          >
-            {loading ? (
-              <LoaderCircle size={17} className="animate-spin" />
-            ) : (
-              <ScanSearch size={17} />
-            )}
-            {loading
-              ? "Audit exhaustivité en cours…"
-              : restoringPersistentAudit
-                ? "Restauration du dernier audit…"
-                : "Auditer tout l’intranet STOCKMAN"}
-          </button>
+          <fieldset className="space-y-2 rounded-xl border border-slate-200 p-3">
+            <legend className="px-2 text-sm font-bold">Périmètre commercial STOCKMAN</legend>
+            {stockmanCommercialCategories.map((category) => {
+              const full = scopeKeys.includes(category.id);
+              const count = scopeKeys.filter((key) => key.startsWith(category.id + ":")).length;
+              return (
+                <details key={category.id} className="rounded-lg border border-slate-200 p-2">
+                  <summary className="cursor-pointer text-sm font-semibold">
+                    {category.label} · {full ? "Toutes les sous-catégories" : count + " sélectionnées"}
+                  </summary>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <label className="text-sm">
+                      <input type="checkbox" checked={full} onChange={(event) => toggleCategory(category.id, event.target.checked)} /> Toute la catégorie
+                    </label>
+                    <button type="button" className="text-sm font-semibold text-cyan-800 underline"
+                      disabled={!effectiveEnabled || loading || linking || restoringPersistentAudit}
+                      onClick={() => void runScan(undefined, [category.id])}>Auditer cette catégorie</button>
+                  </div>
+                  <div className="mt-2 grid gap-1 sm:grid-cols-2">
+                    {category.subcategories.map((sub) => (
+                      <label key={sub.id} className="text-xs">
+                        <input type="checkbox" checked={full || scopeKeys.includes(category.id + ":" + sub.id)}
+                          onChange={(event) => toggleSubcategory(category.id, sub.id, event.target.checked)} /> {sub.label}
+                      </label>
+                    ))}
+                  </div>
+                </details>
+              );
+            })}
+            <label className="block text-sm font-semibold">
+              Références exclues de ce périmètre
+              <textarea value={exclusions} onChange={(event) => saveScope(scopeKeys, event.target.value)}
+                className="mt-1 block w-full rounded-lg border border-slate-300 p-2" rows={2} />
+            </label>
+            {sharedWritable && <button type="button" disabled={!scopeKeys.length || savingSharedScope}
+              className="text-sm font-semibold text-cyan-800 underline disabled:opacity-50" onClick={() => void saveSharedScope()}>
+              Enregistrer le périmètre partagé
+            </button>}
+            {sharedMessage && <p role="status" className="text-sm">{sharedMessage}</p>}
+          </fieldset>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void runScan()}
+              disabled={!effectiveEnabled || !scopeKeys.length || loading || linking || restoringPersistentAudit}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">
+              {loading ? <LoaderCircle size={17} className="animate-spin" /> : <ScanSearch size={17} />}
+              {loading ? "Audit en cours…" : "Auditer la sélection"}
+            </button>
+            <button type="button" onClick={() => void runScan(undefined, scopeKeys, "commercial")}
+              disabled={!effectiveEnabled || !scopeKeys.length || loading || linking || restoringPersistentAudit}
+              className="rounded-xl border border-slate-300 px-4 py-3 text-xs font-bold disabled:opacity-50">
+              Relever prix et stocks
+            </button>
+          </div>
+          <section className="rounded-xl border border-slate-200 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h3 className="font-black text-slate-950">Historique des synchronisations STOCKMAN</h3>
+              <button type="button" className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-bold" onClick={() => void loadSyncHistory()}>Consulter l’historique</button>
+            </div>
+            {syncHistoryMessage && <p role="status" className="mt-2 text-sm">{syncHistoryMessage}</p>}
+            {syncHistory.map(row => <details key={row.id} className="mt-2 text-sm">
+              <summary>{new Date(row.createdAt).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })} · {row.metadata?.next ?? 0}/{row.metadata?.total ?? 0} réf. · Mises à jour ({row.metadata?.entries?.filter(entry => entry.outcome === "APPLIQUE").length ?? 0})</summary>
+              <ul className="mt-2 space-y-1 pl-4">{row.metadata?.entries?.map((entry, index) => <li key={index}>{entry.reference || "Stock du parent"} · {syncLabel(entry.outcome)}{entry.anomalies?.length ? " · " + entry.anomalies.map(syncLabel).join(", ") : ""}</li>)}</ul>
+            </details>)}
+          </section>
+          {scan?.commercialScope && (
+            <details className="rounded-lg border border-slate-200 p-3 text-sm">
+              <summary className="cursor-pointer font-semibold">Rapport du périmètre et relevé commercial</summary>
+              {scan.commercialScope.mode === "commercial" && <p>Relecture des fiches connues issues de l’audit de cette sélection.</p>}
+              <p>Références vérifiées le {new Date(scan.commercialScope.verifiedAt).toLocaleString("fr-FR")}</p>
+              <p>{scan.commercialScope.baselineFinishedAt ? "Comparaison avec l’audit précédent du même périmètre." : "Premier relevé du périmètre. Il servira de base de comparaison."}</p>
+              <ul className="mt-2 space-y-1">
+                <li>Références nouvellement observées · {scan.commercialScope.newReferences.join(", ") || "—"}</li>
+                <li>Références modifiées · {scan.commercialScope.changedReferences.join(", ") || "—"}</li>
+                <li>Arrêts indiqués par STOCKMAN · {scan.commercialScope.reportedStopped.join(", ") || "—"}</li>
+                <li>Références non revues à contrôler · {scan.commercialScope.missingFromScope.join(", ") || "—"}</li>
+                <li>Exclusions du relevé · {scan.commercialScope.excluded.join(", ") || "—"}</li>
+              </ul>
+              <div className="mt-2 max-h-72 overflow-auto">
+                <table className="w-full text-left text-xs">
+                  <thead><tr><th>Référence</th><th>Prix d’achat HT</th><th>Stock</th><th>Vérifiée le</th></tr></thead>
+                  <tbody>
+                    {scan.commercialScope.pricesAndStocks.map((row) => (
+                      <tr key={row.reference}>
+                        <td><a className="underline" href={row.sourceUrl}>{row.reference}</a></td>
+                        <td>{row.price ?? (row.priceState === "ON_REQUEST" ? "Sur demande" : "À vérifier")}</td>
+                        <td>{row.stock ?? (row.stockState === "ON_REQUEST" ? "Sur demande" : row.stockState === "RESTOCK" ? row.stockAvailabilityText ?? "Réapprovisionnement" : "À vérifier")}</td>
+                        <td>{row.readAt ? new Date(row.readAt).toLocaleString("fr-FR") : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+          )}
           {persistentAuditDate ? (
             <p className="mt-2 text-[10px] font-bold text-emerald-700">
               V2.12.8.2 · Audit persistant restauré depuis PostgreSQL ·{" "}
@@ -3648,7 +3804,10 @@ export default function StockmanCatalogDiscoveryCard({
                 {progress.productsPending ?? 0} en attente ·{" "}
                 {progress.productsFailed ?? 0} échec(s)
               </span>
-              <span>Références / occurrences : {progress.referencesFound}</span>
+              {progress.uniqueReferencesFound !== undefined && (
+                <span>Références uniques : {progress.uniqueReferencesFound}</span>
+              )}
+              <span>Occurrences : {progress.referencesFound}</span>
               <span>
                 Débit browse :{" "}
                 {progress.browsePerMinute == null

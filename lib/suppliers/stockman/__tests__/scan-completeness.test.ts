@@ -17,6 +17,7 @@ const complete = {
 
 test("autorise la réconciliation destructive uniquement après preuve complète", () => {
   assert.equal(hasProvenCompleteStockmanScan(complete), true);
+  assert.equal(hasProvenCompleteStockmanScan({ ...complete, globalCoverage: false }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, scanComplete: undefined }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, queueLimitReached: true }), false);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, discardedUrls: 1 }), false);
@@ -33,6 +34,8 @@ test("une preuve incomplète ou un échec produit bloque les disparitions", () =
     assert.equal(hasProvenCompleteStockmanScan(incomplete), false, key);
   }
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, productPageFailures: 1 }), false);
+  assert.equal(hasProvenCompleteStockmanScan({ ...complete, productPagesWithoutReferences: 1 }), false);
+  assert.deepEqual(stockmanPartialReasons({ ...complete, productPagesWithoutReferences: 1 }), ["1 fiche(s) sans référence extraite"]);
   assert.equal(hasProvenCompleteStockmanScan({ ...complete, browseQueueRemaining: 1 }), false);
 });
 

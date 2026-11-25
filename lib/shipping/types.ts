@@ -15,6 +15,7 @@ export type ShippingProductInput = {
   packageWidthCm?: number;
   packageHeightCm?: number;
   shippingMode?: ProductShippingMode;
+  stockmanFreightConfirmed?: boolean;
   quantity?: number;
   pfiShipping?: PfiShippingInput;
   wallPotenceShipping?: WallPotenceShippingInput;

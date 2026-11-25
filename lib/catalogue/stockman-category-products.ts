@@ -1,5 +1,4 @@
 import { isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
-import { getStockmanSellingPriceHT } from "@/lib/catalogue/stockman-selling-prices";
 import "server-only";
 import fs from "node:fs";
 import path from "node:path";
@@ -30,6 +29,12 @@ function normalize(value: string): string {
 
 function classify(record: StockmanRecord): Destination | null {
 
+
+  // OYSTE_DIABLES_V1: Keep all 12 supplier subfamilies together.
+  // Preserve the original subfamily as metadata for catalogue filters.
+  if (/^diables et chariots de manutention$/.test(normalize(record.category || ""))) {
+    return { rayon: "manutention-au-sol", famille: "diable" };
+  }
 
   // STOCKMAN_RAYONNAGE_V52
   const rayonCategory = normalize(record.category || "");
@@ -325,14 +330,14 @@ export function getStockmanCategoryProducts(rayon: string): CatalogueProduct[] {
       categorySlug: destination.rayon,
       // Keep the supplier subfamily for accurate OYSTE gerbeur filtering.
       categoryPath: destination.rayon + " > " + destination.famille +
-        (destination.famille === "gerbeur" && record.subcategory ? " > " + record.subcategory : ""),
-      categories: destination.famille === "gerbeur" && record.subcategory
+        ((destination.famille === "gerbeur" || destination.famille === "diable") && record.subcategory ? " > " + record.subcategory : ""),
+      categories: (destination.famille === "gerbeur" || destination.famille === "diable") && record.subcategory
         ? [destination.rayon, destination.famille, record.subcategory]
         : [destination.rayon, destination.famille],
       description: record.title,
       detailedDescription: "",
-      priceHT: getStockmanSellingPriceHT(reference),
-      minPriceHT: getStockmanSellingPriceHT(reference),
+      priceHT: null,
+      minPriceHT: null,
       delay: "",
       stock: null,
       imageRef: reference,

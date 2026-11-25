@@ -184,10 +184,67 @@ export default async function CatalogueUniversePage({
       products.filter(product => gerbeurClass(product) === type.slug).length
     ])
   );
+  // OYSTE_DIABLES_V1: 12 Stockman subfamilies (no database migration).
+  const isDiable = selectedFamilySlug === "diable";
+  const diableTypes = [
+    { slug: "aluminium-inox", label: "Diables aluminium et inox" },
+    { slug: "acier", label: "Diables acier" },
+    { slug: "leve-charges", label: "Diables lève-charges encombrantes" },
+    { slug: "chariots-acier-aluminium", label: "Diables chariots acier et aluminium" },
+    { slug: "porte-bouteilles", label: "Diables porte-bouteilles" },
+    { slug: "pneus", label: "Diables à pneus" },
+    { slug: "porte-panneaux", label: "Chariots porte-panneaux" },
+    { slug: "porte-bac", label: "Chariots porte-bac et roulpalette" },
+    { slug: "plateaux-roulants", label: "Plateaux roulants" },
+    { slug: "chariots-servantes", label: "Chariots et servantes" },
+    { slug: "tracteurs-pousseurs", label: "Tracteurs pousseurs électriques" },
+    { slug: "accessoires-tracteurs", label: "Accessoires et options de tracteurs pousseurs électriques" },
+    { slug: "autres", label: "Autres modèles" },
+  ];
+  const diableClass = (product: (typeof products)[number]) => {
+    const norm = (value: string) => value.normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const path = norm(`${product.categoryPath} ${(product.categories || []).join(" ")}`);
+    const name = norm(`${product.name} ${product.shortName || ""}`);
+    // Prioritize supplier subfamily, not ambiguous designation words.
+    if (/accessoires? et options? de tracteurs? pousseurs?/.test(path)) return "accessoires-tracteurs";
+    if (/tracteurs? pousseurs? electriques?/.test(path)) return "tracteurs-pousseurs";
+    if (/diables? chariots? acier et aluminium/.test(path)) return "chariots-acier-aluminium";
+    if (/diables? aluminium et inox/.test(path)) return "aluminium-inox";
+    if (/diables? acier/.test(path)) return "acier";
+    if (/diables? leve.charges? encombrantes?/.test(path)) return "leve-charges";
+    if (/diables? porte.bouteilles?/.test(path)) return "porte-bouteilles";
+    if (/diables? a pneus/.test(path)) return "pneus";
+    if (/chariots? porte.panneaux/.test(path)) return "porte-panneaux";
+    if (/chariots? porte.bac et roulpalette/.test(path)) return "porte-bac";
+    if (/plateaux? roulants?/.test(path)) return "plateaux-roulants";
+    if (/chariots? et servantes?/.test(path)) return "chariots-servantes";
+    // Legacy records with no supplier subfamily.
+    if (/accessoires? .*tracteurs? pousseurs?/.test(name)) return "accessoires-tracteurs";
+    if (/tracteurs? pousseurs?/.test(name)) return "tracteurs-pousseurs";
+    if (/porte.panneaux/.test(name)) return "porte-panneaux";
+    if (/porte.bac|roulpalette/.test(name)) return "porte-bac";
+    if (/plateau roulant/.test(name)) return "plateaux-roulants";
+    if (/porte.bouteilles?/.test(name)) return "porte-bouteilles";
+    if (/leve.charges? encombrantes?/.test(name)) return "leve-charges";
+    if (/diables? a pneus/.test(name)) return "pneus";
+    if (/diable/.test(name) && /aluminium|inox/.test(name) && /acier/.test(name)) return "chariots-acier-aluminium";
+    if (/diable/.test(name) && /aluminium|inox/.test(name)) return "aluminium-inox";
+    if (/diable/.test(name) && /acier/.test(name)) return "acier";
+    if (/chariot|servante/.test(name)) return "chariots-servantes";
+    return "autres";
+  };
+  const selectedDiableType = isDiable ? resolvedSearchParams?.type : undefined;
+  const diableCounts = Object.fromEntries(diableTypes.map(type => [
+    type.slug, products.filter(product => diableClass(product) === type.slug).length,
+  ]));
+
   const visibleProducts = isTranspalette && selectedType
     ? products.filter(product => transpaletteClass(product) === selectedType)
     : isGerbeur && selectedGerbeurType
       ? products.filter(product => gerbeurClass(product) === selectedGerbeurType)
+      : isDiable && selectedDiableType
+        ? products.filter(product => diableClass(product) === selectedDiableType)
       : products;
 
   const typeCounts = Object.fromEntries(
@@ -384,6 +441,38 @@ export default async function CatalogueUniversePage({
                       }`}
                     >
                       {type.label} ({gerbeurCounts[type.slug]})
+                    </a>
+                  ))}
+                </div>
+              </nav>
+            ) : null}
+            {isDiable ? (
+              <nav aria-label="Types de diables et chariots de manutention" className="mb-8">
+                <div className="mb-3 text-sm font-bold text-slate-700">
+                  Choisir un type de diable ou de chariot
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    href={`/catalogue/${slug}?famille=diable`}
+                    className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                      !selectedDiableType
+                        ? "border-[#007f8f] bg-[#007f8f] text-white"
+                        : "border-slate-200 bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    Tous ({products.length})
+                  </a>
+                  {diableTypes.map(type => (
+                    <a
+                      key={type.slug}
+                      href={`/catalogue/${slug}?famille=diable&type=${type.slug}`}
+                      className={`rounded-xl border px-4 py-3 text-sm font-bold ${
+                        selectedDiableType === type.slug
+                          ? "border-[#007f8f] bg-[#007f8f] text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-700"
+                      }`}
+                    >
+                      {type.label} ({diableCounts[type.slug]})
                     </a>
                   ))}
                 </div>

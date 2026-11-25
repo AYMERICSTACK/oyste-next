@@ -1,4 +1,5 @@
 export async function sendOysteEmail(input: { to: string; subject: string; html: string }) {
+  if (process.env.OYSTE_STOCKMAN_TEST === "true") return false;
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.warn("RESEND_API_KEY absent : email non envoyé", input.subject);

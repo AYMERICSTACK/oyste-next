@@ -1,4 +1,4 @@
-import { formatStockmanSellingPrice } from "@/lib/catalogue/stockman-selling-prices";
+import { formatStockmanNeonPrice, getStockmanNeonPrices } from "@/lib/catalogue/stockman-neon-prices";
 
 import fs from "node:fs";
 import path from "node:path";
@@ -13,7 +13,7 @@ type StockmanProduct = {
   imageUrl: string;
 };
 
-export default function StockmanOysteResults({
+export default async function StockmanOysteResults({
   query = ""
 }: {
   query?: string;
@@ -41,6 +41,8 @@ export default function StockmanOysteResults({
   );
 
   if (!results.length) return null;
+  const visible = results.slice(0, 36);
+  const prices = await getStockmanNeonPrices(visible.map(p => p.reference)).catch(() => new Map<string, number>());
 
   return (
     <section className="mt-10 border-t border-slate-200 pt-8">
@@ -59,13 +61,13 @@ export default function StockmanOysteResults({
       </div>
 
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {results.slice(0, 36).map(product => (
+        {visible.map(product => (
           <ProductCard
             key={product.reference}
             code={product.reference}
             name={product.title}
             family={product.subcategory || product.category}
-            price={formatStockmanSellingPrice(product.reference)}
+            price={formatStockmanNeonPrice(prices.get(product.reference.trim().toUpperCase()))}
             description=""
             href={
               "/catalogue/stockman/" +

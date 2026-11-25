@@ -44,7 +44,7 @@ function simulatedBrowser(refreshedState: StockmanStorageStateLike) {
   };
 }
 
-test("valide exactement un état assaini dans un nouveau contexte", async () => {
+test("valide un état conservant le cookie ASP.NET dans un nouveau contexte", async () => {
   const source = state([
     cookie("ASP.NET_SessionId", "volatile-old", -1),
     cookie("cookie_customer", "customer", 1_800_000_000),
@@ -67,7 +67,7 @@ test("valide exactement un état assaini dans un nouveau contexte", async () => 
 
   assert.deepEqual(
     simulated.receivedState()?.cookies.map((item) => item.name),
-    ["cookie_customer", "cookie_internal"],
+    ["ASP.NET_SessionId", "cookie_customer", "cookie_internal"],
   );
   assert.equal(simulated.closed(), true);
 });
@@ -121,7 +121,7 @@ test("refuse une fiche sans prix ou sans stock", async () => {
   );
 });
 
-test("conserve le renouvellement persistant et retire la nouvelle session ASP.NET", async () => {
+test("conserve le renouvellement persistant et la nouvelle session ASP.NET", async () => {
   const source = state([
     cookie("cookie_customer", "old-customer", 1_800_000_000),
     cookie("cookie_internal", "old-internal", 1_800_000_000),
@@ -149,6 +149,7 @@ test("conserve le renouvellement persistant et retire la nouvelle session ASP.NE
   assert.deepEqual(
     result.persistedState.cookies.map((item) => [item.name, item.value]),
     [
+      ["ASP.NET_SessionId", "volatile-new"],
       ["cookie_customer", "new-customer"],
       ["cookie_internal", "new-internal"],
     ],

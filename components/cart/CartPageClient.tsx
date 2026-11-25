@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { formatCmuText, formatTechnicalValue } from "@/lib/catalogue/format-cmu-display";
 import { ArrowRight, CheckCircle2, Minus, PackageCheck, Phone, Plus, RotateCcw, ShieldCheck, Trash2, Truck, Wrench } from "lucide-react";
 import Container from "@/components/ui/Container";
@@ -68,6 +68,77 @@ function getCartSuggestions(items: ReturnType<typeof useCart>["items"]): CartSug
 export default function CartPageClient() {
   const { items, totals, updateQuantity, removeItem, clearCart } = useCart();
   const [postcode, setPostcode] = useState("");
+
+  // OYSTE_STOCKMAN_CART_PLUS_GUARD_V1
+  const [checkingStockId, setCheckingStockId] = useState<string | null>(null);
+  const [stockError, setStockError] = useState<{
+    id: string;
+    message: string;
+  } | null>(null);
+  const stockCheckRunning = useRef(false);
+
+  async function increaseQuantity(item: (typeof items)[number]) {
+    if (stockCheckRunning.current) return;
+
+    if (item.supplier?.trim().toUpperCase() !== "STOCKMAN") {
+      updateQuantity(item.id, item.quantity + 1);
+      return;
+    }
+
+    if (!item.code || item.quantity >= 99) return;
+
+    stockCheckRunning.current = true;
+    setCheckingStockId(item.id);
+    setStockError(null);
+
+    try {
+      const reference = item.code.trim().toUpperCase();
+      const quantityInCart = items
+        .filter(
+          (line) =>
+            line.kind === "catalogue" &&
+            line.supplier?.trim().toUpperCase() === "STOCKMAN" &&
+            line.code?.trim().toUpperCase() === reference,
+        )
+        .reduce((sum, line) => sum + line.quantity, 0);
+
+      const response = await fetch("/api/catalogue/stockman/check-add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          code: reference,
+          quantity: quantityInCart + 1,
+        }),
+      });
+
+      const result = (await response.json().catch(() => null)) as {
+        allowed?: boolean;
+        reason?: string;
+      } | null;
+
+      if (!response.ok || result?.allowed !== true) {
+        setStockError({
+          id: item.id,
+          message:
+            result?.reason === "insufficient_stock"
+              ? "Quantité demandée indisponible actuellement."
+              : "Stock fournisseur non confirme. Quantite inchangee.",
+        });
+        return;
+      }
+
+      updateQuantity(item.id, item.quantity + 1);
+    } catch {
+      setStockError({
+        id: item.id,
+        message: "Verification STOCKMAN impossible. Quantite inchangee.",
+      });
+    } finally {
+      stockCheckRunning.current = false;
+      setCheckingStockId(null);
+    }
+  }
   const hasItems = items.length > 0;
   const suggestedProducts = getCartSuggestions(items);
   const { shipping, loading: shippingLoading } = useShippingQuote(items, postcode);
@@ -211,12 +282,20 @@ export default function CartPageClient() {
                         <span className="text-lg font-black">{item.quantity}</span>
                         <button
                           type="button"
-                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          onClick={() => void increaseQuantity(item)}
+                          disabled={checkingStockId === item.id}
+                          aria-busy={checkingStockId === item.id}
                           className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-700 transition hover:border-orange-500 hover:text-orange-600"
                         >
                           <Plus size={16} />
                         </button>
                       </div>
+
+                      {stockError?.id === item.id && (
+                        <p role="alert" className="text-xs font-bold text-amber-800">
+                          {stockError.message}
+                        </p>
+                      )}
 
                       <div className="flex items-center justify-between gap-3">
                         <p className="text-sm font-black text-slate-950">Total : {formatCartPrice(item.unitPriceHT * item.quantity)}</p>
