@@ -1,12 +1,8 @@
 {
-  "crons": [
-    {
-      "path": "/api/cron/adei-lead-times",
-      "schedule": "0 16,17 * * 2"
-    },
-    {
-      "path": "/api/cron/stockman-discovery",
-      "schedule": "* * * * *"
+  "git": {
+    "deploymentEnabled": {
+      "recette-stockman-isolee": false
     }
-  ]
+  },
+  "buildCommand": "node -e \"process.exit(1)\""
 }
