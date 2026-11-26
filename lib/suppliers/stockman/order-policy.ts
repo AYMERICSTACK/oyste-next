@@ -4,6 +4,19 @@ export function isBlockedStockmanReference(reference: string): boolean {
   return ["LP180", "LP280", "LP150", "LP250", "LP-BC05M2", "LP-FCA04"].includes(reference.trim().toUpperCase());
 }
 
+export function hasStockmanPriceHold(...references: Array<string | null | undefined>): boolean {
+  return references.some(reference => ["CT420", "CT420S", "E250"].includes(reference?.trim().toUpperCase() ?? ""));
+}
+
+export function isHistoricalStockmanShipping(product: {
+  publicationStatus?: string; publishedAt?: Date | null; createdAt?: Date;
+}, variantCreatedAt?: Date, cutover = process.env.STOCKMAN_FREIGHT_CUTOVER_AT): boolean {
+  const release = cutover ? Date.parse(cutover) : NaN;
+  const published = (product.publishedAt ?? product.createdAt)?.getTime();
+  return product.publicationStatus === "PUBLISHED" && Number.isFinite(release) && published !== undefined
+    && published < release && (!variantCreatedAt || variantCreatedAt.getTime() < release);
+}
+
 export function stockmanSellingPriceHT(purchase: number): number | null {
   if (!Number.isFinite(purchase) || purchase <= 0) return null;
   return Math.round((purchase / 0.8 + Number.EPSILON) * 100) / 100;
@@ -34,7 +47,7 @@ export function isStockmanSupplier(value: unknown): boolean {
   return typeof value === "string" && value.trim().toUpperCase() === "STOCKMAN";
 }
 
-export function stockmanShippingMode(sourceData: unknown, mode: unknown): "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE" {
+export function stockmanShippingMode(sourceData: unknown, mode: unknown, historical = false): "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE" {
   if (mode === "MESSAGERIE" || mode === "AFFRETEMENT") return mode;
-  return stockmanFreightValidated(sourceData, mode) ? "INCLUDED" : "QUOTE";
+  return stockmanFreightValidated(sourceData, mode) || (historical && mode === "INCLUDED") ? "INCLUDED" : "QUOTE";
 }

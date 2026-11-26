@@ -1,5 +1,5 @@
 import { applyStockmanSalePricesToCatalogue } from "./stockman-detail-prices";
-import { stockmanShippingMode } from "@/lib/suppliers/stockman/order-policy";
+import { isHistoricalStockmanShipping, stockmanShippingMode } from "@/lib/suppliers/stockman/order-policy";
 import { stockmanSource, stockmanStockUnknown, stockmanPriceUnknown, isBlockedStockmanReference } from "@/lib/suppliers/stockman/order-policy";
 import { getStockmanCategoryProducts } from "./stockman-category-products";
 import { applyProductPresentation, productPresentationSchema } from "./product-presentation";
@@ -173,7 +173,7 @@ function mapDatabaseProduct(product: DatabaseProduct, categoryMap?: Map<string, 
         .filter(Boolean);
 
   const isStockman = product.supplier?.name?.trim().toUpperCase() === "STOCKMAN";
-  const variants = product.variants.filter(variant => product.supplier?.name?.trim().toUpperCase() !== "STOCKMAN" || !isBlockedStockmanReference(variant.supplierCode || variant.code)).map(v => ({ ...mapVariant(v), ...(isStockman ? { shippingMode: stockmanShippingMode(v.sourceData, v.shippingMode || product.shippingMode) } : {}) }));
+  const variants = product.variants.filter(variant => product.supplier?.name?.trim().toUpperCase() !== "STOCKMAN" || !isBlockedStockmanReference(variant.supplierCode || variant.code)).map(v => ({ ...mapVariant(v), ...(isStockman ? { shippingMode: stockmanShippingMode(v.sourceData, v.shippingMode || product.shippingMode, isHistoricalStockmanShipping(product, v.createdAt)) } : {}) }));
 
   const mapped: CatalogueProduct = {
     categoryId: product.categoryId || undefined,
@@ -220,7 +220,7 @@ function mapDatabaseProduct(product: DatabaseProduct, categoryMap?: Map<string, 
     packageLengthCm: product.packageLengthCm === null ? null : Number(product.packageLengthCm),
     packageWidthCm: product.packageWidthCm === null ? null : Number(product.packageWidthCm),
     packageHeightCm: product.packageHeightCm === null ? null : Number(product.packageHeightCm),
-    shippingMode: isStockman ? stockmanShippingMode(product.sourceData, product.shippingMode) : product.shippingMode ?? undefined,
+    shippingMode: isStockman ? stockmanShippingMode(product.sourceData, product.shippingMode, isHistoricalStockmanShipping(product)) : product.shippingMode ?? undefined,
     imageRef: product.imageReference || "",
     features: product.features.map(mapFeature),
     variantCount: variants.length || 1,

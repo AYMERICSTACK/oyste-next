@@ -1,3 +1,4 @@
+import { hasStockmanPriceHold } from "@/lib/suppliers/stockman/order-policy";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
@@ -62,6 +63,7 @@ async function buildAudit() {
     if (!product.features.length) warnings.push("Aucune caractéristique structurée");
     if (product.weightKg === null || Number(product.weightKg) <= 0) warnings.push("Poids non exploitable / à confirmer");
     if (margins.some(row => row.shippingMode === "QUOTE")) blockers.push("Transport sur devis ou inclusion non justifiée");
+    if (hasStockmanPriceHold(product.code, product.supplierCode, ...margins.map(row=>row.reference))) blockers.push("Exception tarifaire STOCKMAN à vérifier");
     if (margins.some(row => isBlockedStockmanReference(row.reference))) blockers.push("Une référence STOCKMAN est arrêtée");
     if (!hasStockmanLeadTime(product.leadTime)) blockers.push("Délai STOCKMAN non appliqué");
     if (priceOnRequest) blockers.push("Prix de vente Neon manquant pour une référence");

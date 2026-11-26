@@ -6,6 +6,8 @@ import { getStockmanProduct } from "@/lib/suppliers/stockman/client";
 import { acquireStockmanDistributedSlot } from "@/lib/suppliers/stockman/distributed-guard";
 import {
   isBlockedStockmanReference,
+  hasStockmanPriceHold,
+  isHistoricalStockmanShipping,
   stockmanShippingMode,
   stockmanSource,
 } from "@/lib/suppliers/stockman/order-policy";
@@ -50,7 +52,7 @@ async function checkStockmanAdd(request: Request) {
   const reference = body.data.code.toUpperCase();
   const quantity = body.data.quantity;
 
-  if (isBlockedStockmanReference(reference)) {
+  if (isBlockedStockmanReference(reference) || hasStockmanPriceHold(reference)) {
     return reply({ allowed: false, reason: "blocked" }, 409);
   }
 
@@ -82,8 +84,10 @@ async function checkStockmanAdd(request: Request) {
         supplierCode: true,
         sourceData: true,
         shippingMode: true,
+        createdAt: true,
         product: {
           select: {
+            publicationStatus: true, publishedAt: true, createdAt: true,
             sourceData: true,
             shippingMode: true,
           },
@@ -110,7 +114,7 @@ async function checkStockmanAdd(request: Request) {
 
       supplierReference = variant.supplierCode?.trim().toUpperCase() || reference;
       catalogueCode = variant.code.trim().toUpperCase();
-      shippingMode = stockmanShippingMode(variant.sourceData, variant.shippingMode ?? variant.product.shippingMode);
+      shippingMode = stockmanShippingMode(variant.sourceData, variant.shippingMode ?? variant.product.shippingMode, isHistoricalStockmanShipping(variant.product, variant.createdAt));
     } else {
       const products = await prisma.product.findMany({
         where: {
@@ -120,6 +124,7 @@ async function checkStockmanAdd(request: Request) {
         },
         select: {
           sourceData: true,
+          publicationStatus: true, publishedAt: true, createdAt: true,
           shippingMode: true,
           code: true,
           supplierCode: true,
@@ -134,10 +139,10 @@ async function checkStockmanAdd(request: Request) {
       url = sourceUrl(products[0].sourceData);
       supplierReference = products[0].supplierCode?.trim().toUpperCase() || reference;
       catalogueCode = products[0].code.trim().toUpperCase();
-      shippingMode = stockmanShippingMode(products[0].sourceData, products[0].shippingMode);
+      shippingMode = stockmanShippingMode(products[0].sourceData, products[0].shippingMode, isHistoricalStockmanShipping(products[0]));
     }
 
-    if (isBlockedStockmanReference(supplierReference)) {
+    if (isBlockedStockmanReference(supplierReference) || hasStockmanPriceHold(supplierReference, catalogueCode)) {
       return reply({ allowed: false, reason: "blocked" }, 409);
     }
 

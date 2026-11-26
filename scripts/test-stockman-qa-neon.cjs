@@ -104,6 +104,79 @@ async function run() {
     assert.equal(replay.existing, 4);
     assert.equal(replay.groups.length, 0);
     console.log('STOCKMAN QA: two draft parents and four variants saved on isolated Neon; replay found four existing variants and no new group');
+
+    const { acquireImportLease, readImportState } = require('../lib/suppliers/stockman/global-import/state.ts');
+    const qaAdmin = await prisma.adminUser.findUniqueOrThrow({ where: { email: 'stockman-recette@example.invalid' } });
+    const originalLoad = Module._load;
+    Module._load = function (name, ...args) {
+      if (name === '@/lib/auth/admin-session') return { getCurrentAdmin: async () => qaAdmin };
+      return originalLoad.call(this, name, ...args);
+    };
+    let adminRoute;
+    try {
+      adminRoute = require('../app/api/admin/suppliers/stockman/global-import/route.ts');
+    } finally {
+      Module._load = originalLoad;
+    }
+    const url = 'https://stockman-qa.invalid/api/admin/suppliers/stockman/global-import';
+    const getImport = async (runId) => {
+      const response = await adminRoute.GET(new Request(runId ? `${url}?runId=${runId}` : url));
+      assert.equal(response.status, 200);
+      return response.json();
+    };
+    const applyImport = async (action, runId) => {
+      const response = await adminRoute.POST(new Request(url, { method: 'POST', body: JSON.stringify({ action, runId, confirmation: 'APPLY_DRAFTS_V297' }) }));
+      assert.equal(response.status, 200);
+      return response.json();
+    };
+    const policy = require('../lib/suppliers/stockman/order-policy.ts');
+    const cutover = '2026-11-26T09:00:00Z';
+    const historic = { publicationStatus: 'PUBLISHED', publishedAt: new Date('2026-11-25T09:00:00Z') };
+    assert.equal(policy.stockmanShippingMode({}, 'INCLUDED', policy.isHistoricalStockmanShipping(historic, undefined, cutover)), 'INCLUDED');
+    assert.equal(policy.stockmanShippingMode({}, null, true), 'QUOTE');
+    assert.equal(policy.stockmanShippingMode({}, 'INCLUDED', policy.isHistoricalStockmanShipping(historic, new Date(cutover), cutover)), 'QUOTE');
+    assert(['CT420', 'CT420S', 'E250'].every(ref => policy.hasStockmanPriceHold(ref)));
+    assert(!policy.hasStockmanPriceHold('CT420-SUPPORT'));
+    console.log('STOCKMAN QA: old explicit included shipping preserved; unknown or unverified new shipping on quote; three exact price holds');
+
+    const refList = ['SN30', 'SN50'];
+    await prisma.category.upsert({ where: { slug: 'qa-stockman-chandelles' }, update: {}, create: { name: 'Chandelles', slug: 'qa-stockman-chandelles' } });
+    for (const ref of refList) {
+      await prisma.stockmanCatalogReference.upsert({ where: { reference: ref }, update: {}, create: {
+        reference: ref, designation: `Variante fictive ${ref}`, sourceUrl, firstSeenAt: now, lastSeenAt: now, lastChangedAt: now,
+      } });
+      await prisma.$executeRaw`INSERT INTO "StockmanSalePrice" (reference, "priceHt", "sourceVersion", "sourceSha256")
+        VALUES (${ref},130,'RECETTE','qa-import-only') ON CONFLICT (reference) DO NOTHING`;
+    }
+    const lease = await acquireImportLease();
+    try {
+      await assert.rejects(acquireImportLease(), { code: 'RESOLUTION_BUSY' });
+      const prior = await readImportState();
+      await lease.commit({ pages: prior.pages, failures: prior.failures, evidence: [
+        ...prior.evidence.filter(item => item.familyCode !== 'QA-DURABLE-SN'),
+        { familyCode: 'QA-DURABLE-SN', name: 'Brouillon collectif de recette', verifiedAt: now.toISOString(), products: refList.map(reference => ({
+          reference, name: `Variante fictive ${reference}`, images: [], documents: [], features: [], stock: 2, readAt: now.toISOString(), sourceUrl, weightKg: 20,
+        })) },
+      ] });
+      await assert.rejects(lease.commit(prior), { code: 'RESOLUTION_BUSY' });
+    } finally {
+      await lease.release();
+    }
+    const { plan: beforeImport } = await getImport();
+    const priorDraft = await prisma.product.findUnique({ where: { slug: 'stockman-qa-durable-sn' } });
+    if (!priorDraft) {
+      assert.equal(beforeImport.readyParents, 1);
+      const { runId } = await applyImport('start');
+      assert.equal((await getImport(runId)).events.length, 1);
+      assert.equal((await applyImport('step', runId)).created, 'QA-DURABLE-SN');
+      assert.equal((await applyImport('step', runId)).done, true);
+      assert.equal((await getImport(runId)).events.length, 2);
+    }
+    const imported = await prisma.product.findUniqueOrThrow({ where: { slug: 'stockman-qa-durable-sn' }, include: { variants: true } });
+    assert.equal(imported.publicationStatus, 'DRAFT');
+    assert.deepEqual(imported.variants.map(v => v.code).sort(), refList);
+    assert.equal((await getImport()).plan.readyParents, 0);
+    console.log('STOCKMAN QA: durable lease, persisted plan, resume, batch commit and duplicate protection verified through back-office API handlers');
   } finally {
     await globalThis.__stockmanSalePricePool?.end();
     await prisma.$disconnect();

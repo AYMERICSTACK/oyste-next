@@ -65,10 +65,10 @@ export async function openStockmanBrowser(): Promise<{
   const hasLocalFile = await stockmanAuthFileExists();
 
   if (!persistedState && !hasLocalFile) {
-    throw new Error(
+    throw new ResolutionError("STOCKMAN_SESSION_MISSING",
       `Session Stockman introuvable. Lancez "npm run stockman:auth" ou la reconnexion depuis le BO local pour creer ${path.basename(
         authFile,
-      )}.`,
+      )}.`, 401,
     );
   }
 

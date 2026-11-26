@@ -1,4 +1,4 @@
-import { isBlockedStockmanReference, isStockmanSupplier, stockmanShippingMode } from "@/lib/suppliers/stockman/order-policy";
+import { hasStockmanPriceHold, isHistoricalStockmanShipping, isBlockedStockmanReference, isStockmanSupplier, stockmanShippingMode } from "@/lib/suppliers/stockman/order-policy";
 
 import "server-only";
 import { getStockmanNeonPrices } from "@/lib/catalogue/stockman-neon-prices";
@@ -116,6 +116,7 @@ async function assertStockmanOrderable(
   reference: string,
   _sourceData: unknown,
   _shippingMode: unknown,
+  catalogueCode: string,
 ) {
   // OYSTE_STOCKMAN_CHECKOUT_LIVE_V2
   // Conservation du blocage des references arretees.
@@ -123,7 +124,7 @@ async function assertStockmanOrderable(
   // Le stock est recontrole en direct avant validation.
   if (supplier?.trim().toUpperCase() !== "STOCKMAN") return;
 
-  if (isBlockedStockmanReference(reference)) {
+  if (isBlockedStockmanReference(reference) || hasStockmanPriceHold(reference, catalogueCode)) {
     throw new Error("Cet article n'est plus disponible a la commande.");
   }
 }
@@ -171,7 +172,7 @@ export async function resolveSecureCheckoutItems(
       if (item.kind === "configured" && !item.id.startsWith("catalogue:") && product.supplier?.name?.trim().toUpperCase() !== "STOCKMAN") {
         result.push(item); continue;
       }
-      await assertStockmanOrderable(product.supplier?.name, variant.supplierCode || variant.code, variant.sourceData, variant.shippingMode || product.shippingMode);
+      await assertStockmanOrderable(product.supplier?.name, variant.supplierCode || variant.code, variant.sourceData, variant.shippingMode || product.shippingMode, variant.code);
 
       if (product.publicationStatus !== "PUBLISHED") {
         throw new Error(
@@ -221,10 +222,10 @@ export async function resolveSecureCheckoutItems(
               ? Number(product.packageHeightCm)
               : undefined,
         shippingMode: isStockmanSupplier(product.supplier?.name)
-          ? stockmanShippingMode(variant.sourceData, variant.shippingMode || product.shippingMode)
+          ? stockmanShippingMode(variant.sourceData, variant.shippingMode || product.shippingMode, isHistoricalStockmanShipping(product, variant.createdAt))
           : variant.shippingMode || product.shippingMode,
         stockmanFreightConfirmed: isStockmanSupplier(product.supplier?.name)
-          && stockmanShippingMode(variant.sourceData, variant.shippingMode || product.shippingMode) === "INCLUDED",
+          && stockmanShippingMode(variant.sourceData, variant.shippingMode || product.shippingMode, isHistoricalStockmanShipping(product, variant.createdAt)) === "INCLUDED",
         pfiShipping: undefined,
         wallPotenceShipping: undefined,
         unitPriceHT: await calculateKitoDynamicPriceHT({
@@ -266,7 +267,7 @@ export async function resolveSecureCheckoutItems(
     if (item.kind === "configured" && !item.id.startsWith("catalogue:") && product.supplier?.name?.trim().toUpperCase() !== "STOCKMAN") {
       result.push(item); continue;
     }
-    await assertStockmanOrderable(product.supplier?.name, product.supplierCode || product.code, product.sourceData, product.shippingMode);
+    await assertStockmanOrderable(product.supplier?.name, product.supplierCode || product.code, product.sourceData, product.shippingMode, product.code);
     const childCount = await prisma.productVariant.count({ where: { productId: product.id } });
     if (childCount > 0) throw new Error("Sélectionnez une référence variante disponible.");
     result.push({
@@ -298,8 +299,8 @@ export async function resolveSecureCheckoutItems(
         product.packageHeightCm != null
           ? Number(product.packageHeightCm)
           : undefined,
-      shippingMode: isStockmanSupplier(product.supplier?.name) ? stockmanShippingMode(product.sourceData, product.shippingMode) : product.shippingMode,
-      stockmanFreightConfirmed: isStockmanSupplier(product.supplier?.name) && stockmanShippingMode(product.sourceData, product.shippingMode) === "INCLUDED",
+      shippingMode: isStockmanSupplier(product.supplier?.name) ? stockmanShippingMode(product.sourceData, product.shippingMode, isHistoricalStockmanShipping(product)) : product.shippingMode,
+      stockmanFreightConfirmed: isStockmanSupplier(product.supplier?.name) && stockmanShippingMode(product.sourceData, product.shippingMode, isHistoricalStockmanShipping(product)) === "INCLUDED",
       pfiShipping: undefined,
       wallPotenceShipping: undefined,
       unitPriceHT: await calculateKitoDynamicPriceHT({

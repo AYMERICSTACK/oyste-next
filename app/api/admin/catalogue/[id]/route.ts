@@ -1,3 +1,4 @@
+import { hasStockmanPriceHold, isStockmanSupplier, stockmanSource } from "@/lib/suppliers/stockman/order-policy";
 import { manualProductSchema, isAdminCreated } from "@/lib/admin/product-validation";
 import { canWriteCatalogue } from "@/lib/admin/catalogue-permissions";
 import { NextResponse } from "next/server";
@@ -78,9 +79,15 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const existing = await prisma.product.findUnique({
     where: { id },
-    select: { id: true, sourceData: true, publishedAt: true, variants: { select: { id: true } } },
+    select: { id: true, code: true, supplierCode: true, sourceData: true, publishedAt: true, supplier: { select: { name: true } }, variants: { select: { id: true, code: true, supplierCode: true, sourceData: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
+  if (publicationStatus === "PUBLISHED" && isStockmanSupplier(existing.supplier?.name) && [existing, ...existing.variants].some(row => {
+    const supplierReference = stockmanSource(row.sourceData).reference;
+    return hasStockmanPriceHold(row.code, row.supplierCode, typeof supplierReference === "string" ? supplierReference : null);
+  })) {
+    return NextResponse.json({ error: "Publication bloquée : tarif STOCKMAN à vérifier pour CT420, CT420S ou E250." }, { status: 409 });
+  }
 
   if (manual && !isAdminCreated(existing.sourceData)) return NextResponse.json({ error: "Les champs gérés par import ne peuvent pas être remplacés par cet éditeur." }, { status: 409 });
   const validVariantIds = new Set(existing.variants.map((variant) => variant.id));
