@@ -44,6 +44,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
       sessionHealth.diagnostic.source === "DATABASE",
   );
   const sessionReady = sessionHealth?.valid === true || product !== null;
+  const sessionExpired = sessionHealth?.state === "expired" && !sessionReady;
   const canTestReference = sessionReady || persistentSessionReady;
 
   async function refreshSessionHealth() {
@@ -129,7 +130,17 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
         body: JSON.stringify({ reference, productUrl }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error([payload.message || "La lecture Stockman a échoué.", payload.category].filter(Boolean).join(" · "));
+      if (!response.ok) {
+        if (payload.category === "SESSION_ABSENTE_OU_EXPIREE" || payload.category === "AUTHENTIFICATION_REFUSEE") {
+          setSessionHealth((current) => ({
+            ...current,
+            state: "expired",
+            valid: false,
+            message: "La lecture n’a pas pu utiliser la session revendeur. Reconnectez-vous avant de reprendre.",
+          }));
+        }
+        throw new Error([payload.message || "La lecture Stockman a échoué.", payload.category].filter(Boolean).join(" · "));
+      }
       if (!payload.product || typeof payload.product.reference !== "string" || typeof payload.product.purchasePriceExVat !== "number") {
         throw new Error("Réponse STOCKMAN incomplète : le résultat détaillé est absent.");
       }
@@ -183,7 +194,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
           sessionReady ? "bg-emerald-50 text-emerald-700" : sessionHealth ? "bg-amber-50 text-amber-700" : status.configured ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700"
         }`}>
           {sessionReady ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-          {checkingSession ? "Vérification…" : sessionReady ? "Session revendeur active" : persistentSessionReady ? "Session revendeur enregistrée" : sessionHealth?.state === "expired" ? "Session non validée" : status.configured ? "Session à vérifier" : "Configuration requise"}
+          {checkingSession ? "Vérification…" : sessionReady ? "Session revendeur active" : sessionExpired ? "Session non validée" : persistentSessionReady ? "Session revendeur enregistrée" : status.configured ? "Session à vérifier" : "Configuration requise"}
         </div>
       </div>
 
@@ -213,7 +224,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
                 <p className="mt-2 text-[10px] leading-4 text-slate-400">Empreintes SHA-256 tronquées : elles permettent uniquement de comparer les environnements sans afficher les secrets.</p>
               </div>
             ) : null}
-            {(isLocal || (sessionHealth && !canTestReference) || authJobId) ? (
+            {(isLocal || sessionExpired || (sessionHealth && !canTestReference) || authJobId) ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
                 <p className="font-black text-amber-900">{sessionReady ? "Reconnexion facultative" : "Connexion revendeur requise"}</p>
                 {isLocal && <p className="mt-1 text-[11px] leading-5 text-amber-800">OYSTE peut ouvrir Chromium sur ce poste. Connectez-vous manuellement à Stockman : aucun mot de passe n’est enregistré par OYSTE.</p>}
