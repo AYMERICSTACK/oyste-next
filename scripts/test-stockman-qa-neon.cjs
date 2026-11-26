@@ -177,6 +177,30 @@ async function run() {
     assert.deepEqual(imported.variants.map(v => v.code).sort(), refList);
     assert.equal((await getImport()).plan.readyParents, 0);
     console.log('STOCKMAN QA: durable lease, persisted plan, resume, batch commit and duplicate protection verified through back-office API handlers');
+
+    const uiRefs = ['SN80A', 'SN80B'];
+    for (const ref of uiRefs) {
+      await prisma.stockmanCatalogReference.upsert({ where: { reference: ref }, update: {}, create: {
+        reference: ref, designation: `Variante fictive ${ref}`, sourceUrl, firstSeenAt: now, lastSeenAt: now, lastChangedAt: now,
+      } });
+      await prisma.$executeRaw`INSERT INTO "StockmanSalePrice" (reference, "priceHt", "sourceVersion", "sourceSha256")
+        VALUES (${ref},140,'RECETTE','qa-browser-only') ON CONFLICT (reference) DO NOTHING`;
+    }
+    const uiLease = await acquireImportLease();
+    try {
+      const prior = await readImportState();
+      await uiLease.commit({ ...prior, evidence: [
+        ...prior.evidence.filter(item => item.familyCode !== 'QA-BROWSER-SN'),
+        { familyCode: 'QA-BROWSER-SN', name: 'Brouillon Chromium de recette', verifiedAt: now.toISOString(), products: uiRefs.map(reference => ({
+          reference, name: `Variante fictive ${reference}`, images: [], documents: [], features: [], stock: 2, readAt: now.toISOString(), sourceUrl, weightKg: 20,
+        })) },
+      ] });
+    } finally {
+      await uiLease.release();
+    }
+    const priorBrowserDraft = await prisma.product.findUnique({ where: { slug: 'stockman-qa-browser-sn' } });
+    assert.equal((await getImport()).plan.readyParents, priorBrowserDraft ? 0 : 1);
+    console.log('STOCKMAN QA: two simulated variants prepared for the Chromium back-office check');
   } finally {
     await globalThis.__stockmanSalePricePool?.end();
     await prisma.$disconnect();

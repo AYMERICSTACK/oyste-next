@@ -6,11 +6,19 @@ import type { StockmanConnectionStatus, StockmanProduct, StockmanSessionHealth, 
 
 const DEMO_URL = "https://www.stockman.fr/fr/coins-roulants-et-rouleurs--3/rouleurs-avec-galets--85/--1/rouleur-avec-galets-pivotants-1000-kg--SC%20N.aspx?langue=FR&src=int";
 
+function connectorEndpoint(action: "auth" | "test") {
+  const scenario = new URLSearchParams(window.location.search).get("stockman-qa");
+  const path = `/api/admin/suppliers/stockman/${action}`;
+  return scenario ? `${path}?stockman-qa=${encodeURIComponent(scenario)}` : path;
+}
+
 export default function StockmanConnectorCard({ status }: { status: StockmanConnectionStatus }) {
   const [reference, setReference] = useState("SC102N");
   const [productUrl, setProductUrl] = useState(DEMO_URL);
   const [product, setProduct] = useState<StockmanProduct | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [messageKind, setMessageKind] = useState<"error" | "success" | "info">("info");
+  const [isLocal, setIsLocal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<StockmanSyncResult | null>(null);
@@ -35,13 +43,13 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
       sessionHealth.diagnostic.decryptOk &&
       sessionHealth.diagnostic.source === "DATABASE",
   );
-  const sessionReady = Boolean(sessionHealth?.valid || persistentSessionReady);
-  const canTestReference = sessionReady;
+  const sessionReady = sessionHealth?.valid === true || product !== null;
+  const canTestReference = sessionReady || persistentSessionReady;
 
   async function refreshSessionHealth() {
     setCheckingSession(true);
     try {
-      const response = await fetch("/api/admin/suppliers/stockman/auth", { cache: "no-store" });
+      const response = await fetch(connectorEndpoint("auth"), { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "Vérification de la session impossible.");
       setSessionHealth(payload);
@@ -57,6 +65,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
   }
 
   useEffect(() => {
+    setIsLocal(["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname));
     void refreshSessionHealth();
   }, []);
 
@@ -72,8 +81,10 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "Impossible d’ouvrir Stockman.");
       setAuthJobId(payload.jobId);
+      setMessageKind("info");
       setMessage("La fenêtre Stockman est ouverte. Connectez-vous jusqu’à voir les prix et stocks, puis cliquez sur « Valider la connexion ».");
     } catch (error) {
+      setMessageKind("error");
       setMessage(error instanceof Error ? error.message : "Impossible d’ouvrir Stockman.");
     } finally {
       setAuthBusy(false);
@@ -93,9 +104,11 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(payload.message || "Connexion revendeur non validée.");
       setAuthJobId(null);
+      setMessageKind("success");
       setMessage(payload.message || "Session Stockman reconnectée.");
       await refreshSessionHealth();
     } catch (error) {
+      setMessageKind("error");
       setMessage(error instanceof Error ? error.message : "Connexion revendeur non validée.");
     } finally {
       setAuthBusy(false);
@@ -110,15 +123,22 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
     setSyncResult(null);
 
     try {
-      const response = await fetch("/api/admin/suppliers/stockman/test", {
+      const response = await fetch(connectorEndpoint("test"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reference, productUrl }),
       });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(payload.message || "La lecture Stockman a échoué.");
+      if (!response.ok) throw new Error([payload.message || "La lecture Stockman a échoué.", payload.category].filter(Boolean).join(" · "));
+      if (!payload.product || typeof payload.product.reference !== "string" || typeof payload.product.purchasePriceExVat !== "number") {
+        throw new Error("Réponse STOCKMAN incomplète : le résultat détaillé est absent.");
+      }
+      if (payload.product.reference.trim().toUpperCase() !== reference.trim().toUpperCase()) throw new Error("La référence retournée ne correspond pas à la référence demandée.");
       setProduct(payload.product);
+      setMessageKind("success");
+      setMessage(`Lecture réussie : ${payload.product.reference}.`);
     } catch (error) {
+      setMessageKind("error");
       setMessage(error instanceof Error ? error.message : "La lecture Stockman a échoué.");
     } finally {
       setLoading(false);
@@ -126,7 +146,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
   }
 
   async function handleSync() {
-    if (!product) return;
+    if (!product || loading || syncing || product.reference.trim().toUpperCase() !== reference.trim().toUpperCase()) return;
     setSyncing(true);
     setMessage(null);
     try {
@@ -139,7 +159,10 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
       if (!response.ok) throw new Error(payload.message || "La synchronisation Stockman a échoué.");
       setProduct(payload.product);
       setSyncResult(payload.sync);
+      setMessageKind("success");
+      setMessage("Synchronisation réussie.");
     } catch (error) {
+      setMessageKind("error");
       setMessage(error instanceof Error ? error.message : "La synchronisation Stockman a échoué.");
     } finally {
       setSyncing(false);
@@ -160,7 +183,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
           sessionReady ? "bg-emerald-50 text-emerald-700" : sessionHealth ? "bg-amber-50 text-amber-700" : status.configured ? "bg-slate-100 text-slate-600" : "bg-amber-50 text-amber-700"
         }`}>
           {sessionReady ? <CheckCircle2 size={15} /> : <AlertCircle size={15} />}
-          {checkingSession ? "Vérification…" : sessionReady ? "Session revendeur active" : sessionHealth?.state === "expired" ? "Session expirée" : status.configured ? "Session à vérifier" : "Configuration requise"}
+          {checkingSession ? "Vérification…" : sessionReady ? "Session revendeur active" : persistentSessionReady ? "Session revendeur enregistrée" : sessionHealth?.state === "expired" ? "Session non validée" : status.configured ? "Session à vérifier" : "Configuration requise"}
         </div>
       </div>
 
@@ -190,12 +213,12 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
                 <p className="mt-2 text-[10px] leading-4 text-slate-400">Empreintes SHA-256 tronquées : elles permettent uniquement de comparer les environnements sans afficher les secrets.</p>
               </div>
             ) : null}
-            {(window.location.hostname === "localhost" || !sessionReady || authJobId) ? (
+            {(isLocal || (sessionHealth && !canTestReference) || authJobId) ? (
               <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3">
-                <p className="font-black text-amber-900">Connexion revendeur requise</p>
-                <p className="mt-1 text-[11px] leading-5 text-amber-800">OYSTE peut ouvrir Chromium sur ce poste. Connectez-vous manuellement à Stockman : aucun mot de passe n’est enregistré par OYSTE.</p>
+                <p className="font-black text-amber-900">{sessionReady ? "Reconnexion facultative" : "Connexion revendeur requise"}</p>
+                {isLocal && <p className="mt-1 text-[11px] leading-5 text-amber-800">OYSTE peut ouvrir Chromium sur ce poste. Connectez-vous manuellement à Stockman : aucun mot de passe n’est enregistré par OYSTE.</p>}
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {!authJobId ? (
+                  {!isLocal ? <p>La reconnexion interactive est disponible depuis OYSTE en local.</p> : !authJobId ? (
                     <button type="button" onClick={() => void startReconnect()} disabled={authBusy} className="rounded-lg bg-slate-950 px-3 py-2 text-[10px] font-black text-white disabled:opacity-50">
                       {authBusy ? "Ouverture…" : "Se reconnecter à Stockman"}
                     </button>
@@ -208,18 +231,18 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
               </div>
             ) : null}
           </div>
-          <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Référence fournisseur</span><input value={reference} onChange={(event) => setReference(event.target.value.toUpperCase())} placeholder="SC102N" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" /></label>
-          <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">URL de la fiche Stockman</span><input type="url" value={productUrl} onChange={(event) => setProductUrl(event.target.value)} placeholder="https://www.stockman.fr/fr/..." className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" /></label>
-          <button type="submit" disabled={loading || (sessionHealth ? !canTestReference : !status.configured)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3.5 text-xs font-black text-white shadow-lg shadow-cyan-900/10 transition hover:bg-[#006c79] disabled:cursor-not-allowed disabled:opacity-50">
+          <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Référence fournisseur</span><input value={reference} disabled={loading || syncing} onChange={(event) => { setReference(event.target.value.toUpperCase()); setProduct(null); setSyncResult(null); setMessage(null); }} placeholder="SC102N" className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" /></label>
+          <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">URL de la fiche Stockman</span><input type="url" value={productUrl} disabled={loading || syncing} onChange={(event) => { setProductUrl(event.target.value); setProduct(null); setSyncResult(null); setMessage(null); }} placeholder="https://www.stockman.fr/fr/..." className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-medium outline-none transition focus:border-[#007f8f] focus:ring-4 focus:ring-cyan-50" /></label>
+          <button type="submit" disabled={loading || syncing || authBusy || checkingSession || (sessionHealth ? !canTestReference : !status.configured)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#007f8f] px-5 py-3.5 text-xs font-black text-white shadow-lg shadow-cyan-900/10 transition hover:bg-[#006c79] disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? <LoaderCircle size={17} className="animate-spin" /> : <RefreshCw size={17} />}{loading ? "Lecture de la fiche…" : "Tester cette référence"}
           </button>
-          {message && <div className="flex gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700"><AlertCircle size={18} className="mt-0.5 shrink-0" /><span>{message}</span></div>}
+          {message && <div role={messageKind === "error" ? "alert" : "status"} className={`flex gap-3 rounded-xl border p-4 text-sm font-semibold ${messageKind === "error" ? "border-red-100 bg-red-50 text-red-700" : messageKind === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-700"}`}>{messageKind === "success" ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}<span>{message}</span></div>}
         </form>
 
         <div className="min-h-[270px] rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-5">
-          {!product ? <div className="flex h-full min-h-[230px] flex-col items-center justify-center text-center"><PackageSearch size={34} className="text-slate-300" /><p className="mt-4 text-sm font-black text-slate-600">Aucune lecture effectuée</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-400">Le résultat apparaîtra ici. La base OYSTE ne sera modifiée qu’après confirmation avec le bouton de synchronisation.</p></div> : <div>
+          {!product ? <div className="flex h-full min-h-[230px] flex-col items-center justify-center text-center"><PackageSearch size={34} className="text-slate-300" /><p className="mt-4 text-sm font-black text-slate-600">{loading ? "Lecture en cours…" : messageKind === "error" && message ? "Lecture non disponible" : "Aucune lecture effectuée"}</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-400">Le résultat apparaîtra ici. La base OYSTE ne sera modifiée qu’après confirmation avec le bouton de synchronisation.</p></div> : <div>
             <div className="flex items-start justify-between gap-4"><div><p className="text-[10px] font-black uppercase tracking-[0.16em] text-emerald-600">Lecture réussie</p><h3 className="mt-2 text-xl font-black text-slate-950">{product.reference}</h3><p className="mt-1 text-sm leading-5 text-slate-500">{product.designation}</p></div><CheckCircle2 size={25} className="shrink-0 text-emerald-500" /></div>
-            <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3"><Result icon={Warehouse} label="Stock" value={`${product.stock}`} /><Result icon={Scale} label="Poids" value={product.weightKg === null ? "Non trouvé" : `${product.weightKg} kg`} /><Result icon={PackageSearch} label="Prix HT" value={product.purchasePriceExVat.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })} /></div>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3 xl:grid-cols-1 2xl:grid-cols-3"><Result icon={Warehouse} label="Stock" value={product.stockOnRequest ? "Sur demande" : `${product.stock}`} /><Result icon={Scale} label="Poids" value={product.weightKg === null ? "Non trouvé" : `${product.weightKg} kg`} /><Result icon={PackageSearch} label="Prix HT" value={product.priceOnRequest ? "Sur demande" : product.purchasePriceExVat.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })} /></div>
             <div className="mt-5 border-t border-slate-200 pt-4">
               <p className="text-[10px] font-bold text-slate-400">Lu le {new Date(product.readAt).toLocaleString("fr-FR")}</p>
               {syncResult ? (
@@ -229,7 +252,7 @@ export default function StockmanConnectorCard({ status }: { status: StockmanConn
                   <p className="mt-2 text-[10px] font-bold text-emerald-600">Stock {syncResult.previous.stock} → {syncResult.current.stock} · Poids {syncResult.previous.weightKg ?? "—"} → {syncResult.current.weightKg ?? "—"} kg · Achat {syncResult.previous.purchasePriceExVat?.toLocaleString("fr-FR", { style: "currency", currency: "EUR" }) ?? "—"} → {syncResult.current.purchasePriceExVat.toLocaleString("fr-FR", { style: "currency", currency: "EUR" })}</p>
                 </div>
               ) : (
-                <button type="button" onClick={handleSync} disabled={syncing} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="button" onClick={handleSync} disabled={syncing || loading || product.stockOnRequest || product.priceOnRequest} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-xs font-black text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
                   {syncing ? <LoaderCircle size={16} className="animate-spin" /> : <CheckCircle2 size={16} />}
                   {syncing ? "Synchronisation en cours…" : "Synchroniser avec OYSTE"}
                 </button>

@@ -48,6 +48,7 @@ export default async function LevagePage({ searchParams }: { searchParams?: Prom
     const slug = family.publicFamilySlug || family.slug;
     return [slug, slug ? selectFamilyProducts(categoryProducts, family, filterProductsByFamily).length : 0];
   }));
+  const showPotenceChoice = selectedFamilySlug === "potences";
   const showPalanChoice = selectedFamilySlug === "palan" && !selectedType;
 
   return (
@@ -55,8 +56,8 @@ export default async function LevagePage({ searchParams }: { searchParams?: Prom
       <section className="border-b border-slate-200 bg-white py-9 sm:py-11">
         <Container>
           <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-600">{page.fields.content001}</p>
-          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{selectedFamily?.title || content.title}</h1>
-          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{selectedFamily ? selectedFamily.description || `Découvrez les équipements ${selectedFamily.title.toLowerCase()} disponibles.` : content.description}</p>
+          <h1 className="mt-2 text-3xl font-black sm:text-4xl">{showPotenceChoice ? "Potences de levage" : selectedFamily?.title || content.title}</h1>
+          <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">{showPotenceChoice ? "Choisissez votre famille de potences de levage." : selectedFamily ? selectedFamily.description || `Découvrez les équipements ${selectedFamily.title.toLowerCase()} disponibles.` : content.description}</p>
         </Container>
       </section>
 
@@ -69,9 +70,10 @@ export default async function LevagePage({ searchParams }: { searchParams?: Prom
         </Container></section>
       ) : null}
 
-      {selectedFamilySlug && !showPalanChoice ? (
+      {showPotenceChoice ? <section className="py-10"><Container><div className="grid gap-5 md:grid-cols-2">{[{slug:"potence-sur-fut",title:"Potences sur fût",image:"/media/photos/ADEI/PFI2502000.webp"},{slug:"potence-murale",title:"Potences murales",image:"/media/photos/ADEI/PMI2502000.webp"}].map(item => <Link key={item.slug} href={`/catalogue/levage?famille=${item.slug}`} className="rounded-2xl border border-slate-200 bg-white p-5 hover:border-[#007f8f]"><img src={item.image} alt={item.title} className="h-52 w-full object-contain"/><h2 className="mt-4 text-xl font-black">{item.title} <ArrowRight className="inline" size={18}/></h2></Link>)}</div><Link href="/configurateur" className="mt-6 inline-flex rounded-xl bg-[#007f8f] px-5 py-3 font-bold text-white">Configurer ma potence</Link></Container></section> : null}
+      {selectedFamilySlug && !showPalanChoice && !showPotenceChoice ? (
         <section className="bg-white py-10"><Container>
-          <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-2xl font-black">{selectedType ? palanTypes.find((item) => item.id === selectedType)?.title : selectedFamily?.title}</h2><p className="mt-2 text-sm text-slate-600">{page.fields.content009}</p></div><a href={selectedFamilySlug === "palan" ? "/catalogue/levage?famille=palan" : "/catalogue/levage"} className="text-sm font-black text-[#007f8f]">{page.fields.content010}</a></div>
+          <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-end"><div><h2 className="text-2xl font-black">{selectedType ? palanTypes.find((item) => item.id === selectedType)?.title : selectedFamily?.title}</h2><p className="mt-2 text-sm text-slate-600">{page.fields.content009}</p></div><a href={selectedFamilySlug === "palan" ? "/catalogue/levage?famille=palan" : selectedFamilySlug.startsWith("potence-") ? "/catalogue/levage?famille=potences" : "/catalogue/levage"} className="text-sm font-black text-[#007f8f]">{page.fields.content010}</a></div>
           {products.length ? <CatalogProductGrid products={products} /> : <div className="rounded-2xl border border-orange-200 bg-orange-50 p-6 text-sm font-bold text-orange-800">{page.fields.content011}</div>}
         </Container></section>
       ) : null}

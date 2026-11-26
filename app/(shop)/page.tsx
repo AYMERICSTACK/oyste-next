@@ -25,7 +25,7 @@ import { prisma } from "@/lib/db/prisma";
 
 // Visuels éditoriaux dédiés aux cinq univers de la page d’accueil.
 const homeUniverseImages: Record<string, string> = {
-  levage: "/images/home-categories/levage.webp",
+  levage: "/images/home-categories/levage-atelier.jpg",
   manutention: "/images/home-categories/manutention.webp",
   "motorisation-sew": "/images/home-categories/motorisation-sew.webp",
   stockage: "/images/home-categories/stockage.webp",
@@ -38,12 +38,13 @@ export default async function HomePage() {
   // Textes commerciaux validés : images existantes du CMS conservées.
   const existingSlides = orderedVisible(home.slides);
   const commercialSlides = [
-    { label: "Levage", title: "Potence de levage", text: "Découvrez nos différentes gammes de potences pour atelier.", href: "/catalogue/levage?famille=potence-sur-fut", ctaLabel: "Voir les potences" },
+    { label: "Levage", title: "Potence de levage", text: "Découvrez nos différentes gammes de potences pour atelier.", href: "/catalogue/levage?famille=potences", ctaLabel: "Voir les potences" },
     { label: "Levage", title: "Palan manuel ou électrique", text: "Découvrez nos différentes gammes de chariots et palans.", href: "/catalogue/levage?famille=palan", ctaLabel: "Voir les palans" },
     { label: "Manutention", title: "Équipez vos flux et vos postes en appareils de manutention", text: "Transpalettes, gerbeurs, tables élévatrices et équipements d’atelier.", href: "/catalogue/manutention-au-sol", ctaLabel: "Voir la manutention" },
   ];
   const slides = commercialSlides.map((item, index) => ({
     ...item, image: existingSlides[index]?.image || home.heroImage,
+    images: index === 0 ? ["/media/photos/ADEI/PFI2502000.webp", "/media/photos/ADEI/PFT2502000.webp", "/media/photos/ADEI/PMI2502000.webp"] : index === 1 ? [getProductImageUrl("ER2M010ILIS"), getProductImageUrl("CB010"), getProductImageUrl("TSG1000B")] : undefined,
   }));
   const { categories, suppliers } = await getPublicPresentation();
   // Reuse real, published Stockman product media for the two homepage family cards.
@@ -155,27 +156,27 @@ export default async function HomePage() {
 
       <section className="pb-10 sm:pb-12" aria-labelledby="configurator-promo-title">
         <Container>
-          <div className="overflow-hidden rounded-3xl bg-gradient-to-r from-[#005f70] via-[#007f8f] to-[#0b5965] px-6 py-8 text-white shadow-lg sm:px-9">
-            <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-center">
+          <div className="relative isolate overflow-hidden rounded-3xl border border-cyan-100 bg-gradient-to-br from-white via-cyan-50 to-cyan-200 p-5 shadow-lg sm:p-7">
+            <div aria-hidden="true" className="pointer-events-none absolute -bottom-24 -left-12 -z-10 h-40 w-[70%] rotate-6 rounded-[100%] bg-[#007f8f]/20" />
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-300">Votre potence sur mesure</p>
-                <h2 id="configurator-promo-title" className="mt-2 text-2xl font-black sm:text-3xl">Configurez votre potence de levage</h2>
-                <p className="mt-2 max-w-2xl text-sm text-white/90">Du choix du modèle jusqu’au panier, créez votre solution en quelques étapes.</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#007f8f]">Votre potence sur mesure</p>
+                <h2 id="configurator-promo-title" className="mt-1 text-2xl font-black tracking-tight sm:text-3xl">Configurez votre <span className="text-orange-600">potence de levage</span></h2>
+                <p className="mt-1 text-sm text-slate-700">Du choix du type à l’ajout au panier, composez votre solution en quelques étapes.</p>
               </div>
-              <Link href="/configurateur" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-orange-600 px-6 py-4 text-sm font-black uppercase text-white shadow-lg transition hover:bg-orange-700">Configurer ma potence <ArrowRight size={18} /></Link>
+              <Link href="/configurateur" className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-3 text-sm font-black text-white hover:bg-orange-700">Configurer ma potence <ArrowRight size={17}/></Link>
             </div>
-            <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="mx-auto mt-3 h-1 w-12 rounded-full bg-orange-500" />
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5 xl:gap-5">
               {[
-                { title: "Type de potence", description: "Sur fût ou murale", Icon: Settings2 },
-                { title: "Capacité", description: "Choisissez la charge", Icon: Weight },
-                { title: "Dimensions", description: "Portée et hauteur", Icon: Ruler },
-                { title: "Équipements", description: "Chariot et palan", Icon: PackageCheck },
-                { title: "Panier", description: "Vérifiez et ajoutez", Icon: ShoppingCart },
-              ].map((step, index) => <div key={step.title} className="rounded-xl bg-white p-4 text-slate-900 shadow-sm">
-                <div className="flex items-center justify-between"><span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange-600 text-xs font-black text-white">{index + 1}</span><step.Icon size={23} className="text-[#007f8f]" /></div>
-                <h3 className="mt-3 text-sm font-black">{step.title}</h3><p className="mt-1 text-xs text-slate-600">{step.description}</p>
-              </div>)}
+                {title: "Type de potence", content: <div className="grid gap-2"><div className="flex h-[82px] items-center gap-2 rounded-lg border border-[#007f8f]/40 bg-cyan-50 p-2"><img src="/media/photos/ADEI/PFI2502000.webp" alt="Potence sur fût" className="h-full w-[58%] object-contain mix-blend-multiply"/><span className="text-xs font-black">Sur fût</span></div><div className="flex h-[82px] items-center gap-2 rounded-lg border border-slate-200 p-2"><img src="/media/photos/ADEI/PMI2502000.webp" alt="Potence murale" className="h-full w-[58%] object-contain"/><span className="text-xs font-black">Murale</span></div></div>},
+                {title: "Capacité", content: <div><div className="grid gap-1">{["150 kg", "250 kg", "500 kg", "1 tonne", "2 tonnes"].map((capacity, i) => <div key={capacity} className={`flex items-center gap-2 rounded-md border border-slate-200 px-2 py-1 text-[11px] font-bold ${i === 0 ? "bg-cyan-100" : "bg-white"}`}><Weight size={12} className="text-[#007f8f]"/>{capacity}<span className={`ml-auto h-2.5 w-2.5 rounded-full border ${i === 0 ? "border-[#007f8f] bg-[#007f8f]" : "border-slate-300"}`}/></div>)}</div><img src="/media/photos/ADEI/PFI2502000.webp" alt="Exemple de potence" className="mt-1 h-[64px] w-full object-contain"/></div>},
+                {title: "Dimensions", content: <div><div className="relative h-[135px] overflow-hidden rounded-lg bg-slate-50"><img src="/media/photos/ADEI/PFI2502000.webp" alt="Potence : portée et hauteur sous fer" className="absolute inset-x-0 bottom-1 h-[105px] w-full object-contain mix-blend-multiply"/><div className="absolute inset-x-5 top-1 text-center text-[10px] font-bold text-[#007f8f]">Portée<div className="flex items-center"><span>◀</span><span className="flex-1 border-t border-dashed border-[#007f8f]"/><span>▶</span></div></div><div className="absolute left-1 top-9 flex h-[84px] items-center gap-1 text-[9px] font-bold text-[#007f8f]"><div className="flex h-full flex-col items-center"><span>▲</span><span className="flex-1 border-l border-dashed border-[#007f8f]"/><span>▼</span></div><span className="rounded bg-cyan-50 p-1 leading-tight">Hauteur<br/>sous fer</span></div></div><div className="mt-2 grid gap-1 text-[11px] font-bold"><div className="flex justify-between rounded border border-slate-200 px-2 py-1">Portée <span className="text-slate-500">À définir</span></div><div className="flex justify-between rounded border border-slate-200 px-2 py-1">Hauteur <span className="text-slate-500">À définir</span></div></div></div>},
+                {title: "Chariot et palan", content: <div><div className="grid gap-1 text-[11px] font-bold"><div className="rounded border border-slate-200 px-2 py-1">Chariot <span className="float-right text-slate-500">↔</span></div><div className="rounded border border-slate-200 px-2 py-1">Palan électrique ou manuel</div></div><div className="mt-2 grid grid-cols-2 gap-2 rounded-lg bg-white">{[{src:"/images/configurator/palan-electrique.jpg",label:"Électrique"},{src:"/images/configurator/palan-manuel.jpg",label:"Manuel"}].map(palan => <div key={palan.src} className="min-w-0 rounded-lg border border-slate-200 bg-white p-2"><img src={palan.src} alt={`Palan ${palan.label.toLowerCase()}`} className="h-[108px] w-full object-contain"/><p className="mt-1 text-center text-[11px] font-bold text-slate-700">{palan.label}</p></div>)}</div></div>},
+                {title: "Panier", content: <div className="rounded-lg bg-slate-50 p-2"><div className="flex items-center gap-1 text-xs font-black"><PackageCheck size={15} className="text-[#007f8f]"/> Récapitulatif</div><div className="mt-2 space-y-2 text-[11px] text-slate-700"><p className="font-bold">Votre potence</p><p className="flex items-center gap-1"><Weight size={13}/> Charge choisie</p><p className="flex items-center gap-1"><Ruler size={13}/> Dimensions</p><p className="flex items-center gap-1"><Settings2 size={13}/> Équipements</p></div><div className="mt-3 rounded-md bg-slate-950 px-2 py-2 text-center text-xs font-black text-white">Votre prix HT</div><Link href="/configurateur" className="mt-2 flex items-center justify-center gap-1 rounded-md bg-orange-600 px-2 py-2 text-[11px] font-black text-white"><ShoppingCart size={13}/> Configurer</Link></div>},
+              ].map((step, index) => <article key={step.title} className="relative min-w-0 rounded-xl border border-white bg-white/95 p-3 shadow-md shadow-cyan-900/10"><div className="mb-3 flex items-center gap-2"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-orange-600 text-xs font-black text-white">{index+1}</span><h3 className="text-sm font-black leading-tight">{step.title}</h3></div>{step.content}{index < 4 && <ArrowRight aria-hidden="true" size={17} className="absolute -right-[19px] top-1/2 z-10 hidden -translate-y-1/2 text-orange-600 xl:block"/>}</article>)}
             </div>
+            <p className="mt-3 text-center text-[10px] text-slate-600">Aperçu du parcours de configuration. Les options disponibles dépendent du modèle choisi.</p>
           </div>
         </Container>
       </section>

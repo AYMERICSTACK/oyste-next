@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { getStockmanProduct } from "@/lib/suppliers/stockman/client";
+import { capturedStockmanSc102n, stockmanQaScenario } from "@/lib/suppliers/stockman/qa-connector-fixture";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -34,13 +35,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const product = await getStockmanProduct(
+    const scenario = stockmanQaScenario(request);
+    if (scenario && scenario !== "ready") throw new Error("Session Stockman expirée");
+    if (scenario === "ready" && parsed.data.reference.toUpperCase() !== capturedStockmanSc102n.reference) {
+      throw new Error("Référence absente de la capture commerciale de recette");
+    }
+    const product = scenario === "ready" ? capturedStockmanSc102n : await getStockmanProduct(
       parsed.data.reference,
       parsed.data.productUrl,
     );
 
     return NextResponse.json(
       {
+        product,
         reference: product.reference,
         stockStockman: product.stockOnRequest
           ? null

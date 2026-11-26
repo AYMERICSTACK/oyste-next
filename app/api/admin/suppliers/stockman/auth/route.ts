@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
+import { stockmanQaScenario } from "@/lib/suppliers/stockman/qa-connector-fixture";
 import {
   cancelInteractiveStockmanLogin,
   confirmInteractiveStockmanLogin,
@@ -29,9 +30,18 @@ async function authorize(write = false) {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const denied = await authorize(false);
   if (denied) return denied;
+
+  const scenario = stockmanQaScenario(request);
+  if (scenario) {
+    const state = scenario === "ready" || scenario === "stale" ? "valid" : scenario;
+    return NextResponse.json({
+      state, valid: state === "valid",
+      message: `Recette simulée · session ${state === "valid" ? "active" : state === "missing" ? "absente" : "expirée"}.`,
+    }, { headers: { "Cache-Control": "no-store" } });
+  }
 
   const status = await inspectSavedStockmanSession();
   return NextResponse.json(status, { headers: { "Cache-Control": "no-store, max-age=0" } });
