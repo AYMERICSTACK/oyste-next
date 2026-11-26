@@ -27,9 +27,9 @@ export default async function Header() {
             />
           </Link>
 
-          <nav className="hidden flex-1 items-center justify-center gap-7 text-[13px] font-black uppercase tracking-tight text-slate-950 xl:flex">
+          <nav className="hidden flex-1 items-center justify-center gap-3 text-[12px] font-black uppercase tracking-tight text-slate-950 xl:flex">
             {cms.navigation.filter((item) => !["/catalogue/stockage-emballage", "/catalogue/acces-hauteur"].includes(item.href)).map((item) => {
-              const configuredEntries = page.collections.megaMenus.filter(entry=>entry.enabled && entry.parent===item.href).sort((a,b)=>a.order-b.order).map(entry=>[entry.label, entry.parent === "/catalogue/levage" && entry.label === "Potences" ? "/catalogue/levage?famille=potence-sur-fut" : entry.href]);
+              const configuredEntries = page.collections.megaMenus.filter(entry=>entry.enabled && entry.parent===item.href).sort((a,b)=>a.order-b.order).map(entry=>[entry.label, entry.parent === "/catalogue/levage" && entry.label === "Potences" ? "/catalogue/levage?famille=potences" : entry.href]);
               const entries = item.href === "/catalogue/motorisation-sew" && configuredEntries.length === 0
                 ? (catalogueSubFamilies["motorisation-sew"] || []).map((family) => [family.title, family.href])
                 : configuredEntries;
@@ -53,6 +53,7 @@ export default async function Header() {
                 </div>
               );
             })}
+            <Link href="/configurateur" className="shrink-0 whitespace-nowrap rounded-lg bg-[#007f8f] px-3 py-2.5 text-white hover:bg-[#005f70]">Configurateur potence</Link>
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-3">
@@ -67,6 +68,7 @@ export default async function Header() {
             <details className="relative xl:hidden">
               <summary className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-full border border-slate-200" aria-label="Ouvrir le menu"><Menu size={20} /></summary>
               <nav className="absolute right-0 top-14 w-[min(88vw,360px)] rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl">
+                <Link href="/configurateur" className="block rounded-xl bg-[#007f8f] px-4 py-3 text-sm font-black text-white">Configurateur potence</Link>
                 {cms.navigation.filter((item) => !["/catalogue/stockage-emballage", "/catalogue/acces-hauteur"].includes(item.href)).map((item) => <a key={item.href} href={item.href} className="block rounded-xl px-4 py-3 text-sm font-black text-slate-900 hover:bg-slate-50">{item.label}</a>)}
               </nav>
             </details>

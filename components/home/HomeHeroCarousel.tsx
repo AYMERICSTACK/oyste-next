@@ -8,6 +8,7 @@ export type HomeHeroSlide = {
   text: string;
   href: string;
   image: string;
+  images?: string[];
   label: string;
   ctaLabel?: string;
 };
@@ -30,15 +31,11 @@ export default function HomeHeroCarousel({ slides }: { slides: HomeHeroSlide[] }
     <div className="relative overflow-hidden rounded-[1.75rem] border border-slate-200 bg-white shadow-xl shadow-slate-300/35">
       <div className="relative aspect-[16/8] min-h-[245px]">
         {slides.map((item, index) => (
-          <img
-            key={`${item.label}-${index}`}
-            src={item.image}
-            alt=""
-            aria-hidden={index !== active}
-            className={`absolute inset-0 h-full w-full object-contain p-6 transition-opacity duration-500 ${index === active ? "opacity-100" : "opacity-0"}`}
-          />
+          <div key={`${item.label}-${index}`} aria-hidden={index !== active} className={`absolute inset-0 flex items-center justify-center gap-2 px-10 pb-16 pt-3 transition-opacity duration-500 ${index === active ? "opacity-100" : "opacity-0"}`}>
+            {(item.images?.length ? item.images : [item.image]).map((src, imageIndex) => <img key={`${src}-${imageIndex}`} src={src} alt="" className="min-w-0 flex-1 h-full object-contain" />)}
+          </div>
         ))}
-        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/95 via-slate-950/70 to-transparent px-5 pb-4 pt-14 text-white">
+        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/95 via-slate-950/90 to-transparent px-5 pb-6 pt-5 text-white">
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-orange-300">{slide.label}</p>
           <h2 className="mt-1 text-xl font-black">{slide.title}</h2>
           <div className="mt-2 flex items-end justify-between gap-5">
