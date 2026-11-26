@@ -4,6 +4,7 @@ import { isInStockmanCommercialScope } from "./commercial-scope";
 import { planStockmanCommercialUpdate, type StockmanSyncCandidate } from "./commercial-sync-policy";
 import { stockmanSource } from "./order-policy";
 import { parseSharedStockmanScope, stockmanCommercialSetting } from "./shared-commercial-scope";
+import { readStockmanReplacementHolds } from "./reference-replacements";
 
 export const stockmanSyncHistoryType = "StockmanCommercialSync";
 const batchAction = "STOCKMAN_COMMERCIAL_SYNC_BATCH";
@@ -56,6 +57,7 @@ export async function applyNextScheduledStockmanSync(now = new Date()) {
     const batch = references.slice(start, start + batchSize);
     const entries = [];
     if (batch.length) {
+      const replacementHolds = await readStockmanReplacementHolds(tx);
       const identities = { OR: [{ supplierCode: { in: batch, mode: "insensitive" as const } }, { code: { in: batch, mode: "insensitive" as const } }] };
       const [rows, variants, parents, sales, saved] = await Promise.all([
         tx.stockmanDiscoveryResult.findMany({ where: { jobId: job.id, reference: { in: batch } }, select: { reference: true, sourceUrl: true, relationType: true, payload: true },
@@ -79,6 +81,10 @@ export async function applyNextScheduledStockmanSync(now = new Date()) {
       const changedParents = new Set<string>();
       const matches = (row: { code: string; supplierCode: string | null }) => (code(row.supplierCode) || code(row.code));
       for (const reference of batch) {
+        if (replacementHolds.has(reference)) {
+          entries.push({ reference, outcome: "REMPLACEMENT_FOURNISSEUR_A_VERIFIER" });
+          continue;
+        }
         const v = variants.filter(row => matches(row) === reference);
         const p = parents.filter(row => matches(row) === reference);
         const variant = v.length === 1 && p.every(parent => parent.id === v[0].productId) ? v[0] : undefined;

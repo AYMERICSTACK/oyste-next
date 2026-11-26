@@ -3,11 +3,11 @@ import bc from "@/data/stockman/technical-bc.json";
 import { BC_CATEGORY, BC_REFERENCES } from "../bc-family-plan";
 import { isBlockedStockmanReference } from "../order-policy";
 export type RecordRow={reference:string;title:string;category:string;subcategory:string;imageUrl:string};
-export type EvidenceProduct={reference:string;name:string;images:string[];documents:Array<{name:string;url:string;type:"TECHNICAL_SHEET"|"OTHER"}>;features:Array<{label:string;value:string}>;stock:number|null;readAt:string|null;sourceUrl:string;weightKg:number|null};
-export type Evidence={name?:string;familyCode:string;verifiedAt:string;products:EvidenceProduct[]};
+export type EvidenceProduct={reference:string;name:string;description?:string;images:string[];documents:Array<{name:string;url:string;type:"TECHNICAL_SHEET"|"OTHER"}>;features:Array<{label:string;value:string}>;stock:number|null;readAt:string|null;sourceUrl:string;weightKg:number|null;purchaseObservation?:{amountHT:number;readAt:string}};
+export type Evidence={name?:string;familyCode:string;verifiedAt:string;products:EvidenceProduct[];approvedCategoryId?:string};
 export type Existing={kind?:"product"|"variant";id:string;productId:string;references:string[];supplierId:string|null;publicationStatus:string;categoryId?:string|null};
 export type Category={id:string;name:string;slug:string;path:string|null;isActive:boolean;catalogueVisible:boolean;parentId:string|null};
-export type Inventory={supplierId:string|null;existing:Existing[];drafts:string[];active:string[];prices:Map<string,number>;categories:Category[];evidence:Evidence[];excludedScopeReferences?:string[];sourceUrls?:Record<string,string>};
+export type Inventory={supplierId:string|null;existing:Existing[];drafts:string[];active:string[];prices:Map<string,number>;categories:Category[];evidence:Evidence[];excludedScopeReferences?:string[];sourceUrls?:Record<string,string>;replacementHolds?:ReadonlySet<string>};
 export type Group={categoryResolution?:CategoryResolution;verifiedAt?:string;key:string;categoryId:string;name:string;products:EvidenceProduct[]};
 export const groupDecision=(g:Group)=>({key:g.key,categoryId:g.categoryId,name:g.name,products:g.products,verifiedAt:g.verifiedAt});
 export const groupSlug=(key:string)=>key.toUpperCase()==="BC"?"stockman-griffes-accrochage-bc":`stockman-${key.toLowerCase().replace(/[^a-z0-9]+/g,"-")}`;
@@ -21,8 +21,9 @@ export function planGlobal(rows:RecordRow[],inventory:Inventory){
  const isVariant=(e:Existing)=>e.kind==="variant"||(e.kind===undefined&&e.id!==e.productId);
  const matchesFor=(r:string)=>{const all=inventory.existing.filter(e=>e.references.map(ref).includes(r));return all.filter(e=>isVariant(e)||!all.some(v=>isVariant(v)&&v.productId===e.productId));};
  const assigned=new Set<string>();
+ for(const row of rows){const code=ref(row.reference);if(inventory.replacementHolds?.has(code)){statuses.push({reference:code,status:"BLOCKED",reasons:["SUPPLIER_REFERENCE_REPLACEMENT_REVIEW"]});assigned.add(code);}}
  // Existing references are classified before any family expansion, irrespective of row order.
- for(const row of rows){const r=ref(row.reference),matches=matchesFor(r);if(!matches.length)continue;
+ for(const row of rows){const r=ref(row.reference),matches=matchesFor(r);if(assigned.has(r)||!matches.length)continue;
   statuses.push({reference:r,status:!isBlockedStockmanReference(r)&&matches.length===1&&inventory.supplierId!==null&&matches[0].supplierId===inventory.supplierId?"EXISTING":"BLOCKED",reasons:!inventory.supplierId?["SUPPLIER_MISSING_OR_AMBIGUOUS"]:isBlockedStockmanReference(r)?["DISCONTINUED"]:matches.length>1?["AMBIGUOUS_IDENTITY"]:matches[0].supplierId!==inventory.supplierId?["OTHER_SUPPLIER_COLLISION"]:[],publicationStatus:matches[0].publicationStatus,groupKey:matches[0].productId});assigned.add(r);}
 
  for(const row of rows){const r=ref(row.reference);if(assigned.has(r))continue;
@@ -33,7 +34,7 @@ export function planGlobal(rows:RecordRow[],inventory:Inventory){
   if(!inventory.prices.has(r)){statuses.push({reference:r,status:"BLOCKED",reasons:["NO_NEON_PRICE"]});assigned.add(r);continue;}
   const proofs=BC_REFERENCES.includes(r)?[bcEvidence]:byRef.get(r)||[];
   if(proofs.length!==1){statuses.push({reference:r,status:"BLOCKED",reasons:[proofs.length?"CONFLICTING_GROUPING":"GROUPING_REQUIRES_SUPPLIER_EVIDENCE",...(!inventory.prices.has(r)?["NO_NEON_PRICE"]:[])]});assigned.add(r);continue;}
-  const proof=proofs[0];const candidates=proof.products.filter(p=>rows.some(x=>ref(x.reference)===ref(p.reference))&&!matchesFor(ref(p.reference)).length&&inventory.active.includes(ref(p.reference))&&inventory.prices.has(ref(p.reference))&&!isBlockedStockmanReference(p.reference));
+  const proof=proofs[0];const candidates=proof.products.filter(p=>rows.some(x=>ref(x.reference)===ref(p.reference))&&!matchesFor(ref(p.reference)).length&&inventory.active.includes(ref(p.reference))&&inventory.prices.has(ref(p.reference))&&!isBlockedStockmanReference(p.reference)&&!inventory.replacementHolds?.has(ref(p.reference)));
   const reasons:string[]=[];
   const slugKey=`slug:${groupSlug(proof.familyCode)}`;
   if(inventory.existing.some(e=>e.references.includes(slugKey)))reasons.push("PARENT_SLUG_ALREADY_EXISTS");
@@ -50,10 +51,14 @@ export function planGlobal(rows:RecordRow[],inventory:Inventory){
   if(candidates.length>200)reasons.push("FAMILY_TOO_LARGE_FOR_AUTOMATIC_BATCH");
   if(candidates.some(p=>isBlockedStockmanReference(p.reference)))reasons.push("FAMILY_CONTAINS_DISCONTINUED_REFERENCE");
   if(proof.products.some(p=>inventory.existing.some(e=>e.references.map(ref).includes(ref(p.reference)))))reasons.push("PARTIALLY_EXISTING_FAMILY_REVIEW_REQUIRED");
+  if(proof.products.some(p=>inventory.replacementHolds?.has(ref(p.reference))))reasons.push("SUPPLIER_REFERENCE_REPLACEMENT_REVIEW");
   if(candidates.some(p=>inventory.drafts.map(ref).includes(ref(p.reference))))reasons.push("EXISTING_IMPORT_DRAFT_REVIEW_REQUIRED");
   if(candidates.some(p=>!inventory.active.includes(ref(p.reference))))reasons.push("REFERENCE_NOT_ACTIVE");
 
-  const categoryResolution=resolveExistingCategory(row,rows,inventory.categories,inventory.existing.filter(e=>e.supplierId===inventory.supplierId));
+  const approvedCategory=inventory.categories.find(c=>c.id===proof.approvedCategoryId&&c.isActive&&c.catalogueVisible);
+  const categoryResolution:CategoryResolution=proof.approvedCategoryId
+    ? {categoryId:approvedCategory?.id??null,categoryName:approvedCategory?.name??null,method:"APPROVED_CAPTURED_CATEGORY",evidenceProductIds:[]}
+    : resolveExistingCategory(row,rows,inventory.categories,inventory.existing.filter(e=>e.supplierId===inventory.supplierId));
   const categories=inventory.categories.filter(c=>c.id===categoryResolution.categoryId);
   if(categories.length!==1)reasons.push("CATEGORY_MISSING_OR_AMBIGUOUS");
 
