@@ -1,3 +1,4 @@
+import { collectiveStockmanRequiresQuote, collectiveStockmanStockOnRequest, isCollectiveStockmanImport, stockmanSource } from "@/lib/suppliers/stockman/order-policy";
 import { getStockmanCategoryProducts } from "./stockman-category-products";
 import { applyProductPresentation, productPresentationSchema } from "./product-presentation";
 import "server-only";
@@ -98,7 +99,14 @@ function mapFeature(feature: {
 function mapVariant(
   variant: DatabaseProduct["variants"][number],
 ): CatalogueVariant {
+  const managedStockman = isCollectiveStockmanImport(variant.sourceData);
+  const images = managedStockman ? stockmanSource(variant.sourceData).images : undefined;
   return {
+    ...(managedStockman ? {
+      collectiveStockmanStockOnRequest: collectiveStockmanStockOnRequest(variant.sourceData),
+      collectiveStockmanQuoteOnly: collectiveStockmanRequiresQuote(variant.sourceData, variant.shippingMode),
+      mediaImages: Array.isArray(images) ? images.filter((image): image is string => typeof image === "string" && /^https:\/\/(?:www\.)?stockman\.fr\//i.test(image)) : undefined,
+    } : {}),
     id: variant.id,
     code: variant.code,
     supplierCode: variant.supplierCode || "",

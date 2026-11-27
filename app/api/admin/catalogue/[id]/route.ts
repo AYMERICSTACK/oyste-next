@@ -1,3 +1,4 @@
+import { hasStockmanPriceHold, stockmanSource } from "@/lib/suppliers/stockman/order-policy";
 import { manualProductSchema, isAdminCreated } from "@/lib/admin/product-validation";
 import { canWriteCatalogue } from "@/lib/admin/catalogue-permissions";
 import { NextResponse } from "next/server";
@@ -78,9 +79,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const existing = await prisma.product.findUnique({
     where: { id },
-    select: { id: true, sourceData: true, publishedAt: true, variants: { select: { id: true } } },
+    select: { id: true, code: true, supplierCode: true, sourceData: true, publishedAt: true, publicationStatus: true, supplier: { select: { slug:true, name:true } }, variants: { select: { id: true, code: true, supplierCode: true } } },
   });
   if (!existing) return NextResponse.json({ error: "Produit introuvable." }, { status: 404 });
+
+  const vendor = existing.supplier;
+  const stockman = vendor?.slug.toLowerCase() === "stockman" || vendor?.name.toLowerCase() === "stockman";
+  const supplierReference = stockmanSource(existing.sourceData).reference;
+  if (publicationStatus === "PUBLISHED" && existing.publicationStatus !== "PUBLISHED" && stockman &&
+      hasStockmanPriceHold(existing.code, existing.supplierCode,
+        typeof supplierReference === "string" ? supplierReference : null, ...existing.variants.flatMap(v=>[v.code,v.supplierCode]))) {
+    return NextResponse.json({ error: "Publication bloquée : vérifier le tarif STOCKMAN." }, { status: 409 });
+  }
 
   if (manual && !isAdminCreated(existing.sourceData)) return NextResponse.json({ error: "Les champs gérés par import ne peuvent pas être remplacés par cet éditeur." }, { status: 409 });
   const validVariantIds = new Set(existing.variants.map((variant) => variant.id));

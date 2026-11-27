@@ -1,3 +1,4 @@
+import { hasStockmanPriceHold } from "@/lib/suppliers/stockman/order-policy";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db/prisma";
 import { getCurrentAdmin } from "@/lib/auth/admin-session";
@@ -24,11 +25,11 @@ async function buildAudit() {
   const products = await prisma.product.findMany({
     where: { supplierId: supplier.id },
     select: {
-      id: true, code: true, name: true, description: true, detailedDescription: true, priceHt: true, stock: true, weightKg: true,
+      id: true, code: true, supplierCode: true, name: true, description: true, detailedDescription: true, priceHt: true, stock: true, weightKg: true,
       shippingMode: true, leadTime: true, publicationStatus: true, categoryId: true, imageReference: true, sourceData: true,
       category: { select: { name: true, path: true } }, media: { where: { type: "IMAGE" }, select: { id: true }, take: 1 },
       documents: { select: { id: true }, take: 1 }, features: { select: { id: true }, take: 1 },
-      variants: { select: { id: true, priceHt: true, shippingMode: true, leadTime: true } },
+      variants: { select: { id: true, code: true, supplierCode: true, priceHt: true, shippingMode: true, leadTime: true } },
     }, orderBy: { code: "asc" },
   });
   const rows = products.map((product) => {
@@ -38,6 +39,8 @@ async function buildAudit() {
     const stockOnRequest = meta.stockLabel === "Nous consulter" || meta.stock === null;
     const productPriceHT = Number(product.priceHt);
     const expectedSellingPriceHT = purchasePriceHT && purchasePriceHT > 0 ? Math.round((purchasePriceHT / STOCKMAN_MARGIN_DIVISOR) * 100) / 100 : null;
+    if (hasStockmanPriceHold(product.code, product.supplierCode, ...product.variants.flatMap(v=>[v.code,v.supplierCode]))) blockers.push("Tarif STOCKMAN à vérifier");
+    if (asObject(product.sourceData)?.v297) blockers.push("Brouillon collectif : validation commerciale individuelle requise");
     if (!product.code.trim()) blockers.push("Référence absente");
     if (!product.name.trim()) blockers.push("Nom absent");
     if (!product.categoryId) blockers.push("Catégorie absente");

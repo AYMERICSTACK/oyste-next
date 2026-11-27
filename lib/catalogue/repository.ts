@@ -10,6 +10,8 @@ export type CatalogueFeature = {
 };
 
 export type CatalogueVariant = {
+  collectiveStockmanStockOnRequest?: boolean;
+  collectiveStockmanQuoteOnly?: boolean;
   mediaImages?: string[];
   id: string;
   code: string;

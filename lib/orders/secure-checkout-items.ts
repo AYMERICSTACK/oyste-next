@@ -1,6 +1,7 @@
 import "server-only";
 
 import { prisma } from "@/lib/db/prisma";
+import { collectiveStockmanRequiresQuote, isCollectiveStockmanImport } from "@/lib/suppliers/stockman/order-policy";
 import type { CartItem } from "@/lib/cart/types";
 import { calculateKitoDynamicWeightKg } from "@/lib/shipping/kito-chain-weight";
 import { calculateKitoDynamicPriceHT } from "@/lib/pricing/kito-chain-price";
@@ -53,6 +54,10 @@ export async function resolveSecureCheckoutItems(items: CheckoutItemInput[]): Pr
       if (product.publicationStatus !== "PUBLISHED") {
         throw new Error(`La référence ${code} n’est plus disponible à la commande.`);
       }
+      if ((isCollectiveStockmanImport(product.sourceData) || isCollectiveStockmanImport(variant.sourceData)) &&
+          collectiveStockmanRequiresQuote(variant.sourceData, variant.shippingMode ?? product.shippingMode, item.quantity)) {
+        throw new Error(`La référence ${code} est disponible uniquement sur devis.`);
+      }
       result.push({
         ...item,
         id: `catalogue:${variant.code}`,
@@ -91,6 +96,9 @@ export async function resolveSecureCheckoutItems(items: CheckoutItemInput[]): Pr
       throw new Error(`La référence ${code} n’est plus disponible à la commande.`);
     }
 
+    if (isCollectiveStockmanImport(product.sourceData) && collectiveStockmanRequiresQuote(product.sourceData, product.shippingMode, item.quantity)) {
+      throw new Error(`La référence ${code} est disponible uniquement sur devis.`);
+    }
     result.push({
       ...item,
       id: `catalogue:${product.code}`,

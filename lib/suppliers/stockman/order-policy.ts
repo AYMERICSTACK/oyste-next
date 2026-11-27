@@ -29,3 +29,31 @@ export function stockmanPriceUnknown(value: unknown): boolean {
 export function stockmanFreightValidated(sourceData: unknown, shippingMode: unknown): boolean {
   return shippingMode === "INCLUDED" && stockmanSource(sourceData).freightIncludedValidated === true;
 }
+
+export function hasStockmanPriceHold(...references: Array<string | null | undefined>): boolean {
+  return references.some(reference => ["CT420", "CT420S", "E250"].includes(reference?.trim().toUpperCase() ?? ""));
+}
+
+export function isCollectiveStockmanImport(value: unknown): boolean {
+  if (!value || typeof value !== "object" || !("v297" in value)) return false;
+  const audit = value.v297;
+  return Boolean(audit && typeof audit === "object" && "runId" in audit && typeof audit.runId === "string");
+}
+
+export function collectiveStockmanStockOnRequest(sourceData: unknown, now = Date.now()): boolean {
+  const source = stockmanSource(sourceData);
+  const readAt = typeof source.stockReadAt === "string" ? Date.parse(source.stockReadAt) : NaN;
+  return stockmanStockUnknown(sourceData) || typeof source.stock !== "number" || !Number.isSafeInteger(source.stock) ||
+    source.stock < 0 || !Number.isFinite(readAt) || readAt > now || now - readAt >= 86_400_000;
+}
+
+export function collectiveStockmanRequiresQuote(sourceData: unknown, mode: unknown, quantity = 1): boolean {
+  const stock = stockmanSource(sourceData).stock;
+  return collectiveStockmanStockOnRequest(sourceData) || typeof stock !== "number" || stock < quantity ||
+    stockmanShippingMode(sourceData, mode) === "QUOTE";
+}
+
+export function stockmanShippingMode(sourceData: unknown, mode: unknown): "INCLUDED" | "MESSAGERIE" | "AFFRETEMENT" | "QUOTE" {
+  if (mode === "MESSAGERIE" || mode === "AFFRETEMENT") return mode;
+  return stockmanFreightValidated(sourceData, mode) ? "INCLUDED" : "QUOTE";
+}

@@ -173,6 +173,7 @@ export default async function CatalogProductPage({
   const variantGalleryImages = Object.fromEntries(
     variants.map((variant) => {
       if (product.presentationManagedKeys?.includes("media")) return [variant.code, mediaImages];
+      if (variant.mediaImages?.length) return [variant.code, variant.mediaImages];
       const exactImages = getImportedProductImagesExact(variant.imageRef, variant.code);
       const isPalfix = variant.code.trim().toUpperCase().startsWith("PALFIX");
 

@@ -27,6 +27,7 @@ import type { StockmanConnectionStatus } from "@/lib/suppliers/stockman/types";
 import StockmanConnectorCard from "@/components/admin/StockmanConnectorCard";
 import StockmanBulkSyncCard from "@/components/admin/StockmanBulkSyncCard";
 import StockmanCatalogDiscoveryCard from "@/components/admin/StockmanCatalogDiscoveryCard";
+import StockmanGlobalImportCard from "@/components/admin/StockmanGlobalImportCard";
 import StockmanImportDraftReviewCard from "@/components/admin/StockmanImportDraftReviewCard";
 import SupplierPricingManager from "@/components/admin/SupplierPricingManager";
 import StockmanPublicationAuditCard from "@/components/admin/StockmanPublicationAuditCard";
@@ -395,6 +396,7 @@ export default function SuppliersWorkspace({
         {isStockman && tab === "import" ? (
           <div className="space-y-5">
             <StockmanCatalogDiscoveryCard enabled={stockmanStatus.configured} />
+            <StockmanGlobalImportCard />
             <StockmanImportDraftReviewCard />
           </div>
         ) : null}
