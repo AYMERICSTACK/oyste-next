@@ -2,6 +2,7 @@ const assert = require('node:assert/strict');
 const { randomUUID } = require('node:crypto');
 const Module = require('node:module');
 const path = require('node:path');
+const { Client } = require('pg');
 
 const specifications = [["BAL100",["BAL100"],[]],["BL",["BL40","BL80"],[]],["BS",["BS100","BS15","BS25","BS50","BS75"],[]],["BS L",["BS100L","BS50LA","BS50LB"],[]],["BS D",["BS30D","BS50D","BS80D"],[]],["DCE105",["DCE105"],["B-1-00166","A-3-00021","B-1-00015","B-1-00085","B-1-00031","B-1-00003","B-1-00002","B-1-00423","C-2-00445","C101000298","C-1-00969"]],["DGM170",["DGM170"],["B-1-00423","C-2-00445","C101000298","C-1-00969"]],["DMEG",["DMEG170","DMEG200"],["B-1-00166","A-3-00002","A-1-00026","B-1-00068","B601000129","B-1-00013","A-3-00021","B-1-00015","A404000006","B-1-00085","B-1-00031","B-1-00408","B-00163","B-1-00446","B-1-00004","B-00208","B-1-00003","B-1-00002","B-1-00423","C-2-00445","C-2-00286","B-1-00202","C-1-00969","B-1-00033","B-1-00327","B-1-00331","B-1-00188"]],["DMEG170-R",["DMEG170-R"],["B-1-00166","B-1-00068","A-3-00021","B-1-00015","B-1-00031","B-1-00003","B-1-00002","B-1-00423","C-2-00445","C-2-00286","B-1-00202","C-1-00969","B-1-00033","B-1-00327","B-1-00331","B-1-00188"]],["DMEG250",["DMEG250"],["B-1-00166","A-3-00002","A-1-00026","B-1-00068","B601000129","B-1-00013","A-3-00021","B-1-00015","A404000006","B-1-00085","B-1-00031","B-1-00408","B-00163","B-1-00446","B-1-00004","B-00208","B-1-00003","B-1-00002","B-1-00423","C-2-00445","C-2-00286","B-1-00202","C-1-00969","B-1-00033","B-1-00327","B-1-00331","B-1-00188"]],["ES",["ES100","ES100L","ES50","ES50D","ES50LA","ES50LB","ES75","ES80D"],[]],["ESM",["ESM80","ESM80D"],[]],["HULC1000",["HULC1000/220V","HULC1000/380V"],[]],["HUS600",["HUS600"],[]],["HW501",["HW501/220V","HW501/380V"],[]],["HWLC",["HWLC1000/220V","HWLC1000/380V","HWLC2000/380V"],[]],["HWS1800",["HWS1800"],[]],["HYLC1000",["HYLC1000/220V","HYLC1000/380V"],[]],["HZ1000",["HZ1000"],[]],["MD20R",["MD20R"],[]],["MH-V",["MH-V10","MH-V20"],[]],["P MR",["P110MR","P150MR","P50MR","P70MR"],[]],["PHP50PLUS",["PHP50PLUS"],[]],["PM-1",["PM30R/1","PM50/1","PM50/2"],["PM/1KITGUARD","PM/2KITGUARD"]],["PSE12NM",["PSE12NM1600","PSE12NM2000","PSE12NM800"],[]],["SA",["SA1000","SA500"],[]],["SBC",["SBC21","SBC40"],[]],["SBV",["SBV200","SBV500"],[]],["SC",["SC1000","SC2000","SC500"],[]],["SC M",["SC300DM","SC500SM"],[]],["SCH",["SCH05","SCH075"],[]],["SCP05EE",["SCP05EE"],[]],["SME170",["SME170"],["B-1-00324","B-1-00397","B-1-00423","C-2-00445","C101000298","C-1-00969","B-1-00033","B-1-00327","B-1-00331","B-1-00188"]],["STF N",["STF15N","STF30N","STF50N"],[]],["STR80N",["STR80N"],["STR80NSAC","BOX6"]],["TM40D",["TM40D"],[]],["TS",["TS40","TS80"],[]],["XH15A",["XH15A"],[]],["ZC48",["ZC48"],[]]];
 
@@ -13,7 +14,52 @@ async function run() {
   Module._resolveFilename = function(name,...args) {
     return next.call(this,name.startsWith('@/') ? path.resolve(name.slice(2)) : name,...args);
   };
-  const { prisma } = require('../lib/db/prisma.ts');
+  const { verifiedDatabaseUrl } = require('../lib/db/verified-database-url.ts');
+  const { PrismaPg } = require('@prisma/adapter-pg');
+  const { PrismaClient } = require('../generated/prisma/client.ts');
+  const endpoint = new URL(verifiedDatabaseUrl());
+  endpoint.hostname = endpoint.hostname.replace(/-pooler(?=\.)/,'');
+  const connectionString=verifiedDatabaseUrl({...process.env,DATABASE_URL:endpoint.href});
+  const source = new Client({connectionString,connectionTimeoutMillis:8000,query_timeout:15000});
+  const schema='stockman_qa_'+randomUUID().replaceAll('-','');
+  let prisma;
+  let schemaCreated=false;
+  try {
+    await source.connect();
+    const marker = (await source.query('SELECT environment FROM public."OysteQaMarker"')).rows;
+    assert.deepEqual(marker,[{environment:'recette-stockman-isolee'}]);
+    const allowed=(await source.query("SELECT has_database_privilege(current_user,current_database(),'CREATE') AS allowed")).rows[0]?.allowed;
+    assert(allowed,'Le rôle Neon de recette doit pouvoir créer un schéma jetable');
+    const required=['AdminUser','AuditLog','Category','OysteQaMarker','OrderItem','Product','ProductDocument','ProductFeature',
+      'ProductMedia','ProductPresentationOverride','ProductVariant','ProductVariantFeature','SiteSetting','StockmanCatalogReference',
+      'StockmanDiscoveryJob','StockmanDiscoveryResult','StockmanImportDraft','StockmanSalePrice','Supplier'];
+    const modelNames=(await source.query("SELECT tablename FROM pg_tables WHERE schemaname='public'")).rows.map(row=>row.tablename);
+    for(const name of required) assert(modelNames.includes(name),'Table de recette manquante : '+name);
+    await source.query('CREATE SCHEMA "'+schema+'"');
+    schemaCreated=true;
+    for(const name of required) await source.query('CREATE TABLE "'+schema+'"."'+name+'" (LIKE public."'+name+'" INCLUDING ALL)');
+    await source.query('INSERT INTO "'+schema+'"."OysteQaMarker" (environment) VALUES ($1)',['recette-stockman-isolee']);
+    prisma=new PrismaClient({adapter:new PrismaPg({connectionString,options:'-c search_path='+schema+',public'},{schema})});
+    const [{currentSchema}]=await prisma.$queryRawUnsafe('SELECT current_schema()::text AS "currentSchema"');
+    assert.equal(currentSchema,schema);
+    const original = Module._load;
+    Module._load=function(name,...args) {
+      if(name==='@/lib/db/prisma') return {prisma};
+      return original.call(this,name,...args);
+    };
+    try {
+      await checkMaintenance(prisma);
+    } finally {
+      Module._load=original;
+    }
+  } finally {
+    await prisma?.$disconnect();
+    if(schemaCreated) await source.query('DROP SCHEMA "'+schema+'" CASCADE');
+    await source.end();
+  }
+}
+
+async function checkMaintenance(prisma) {
   const { maintenanceDigest } = require('../lib/suppliers/stockman/global-import/maintenance.ts');
   const { SCOPE_VERSION } = require('../lib/suppliers/stockman/global-import/scope.ts');
   const { simulate, startRun, stepRun, rollbackRun } = require('../lib/suppliers/stockman/global-import/service.ts');
@@ -22,13 +68,16 @@ async function run() {
   const refs = specifications.flatMap(([, codes])=>codes);
   const marker = await prisma.$queryRawUnsafe('SELECT environment FROM "OysteQaMarker"');
   assert.deepEqual(marker,[{environment:'recette-stockman-isolee'}]);
-  const fixture = await prisma.product.findFirstOrThrow({where:{code:'QASTOCK1'}});
+  const supplier=await prisma.supplier.create({data:{name:'STOCKMAN',slug:'stockman'}});
+  const category=await prisma.category.create({data:{name:'Catégorie STOCKMAN de recette',slug:'qa-recette-oyste'}});
+  const admin=await prisma.adminUser.create({data:{email:'stockman-recette@example.invalid',firstName:'Recette',lastName:'STOCKMAN',
+    passwordHash:'fixture-inutilisable',role:'SUPER_ADMIN',status:'ACTIVE'}});
+  const fixture=await prisma.product.create({data:{id:'qa-maintenance-history',code:'QASTOCK1',name:'Produit existant témoin',
+    slug:'qa-maintenance-history',priceHt:119,stock:4,supplierId:supplier.id,categoryId:category.id,shippingMode:'QUOTE'}});
   const oldProducts = await prisma.product.findMany({orderBy:{id:'asc'}});
   const oldVariants = await prisma.productVariant.findMany({orderBy:{id:'asc'}});
-  const admin = await prisma.adminUser.findUniqueOrThrow({where:{email:'stockman-recette@example.invalid'}});
   assert.equal(admin.role,'SUPER_ADMIN');
   assert.equal(admin.status,'ACTIVE');
-  const category = await prisma.category.findUniqueOrThrow({where:{slug:'qa-recette-oyste'}});
   const keys = [stockmanReplacementSetting,importStateKey];
   const settings = () => prisma.siteSetting.findMany({where:{key:{in:keys}},orderBy:{key:'asc'}});
   const before = await settings();
@@ -196,7 +245,6 @@ async function run() {
         await tx.$executeRawUnsafe('DELETE FROM "StockmanSalePrice" WHERE reference = ANY($1::text[]) AND "sourceSha256" = $2',madeSale,testId);
       });
     }
-    await prisma.$disconnect();
   }
 }
 run().catch(error=>{
