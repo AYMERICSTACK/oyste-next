@@ -22,7 +22,7 @@ async function run() {
   const refs = specifications.flatMap(([, codes])=>codes);
   const marker = await prisma.$queryRawUnsafe('SELECT environment FROM "OysteQaMarker"');
   assert.deepEqual(marker,[{environment:'recette-stockman-isolee'}]);
-  const fixture = await prisma.product.findUniqueOrThrow({where:{code:'QASTOCK1'}});
+  const fixture = await prisma.product.findFirstOrThrow({where:{code:'QASTOCK1'}});
   const oldProducts = await prisma.product.findMany({orderBy:{id:'asc'}});
   const oldVariants = await prisma.productVariant.findMany({orderBy:{id:'asc'}});
   const admin = await prisma.adminUser.findUniqueOrThrow({where:{email:'stockman-recette@example.invalid'}});
@@ -199,4 +199,9 @@ async function run() {
     await prisma.$disconnect();
   }
 }
-run().catch(error=>{console.error(error.message?.split('\n')[0]);process.exitCode=1;});
+run().catch(error=>{
+  const message=error.message?.split('\n').map(line=>line.trim()).filter(Boolean)
+    .filter(line=>!/postgres(?:ql)?:\/\/|password|token/i.test(line)).slice(0,8).join(' ');
+  console.error('STOCKMAN MAINTENANCE QA: '+(error.code??error.name)+' '+message);
+  process.exitCode=1;
+});
