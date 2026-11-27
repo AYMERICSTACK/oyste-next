@@ -60,7 +60,8 @@ export async function inventory(tx:Prisma.TransactionClient):Promise<Inventory>{
  const sourceRef=(v:unknown)=>{const s=v as {stockman?:{reference?:unknown}}|null;return typeof s?.stockman?.reference==="string"?s.stockman.reference:"";};
  return{replacementHolds,excludedScopeReferences:(await allCatalogue()).filter(r=>!inCommercialScope(r)).map(r=>r.reference),sourceUrls:Object.fromEntries(active.map(a=>[a.reference,a.sourceUrl])),supplierId:suppliers.length===1?suppliers[0].id:null,existing:[...products.map(p=>({kind:"product" as const,categoryId:p.categoryId,id:p.id,productId:p.id,references:[p.code,p.supplierCode||"",p.parentCode||"",sourceRef(p.sourceData),`slug:${p.slug}`].filter(Boolean),supplierId:p.supplierId,publicationStatus:p.publicationStatus})),...variants.map(v=>({kind:"variant" as const,categoryId:v.product.categoryId,id:v.id,productId:v.productId,references:[v.code,v.supplierCode||"",sourceRef(v.sourceData)].filter(Boolean),supplierId:v.product.supplierId,publicationStatus:v.product.publicationStatus}))],drafts:[...drafts.map(d=>d.reference),...active.filter(a=>a.lastMatchStatus==="ambiguous"||a.targetId||a.productId).map(a=>a.reference)],active:active.map(a=>a.reference),categories,prices:new Map(prices.map(p=>[p.reference,Number(p.priceHt)]).filter(([,v])=>Number.isFinite(v)&&Number(v)>0) as Array<[string,number]>),evidence:[...new Map([...discoveryEvidence.filter(d=>!cachedEvidence.some(c=>Date.parse(c.verifiedAt)>=Date.parse(d.verifiedAt)&&c.products.some(p=>d.products.some(n=>n.reference===p.reference)))),...cachedEvidence].sort((a,b)=>Date.parse(a.verifiedAt)-Date.parse(b.verifiedAt)).map(e=>[e.familyCode,e])).values()]};
 }
-export async function simulate(){return prisma.$transaction(async tx=>{await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8s'");const rows=await catalogue(),inv=await inventory(tx);const plan=planGlobal(rows,inv),state=await readImportState(tx),failed=state.failures;for(const status of plan.statuses){if(status.status==="BLOCKED"&&status.reasons.some(r=>["GROUPING_REQUIRES_SUPPLIER_EVIDENCE","GROUPING_EVIDENCE_EXPIRED","CONFLICTING_GROUPING"].includes(r))&&failed[status.reference]){status.reasons.push("SUPPLIER_VERIFICATION_FAILED");plan.reasons.SUPPLIER_VERIFICATION_FAILED=(plan.reasons.SUPPLIER_VERIFICATION_FAILED||0)+1;}}const verification=pageQueue(plan.statuses,inv.sourceUrls||{},state.pages);for(const exception of verification.exceptions){const status=plan.statuses.find(s=>s.reference===exception.reference);if(status&&!status.reasons.includes(exception.reason)){status.reasons.push(exception.reason);plan.reasons[exception.reason]=(plan.reasons[exception.reason]||0)+1;}}return {...plan,documentedFamilies:new Set(inv.evidence.filter(e=>e.products.some(p=>rows.some(r=>r.reference===p.reference))).map(e=>e.familyCode)).size,blockedFamilies:new Set(plan.statuses.filter(s=>s.status==="BLOCKED"&&s.groupKey&&inv.evidence.some(e=>e.familyCode.toUpperCase()===s.groupKey)).map(s=>s.groupKey)).size,verification,categoryMappings:plan.groups.map(g=>({family:g.key,categoryId:g.categoryId,resolution:g.categoryResolution})),readyParents:plan.groups.length,readyVariants:plan.groups.reduce((n,g)=>n+g.products.length,0),existingParents:new Set(plan.statuses.filter(s=>s.status==="EXISTING").map(s=>s.groupKey)).size,existingVariants:new Set(inv.existing.filter(e=>e.kind==="variant"&&e.references.some(r=>plan.statuses.some(s=>s.status==="EXISTING"&&s.reference===r.trim().toUpperCase()))).map(e=>e.id)).size,scope:scopeReport(await allCatalogue()),origin:"LIVE_NEON_READ_ONLY",canRollback:writesConfigured()&&process.env.STOCKMAN_V297_ROLLBACK_ENABLED==="true",canVerify:process.env.STOCKMAN_COLLECTIVE_VERIFICATION_AUTHORIZED==="true",approvedFamilies:configuredStockmanSelection().map(group=>({parent:group.parent,references:group.references})),canApply:writesConfigured()};},{isolationLevel:"RepeatableRead",maxWait:5000,timeout:12000});}
+async function simulateInTransaction(tx: Prisma.TransactionClient) {const rows=await catalogue(),inv=await inventory(tx);const plan=planGlobal(rows,inv),state=await readImportState(tx),failed=state.failures;for(const status of plan.statuses){if(status.status==="BLOCKED"&&status.reasons.some(r=>["GROUPING_REQUIRES_SUPPLIER_EVIDENCE","GROUPING_EVIDENCE_EXPIRED","CONFLICTING_GROUPING"].includes(r))&&failed[status.reference]){status.reasons.push("SUPPLIER_VERIFICATION_FAILED");plan.reasons.SUPPLIER_VERIFICATION_FAILED=(plan.reasons.SUPPLIER_VERIFICATION_FAILED||0)+1;}}const verification=pageQueue(plan.statuses,inv.sourceUrls||{},state.pages);for(const exception of verification.exceptions){const status=plan.statuses.find(s=>s.reference===exception.reference);if(status&&!status.reasons.includes(exception.reason)){status.reasons.push(exception.reason);plan.reasons[exception.reason]=(plan.reasons[exception.reason]||0)+1;}}return {...plan,documentedFamilies:new Set(inv.evidence.filter(e=>e.products.some(p=>rows.some(r=>r.reference===p.reference))).map(e=>e.familyCode)).size,blockedFamilies:new Set(plan.statuses.filter(s=>s.status==="BLOCKED"&&s.groupKey&&inv.evidence.some(e=>e.familyCode.toUpperCase()===s.groupKey)).map(s=>s.groupKey)).size,verification,categoryMappings:plan.groups.map(g=>({family:g.key,categoryId:g.categoryId,resolution:g.categoryResolution})),readyParents:plan.groups.length,readyVariants:plan.groups.reduce((n,g)=>n+g.products.length,0),existingParents:new Set(plan.statuses.filter(s=>s.status==="EXISTING").map(s=>s.groupKey)).size,existingVariants:new Set(inv.existing.filter(e=>e.kind==="variant"&&e.references.some(r=>plan.statuses.some(s=>s.status==="EXISTING"&&s.reference===r.trim().toUpperCase()))).map(e=>e.id)).size,scope:scopeReport(await allCatalogue()),origin:"LIVE_NEON_READ_ONLY",canRollback:writesConfigured()&&process.env.STOCKMAN_V297_ROLLBACK_ENABLED==="true",canVerify:process.env.STOCKMAN_COLLECTIVE_VERIFICATION_AUTHORIZED==="true",approvedFamilies:configuredStockmanSelection().map(group=>({parent:group.parent,references:group.references})),canApply:writesConfigured()};}
+export async function simulate(){return prisma.$transaction(async tx=>{await tx.$executeRawUnsafe("SET TRANSACTION READ ONLY");await tx.$executeRawUnsafe("SET LOCAL statement_timeout = '8s'");return simulateInTransaction(tx);},{isolationLevel:"RepeatableRead",maxWait:5000,timeout:12000});}
 const purchaseMaxAge = 24 * 60 * 60 * 1000;
 
 function purchaseIsUsable(product: Group["products"][number], salePrice: number | undefined) {
@@ -133,35 +134,46 @@ function writesConfigured() {
     configuredStockmanSelection().length > 0;
 }
 
-async function enabled() {
+function requireWritesConfigured() {
   if (!writesConfigured()) {
     throw new ResolutionError("COMMERCIAL_WRITES_DISABLED", "L’import réel nécessite une autorisation explicite et une liste de familles.", 423);
   }
-  if ((await readStockmanReplacementHolds(prisma)).size < 38) {
+}
+
+async function enabled(tx: Prisma.TransactionClient = prisma) {
+  requireWritesConfigured();
+  if ((await readStockmanReplacementHolds(tx)).size < 38) {
     throw new ResolutionError("REPLACEMENT_REGISTRY_REQUIRED", "Le registre des 38 anciens codes doit être confirmé avant l’import.", 423);
   }
 }
 
 export async function startRun(actorId?: string) {
-  await enabled();
-  const plan = await simulate();
-  const approval = configuredStockmanSelection();
-  const { accepted: groups, unavailable } = selectApprovedStockmanGroups(plan.groups, approval);
-  if (unavailable.length) {
-    throw new ResolutionError("APPROVED_FAMILIES_UNAVAILABLE", "Familles autorisées à revoir : "+unavailable.join(", "), 409);
-  }
-  const references = new Set(groups.flatMap(group => group.products.map(product => product.reference)));
-  const expectedPrices = Object.fromEntries(plan.statuses.filter(row => references.has(row.reference)).map(row => [row.reference,row.salePriceHT]));
-  const held = groups.filter(group => group.products.some(p => !purchaseIsUsable(p, expectedPrices[p.reference] ?? undefined)));
-  if (held.length) {
-    throw new ResolutionError("PURCHASE_MARGIN_REVIEW", "Achats récents ou marges à contrôler : "+held.map(group => group.key).join(", "), 409);
-  }
-  const runId = randomUUID();
-  await prisma.auditLog.create({data:{userId:actorId,action:"STOCKMAN_V297_RUN",entityType:"StockmanImport",entityId:runId,metadata:{
-    scopeVersion:SCOPE_VERSION,runId,groups,expectedPrices,createdAt:new Date().toISOString(),
-  }}});
-  return {runId};
+  requireWritesConfigured();
+  return prisma.$transaction(async tx => {
+    await tx.$executeRawUnsafe("SET LOCAL lock_timeout = '5s'");
+    await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(193701, 5)");
+    await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(193701, 7)");
+    await enabled(tx);
+    const plan = await simulateInTransaction(tx);
+    const approval = configuredStockmanSelection();
+    const { accepted: groups, unavailable } = selectApprovedStockmanGroups(plan.groups, approval);
+    if (unavailable.length) {
+      throw new ResolutionError("APPROVED_FAMILIES_UNAVAILABLE", "Familles autorisées à revoir : "+unavailable.join(", "), 409);
+    }
+    const references = new Set(groups.flatMap(group => group.products.map(product => product.reference)));
+    const expectedPrices = Object.fromEntries(plan.statuses.filter(row => references.has(row.reference)).map(row => [row.reference,row.salePriceHT]));
+    const held = groups.filter(group => group.products.some(p => !purchaseIsUsable(p, expectedPrices[p.reference] ?? undefined)));
+    if (held.length) {
+      throw new ResolutionError("PURCHASE_MARGIN_REVIEW", "Achats récents ou marges à contrôler : "+held.map(group => group.key).join(", "), 409);
+    }
+    const runId = randomUUID();
+    await tx.auditLog.create({data:{userId:actorId,action:"STOCKMAN_V297_RUN",entityType:"StockmanImport",entityId:runId,metadata:{
+      scopeVersion:SCOPE_VERSION,runId,groups,expectedPrices,createdAt:new Date().toISOString(),
+    }}});
+    return {runId};
+  }, { isolationLevel: "ReadCommitted", timeout: 25000 });
 }
+
 async function lock(tx:Prisma.TransactionClient){await tx.$executeRawUnsafe("SET LOCAL lock_timeout = '5s'");await tx.$executeRawUnsafe('LOCK TABLE "Product", "ProductVariant", "StockmanImportDraft", "Supplier", "Category", "StockmanCatalogReference", "StockmanSalePrice", "AuditLog" IN SHARE ROW EXCLUSIVE MODE');}
 export async function stepRun(runId:string,actorId?:string){await enabled();return prisma.$transaction(async tx=>{
  await lock(tx);const audits=await tx.auditLog.findMany({where:{action:"STOCKMAN_V297_RUN",entityId:runId}});if(audits.length!==1)throw Error("Lot introuvable.");

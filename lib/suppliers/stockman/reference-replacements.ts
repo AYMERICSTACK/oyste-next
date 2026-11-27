@@ -31,16 +31,9 @@ export async function readStockmanReplacementHolds(db: Prisma.TransactionClient)
   return new Set(records.map(item => item.formerReference.trim().toUpperCase()));
 }
 
-type StockmanReplacement = z.infer<typeof stockmanReplacementSchema>;
+export type StockmanReplacement = z.infer<typeof stockmanReplacementSchema>;
 
-export async function registerStockmanReplacements(records: StockmanReplacement[], actorId: string) {
-  if (process.env.STOCKMAN_COLLECTIVE_REGISTRY_AUTHORIZED !== "true") {
-    throw new ResolutionError("REPLACEMENT_WRITES_DISABLED", "L’enregistrement du registre nécessite une autorisation explicite.", 423);
-  }
-  return prisma.$transaction(async tx => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(193701, 7)`;
-    const row = await tx.siteSetting.findUnique({ where: { key: stockmanReplacementSetting }, select: { value: true } });
-    const old = row ? stockmanReplacementsSchema.parse(row.value) : [];
+export function planStockmanReplacements(old: StockmanReplacement[], records: StockmanReplacement[]) {
     const byCode = new Map(old.map(item => [item.formerReference.toUpperCase(), item]));
     const additions: StockmanReplacement[] = [];
     const resolved: StockmanReplacement[] = [];
@@ -60,6 +53,13 @@ export async function registerStockmanReplacements(records: StockmanReplacement[
       }
     }
     const value = stockmanReplacementsSchema.parse([...byCode.values(), ...additions]);
+    return { value, additions, resolved };
+}
+
+export async function writeStockmanReplacementPlan(
+  tx: Prisma.TransactionClient, plan: ReturnType<typeof planStockmanReplacements>, actorId: string,
+) {
+    const {value, additions, resolved} = plan;
     if (!additions.length && !resolved.length) return { total: value.length, added: 0, resolved: 0 };
     await tx.siteSetting.upsert({
       where: { key: stockmanReplacementSetting },
@@ -71,5 +71,15 @@ export async function registerStockmanReplacements(records: StockmanReplacement[
       entityId: stockmanReplacementSetting, metadata: { references: additions.map(item => item.formerReference), previousUnresolved: resolved },
     } });
     return { total: value.length, added: additions.length, resolved: resolved.length };
+}
+
+export async function registerStockmanReplacements(records: StockmanReplacement[], actorId: string) {
+  if (process.env.STOCKMAN_COLLECTIVE_REGISTRY_AUTHORIZED !== "true") {
+    throw new ResolutionError("REPLACEMENT_WRITES_DISABLED", "L’enregistrement du registre nécessite une autorisation explicite.", 423);
+  }
+  return prisma.$transaction(async tx => {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(193701, 7)`;
+    const row = await tx.siteSetting.findUnique({ where: { key: stockmanReplacementSetting }, select: { value: true } });
+    return writeStockmanReplacementPlan(tx, planStockmanReplacements(row ? stockmanReplacementsSchema.parse(row.value) : [], records), actorId);
   });
 }
