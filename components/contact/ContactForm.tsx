@@ -47,8 +47,11 @@ const subjects = [
 const inputClass =
   "mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-semibold text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#007f8f] focus:ring-4 focus:ring-[#007f8f]/10";
 
-export default function ContactForm({content}: {content: Record<string,string>}) {
-  const [form, setForm] = useState<ContactFormState>(initialState);
+export default function ContactForm({content, quoteReference}: {content: Record<string,string>; quoteReference?: string}) {
+  const [form, setForm] = useState<ContactFormState>(() => ({
+    ...initialState,
+    message: quoteReference ? "Je souhaite un devis pour la référence " + quoteReference + "." : "",
+  }));
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [feedback, setFeedback] = useState("");
 

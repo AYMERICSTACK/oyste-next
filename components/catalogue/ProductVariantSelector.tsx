@@ -201,6 +201,9 @@ export default function ProductVariantSelector({
   }, [initialOptions]);
 
   const selectedVariant = findMatchingVariant(variants, selectedOptions);
+  const quoteHref = (href: string) => href === "#demande-devis"
+    ? "/contact?subject=DEVIS&reference=" + encodeURIComponent(selectedVariant?.code || productCode) + "#contact-form"
+    : href;
   const rawOysteVariantName =
     selectedVariant?.label || selectedVariant?.name || productName;
   const stockmanForDisplay =
@@ -586,7 +589,7 @@ export default function ProductVariantSelector({
             </div>
           ) : null}
 
-          <div className="sticky bottom-0 z-20 mt-7 rounded-[1.75rem] bg-white pt-3 shadow-[0_-16px_24px_rgba(255,255,255,0.96)]">
+          <div className="mt-7 rounded-[1.75rem] bg-white pt-3">
           <div className="rounded-[1.75rem] bg-slate-950 p-5 text-white">
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
               <div>
@@ -632,7 +635,7 @@ export default function ProductVariantSelector({
                 cartItemId={kitoCartItemId}
               />
             ) : (
-              <Button href={commerce.content024} className="w-full justify-center py-4 text-base">
+              <Button href={quoteHref(commerce.content024)} className="w-full justify-center py-4 text-base">
                 {commerce.content025}<FileQuestion size={18} />
               </Button>
             ))}
@@ -674,7 +677,7 @@ export default function ProductVariantSelector({
               cartItemId={kitoCartItemId}
             />
           ) : (
-            <a href={commerce.content029} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white">
+            <a href={quoteHref(commerce.content029)} className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-orange-600 px-4 py-3 text-sm font-black text-white">
               {commerce.content030}<FileQuestion size={17} />
             </a>
           ))}

@@ -20,7 +20,9 @@ export async function generateMetadata(){const page=await getEditorialPage("cont
 
 
 
-export default async function ContactPage() {
+export default async function ContactPage({ searchParams }: { searchParams: Promise<{ reference?: string | string[] }> }) {
+  const { reference } = await searchParams;
+  const quoteReference = typeof reference === "string" && /^[\p{L}\p{N} ./_-]{1,80}$/u.test(reference) ? reference : undefined;
  const page = await getEditorialPage("contact");
 const contactCards=page.collections.contactCards.filter(item=>item.enabled).sort((a,b)=>a.order-b.order).map(item=>({...item,icon:editorialIcon(item.icon)}));
 const promises=page.collections.promises.filter(item=>item.enabled).sort((a,b)=>a.order-b.order).map(item=>({...item,icon:editorialIcon(item.icon)}));
@@ -127,7 +129,7 @@ const promises=page.collections.promises.filter(item=>item.enabled).sort((a,b)=>
           </aside>
 
           <div id="formulaire" className="scroll-mt-32">
-            <ContactForm content={page.fields} />
+            <ContactForm content={page.fields} quoteReference={quoteReference} />
           </div>
         </Container>
       </section>)} as Record<string,React.ReactNode>)[block.id]}</Fragment>)}</main>
