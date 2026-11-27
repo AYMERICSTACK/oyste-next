@@ -38,6 +38,32 @@ async function run() {
     await source.query('CREATE SCHEMA "'+schema+'"');
     schemaCreated=true;
     for(const name of required) await source.query('CREATE TABLE "'+schema+'"."'+name+'" (LIKE public."'+name+'" INCLUDING ALL)');
+    const columns=(await source.query(`
+      SELECT c.table_name,c.column_name,c.udt_name,c.column_default,
+        ARRAY(SELECT enumlabel::text FROM pg_enum WHERE enumtypid=t.oid ORDER BY enumsortorder) AS labels
+      FROM information_schema.columns c
+      JOIN pg_namespace n ON n.nspname=c.udt_schema
+      JOIN pg_type t ON t.typnamespace=n.oid AND t.typname=c.udt_name AND t.typtype='e'
+      WHERE c.table_schema='public' AND c.table_name=ANY($1::text[])
+    `,[required])).rows;
+    const id=x=>'"'+x.replaceAll('"','""')+'"';
+    const literal=x=>"'"+x.replaceAll("'","''")+"'";
+    const enumTypes=new Set();
+    for(const col of columns) {
+      const type=id(schema)+'.'+id(col.udt_name);
+      if(!enumTypes.has(type)) {
+        await source.query('CREATE TYPE '+type+' AS ENUM ('+col.labels.map(literal).join(',')+')');
+        enumTypes.add(type);
+      }
+      const table=id(schema)+'.'+id(col.table_name);
+      const field=id(col.column_name);
+      await source.query('ALTER TABLE '+table+' ALTER COLUMN '+field+' DROP DEFAULT, ALTER COLUMN '+field+' TYPE '+type+' USING '+field+'::text::'+type);
+      if(col.column_default) {
+        const value=col.column_default.match(/^'([A-Za-z0-9_]+)'::/)?.[1];
+        assert(value && col.labels.includes(value),'Enum default non reconnu : '+col.udt_name);
+        await source.query('ALTER TABLE '+table+' ALTER COLUMN '+field+' SET DEFAULT '+literal(value)+'::'+type);
+      }
+    }
     await source.query('INSERT INTO "'+schema+'"."OysteQaMarker" (environment) VALUES ($1)',['recette-stockman-isolee']);
     prisma=new PrismaClient({adapter:new PrismaPg({connectionString,options:'-c search_path='+schema+',public'},{schema})});
     const [{currentSchema}]=await prisma.$queryRawUnsafe('SELECT current_schema()::text AS "currentSchema"');
