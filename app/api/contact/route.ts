@@ -1,3 +1,6 @@
+import { randomUUID } from "node:crypto";
+import { prisma } from "@/lib/db/prisma";
+import { getCurrentAdmin } from "@/lib/auth/admin-session";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
@@ -24,6 +27,27 @@ const contactSchema = z.object({
   message: z.string().trim().min(20).max(3000),
   consent: z.literal(true),
 });
+
+const qaReceiptPrefix = "qa.stockman.quote.";
+
+async function isIsolatedQuoteDatabase() {
+  if (process.env.OYSTE_STOCKMAN_TEST !== "true" ||
+      process.env.VERCEL_ENV !== "preview" ||
+      process.env.VERCEL_GIT_COMMIT_REF !== "recette-stockman-isolee") return false;
+  const markers = await prisma.$queryRaw<Array<{ environment: string }>>`SELECT environment FROM "OysteQaMarker"`;
+  return markers.length === 1 && markers[0].environment === "recette-stockman-isolee";
+}
+
+export async function GET(request: Request) {
+  if (process.env.OYSTE_STOCKMAN_TEST !== "true") return new NextResponse(null, { status: 405 });
+  const id = z.uuid().safeParse(new URL(request.url).searchParams.get("recette"));
+  if (!id.success || !await isIsolatedQuoteDatabase()) return new NextResponse(null, { status: 404 });
+  const admin = await getCurrentAdmin();
+  if (!admin || admin.status !== "ACTIVE") return new NextResponse(null, { status: 401 });
+  const receipt = await prisma.siteSetting.findUnique({ where: { key: qaReceiptPrefix + id.data }, select: { value: true } });
+  if (!receipt) return new NextResponse(null, { status: 404 });
+  return NextResponse.json({ receipt: id.data, record: receipt.value }, { headers: { "Cache-Control": "no-store" } });
+}
 
 async function sendResendEmail(payload: {
   from: string;
@@ -74,6 +98,17 @@ export async function POST(request: Request) {
     }
 
     const data = parsed.data;
+    if (process.env.OYSTE_STOCKMAN_TEST === "true") {
+      if (data.subject !== "DEVIS" || !data.email.toLowerCase().endsWith("@example.invalid") ||
+          !await isIsolatedQuoteDatabase()) {
+        return NextResponse.json({ message: "Utilisez une demande de devis et une adresse fictive @example.invalid réservées à la recette." }, { status: 422 });
+      }
+      const id = randomUUID();
+      await prisma.siteSetting.create({
+        data: { key: qaReceiptPrefix + id, isPublic: false, value: { subject: data.subject, message: data.message, createdAt: new Date().toISOString() } },
+      });
+      return NextResponse.json({ message: "Demande enregistrée en recette. Référence : " + id, receipt: id }, { status: 201 });
+    }
     const from =
       process.env.CONTACT_FROM_EMAIL || "OYSTE <onboarding@resend.dev>";
     const adminEmail = process.env.CONTACT_TO_EMAIL;
