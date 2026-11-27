@@ -17,6 +17,8 @@ const catalogueStock = (product: AdminCatalogueProduct): number => {
   }
   return product.stock ?? 0;
 };
+const catalogueStockStatus = (product: AdminCatalogueProduct) =>
+  catalogueStock(product) > 0 ? "En stock" : product.stockOnRequest ? "Sur demande" : "Rupture";
 
 const cataloguePrice = (product: AdminCatalogueProduct): number | null => {
   const variantPrices = (product.variants ?? [])
@@ -56,7 +58,7 @@ export default function CatalogueManager({
   const filtered = useMemo(() => {
     const result = products.filter((product) => {
       const search = `${product.name} ${product.code} ${product.manufacturer} ${product.categoryPath}`.toLowerCase();
-      const matchesStock = stock === "Tous" || (stock === "En stock" && catalogueStock(product) > 0) || (stock === "Rupture" && catalogueStock(product) <= 0);
+      const matchesStock = stock === "Tous" || stock === catalogueStockStatus(product);
       const matchesCompleteness = completeness === "Toutes" || (completeness === "Complètes" && product.completeness >= 70) || (completeness === "À compléter" && product.completeness < 70);
       return search.includes(query.toLowerCase())
         && (status === "Tous" || product.status === status)
@@ -151,7 +153,7 @@ export default function CatalogueManager({
         "Prix minimum HT (€)": product.minPriceHT ?? null,
         "Prix maximum HT (€)": product.maxPriceHT ?? null,
         "Stock": catalogueStock(product),
-        "État du stock": catalogueStock(product) > 0 ? "En stock" : "Rupture",
+        "État du stock": catalogueStockStatus(product),
         "Délai": product.delay || "",
         "Poids (kg)": product.weightKg ?? null,
         "Longueur colis (cm)": product.packageLengthCm ?? null,
@@ -181,7 +183,7 @@ export default function CatalogueManager({
           "Prix minimum HT (€)": null,
           "Prix maximum HT (€)": null,
           "Stock": variant.stock ?? 0,
-          "État du stock": (variant.stock ?? 0) > 0 ? "En stock" : "Rupture",
+          "État du stock": (variant.stock ?? 0) > 0 ? "En stock" : product.stockOnRequestVariantIds?.includes(variant.id) ? "Sur demande" : "Rupture",
           "Délai": variant.delay || product.delay || "",
           "Poids (kg)": variant.weightKg ?? null,
           "Longueur colis (cm)": variant.packageLengthCm ?? product.packageLengthCm ?? null,
@@ -248,7 +250,7 @@ export default function CatalogueManager({
         <FilterSelect label="Catégorie" icon={<SlidersHorizontal size={15} />} value={category} onChange={(value) => { setCategory(value); setCurrentPage(1); }} options={["Toutes", ...categories]} />
         <FilterSelect label="Fournisseur" value={supplier} onChange={(value) => { setSupplier(value); setCurrentPage(1); }} options={["Tous", ...suppliers]} />
         <FilterSelect label="Statut" value={status} onChange={(value) => { setStatus(value); setCurrentPage(1); }} options={["Tous", "Publié", "Brouillon", "Masqué"]} />
-        <FilterSelect label="Stock" value={stock} onChange={(value) => { setStock(value); setCurrentPage(1); }} options={["Tous", "En stock", "Rupture"]} />
+        <FilterSelect label="Stock" value={stock} onChange={(value) => { setStock(value); setCurrentPage(1); }} options={["Tous", "En stock", "Rupture", "Sur demande"]} />
         <FilterSelect label="Complétude" value={completeness} onChange={(value) => { setCompleteness(value); setCurrentPage(1); }} options={["Toutes", "Complètes", "À compléter"]} />
         <button onClick={resetFilters} className="min-h-[62px] rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-black text-slate-500 hover:bg-slate-50">Réinitialiser</button>
       </div>
@@ -305,7 +307,7 @@ export default function CatalogueManager({
             <td className="px-4 py-4"><div className="flex items-center gap-3"><button title="Épingler" className="text-slate-250 hover:text-amber-500"><Star size={15} /></button><div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-slate-50">{product.images[0] ? <img src={product.images[0]} alt="" className="h-full w-full object-contain p-1" /> : <ImageIcon size={20} className="text-slate-300" />}</div><div className="min-w-0"><p className="max-w-[300px] truncate text-sm font-black text-slate-900">{product.name}</p><p className="mt-1 text-[11px] font-bold text-slate-400">{product.code}</p><p className="mt-1 text-[9px] font-bold text-slate-300">Modifié le {String(((pageStart + index) % 17) + 1).padStart(2, "0")}/07/2026 par Aymeric D.</p></div></div></td>
             <td className="px-4 py-4"><button onClick={() => { setSupplier(product.manufacturer || "Sans fournisseur"); setCurrentPage(1); }} className="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[10px] font-black text-slate-700 hover:bg-cyan-50 hover:text-[#007f8f]">{product.manufacturer || "Sans fournisseur"}</button></td>
             <td className="px-4 py-4"><p className="max-w-[220px] truncate text-xs font-bold text-slate-600">{product.categoryPath || "Non classé"}</p></td>
-            <td className="px-4 py-4"><p className="text-sm font-black">{cataloguePrice(product) != null ? `${product.variants?.length ? "À partir de " : ""}${cataloguePrice(product)!.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "Sur étude"}</p><p className={`mt-1 text-[10px] font-black ${catalogueStock(product) > 0 ? "text-emerald-600" : "text-red-500"}`}>{catalogueStock(product) > 0 ? `${catalogueStock(product)} en stock${product.variants?.length ? ` (${product.variants.length} variantes)` : ""}` : "Rupture"}</p></td>
+            <td className="px-4 py-4"><p className="text-sm font-black">{cataloguePrice(product) != null ? `${product.variants?.length ? "À partir de " : ""}${cataloguePrice(product)!.toLocaleString("fr-FR", { minimumFractionDigits: 2 })} €` : "Sur étude"}</p><p className={`mt-1 text-[10px] font-black ${catalogueStock(product) > 0 ? "text-emerald-600" : product.stockOnRequest ? "text-amber-700" : "text-red-500"}`}>{catalogueStock(product) > 0 ? `${catalogueStock(product)} en stock${product.variants?.length ? ` (${product.variants.length} variantes)` : ""}` : catalogueStockStatus(product)}</p></td>
             <td className="px-4 py-4"><div className="flex items-center gap-3 text-xs font-bold text-slate-500"><span className="inline-flex items-center gap-1"><ImageIcon size={14} />{product.images.length}</span><span className="inline-flex items-center gap-1"><FileText size={14} />{product.documentCount}</span></div></td>
             <td className="px-4 py-4"><div className="w-28"><div className="mb-1 flex items-center justify-between text-[10px] font-black"><span>{product.completeness}%</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${product.completeness < 70 ? "bg-amber-500" : "bg-[#007f8f]"}`} style={{ width: `${product.completeness}%` }} /></div></div></td>
             <td className="px-4 py-4"><span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black ring-1 ring-inset ${statusStyle[product.status]}`}>{product.status}</span></td>

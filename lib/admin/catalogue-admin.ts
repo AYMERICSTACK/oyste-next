@@ -11,6 +11,7 @@ import {
 import { prisma } from "@/lib/db/prisma";
 import type { StockmanProductSyncTarget } from "@/lib/suppliers/stockman/types";
 import type { Prisma } from "@/generated/prisma/client";
+import { stockmanSource } from "@/lib/suppliers/stockman/order-policy";
 
 export type AdminCatalogueProduct = CatalogueProduct & {
   adminCreated?: boolean;
@@ -19,6 +20,8 @@ export type AdminCatalogueProduct = CatalogueProduct & {
   documentCount: number;
   completeness: number;
   stockmanSyncTargets: StockmanProductSyncTarget[];
+  stockOnRequest?: boolean;
+  stockOnRequestVariantIds?: string[];
 };
 
 const products = productsData as CatalogueProduct[];
@@ -191,6 +194,9 @@ export async function getAdminCatalogueProductsFromDatabase(): Promise<AdminCata
         ),
       ),
     ].filter((target): target is StockmanProductSyncTarget => target !== null);
+    const stockOnRequestVariantIds = product.variants
+      .filter(variant => stockmanSource(variant.sourceData).stockOnRequest === true)
+      .map(variant => variant.id);
 
     return {
       adminCreated: isAdminCreated(product.sourceData),
@@ -217,6 +223,8 @@ export async function getAdminCatalogueProductsFromDatabase(): Promise<AdminCata
       maxPriceHT: product.maxPriceHt === null ? null : Number(product.maxPriceHt),
       delay: product.leadTime || "",
       stock: product.stock,
+      stockOnRequest: product.variants.length ? stockOnRequestVariantIds.length > 0 : stockmanSource(product.sourceData).stockOnRequest === true,
+      stockOnRequestVariantIds,
       weightKg: product.weightKg === null ? null : Number(product.weightKg),
       packageLengthCm: product.packageLengthCm === null ? null : Number(product.packageLengthCm),
       packageWidthCm: product.packageWidthCm === null ? null : Number(product.packageWidthCm),
